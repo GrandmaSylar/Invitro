@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Search } from "lucide-react";
 import { LabBanner } from "./LabBanner";
+import { Button } from "./ui/button";
 
 interface OrderedTest {
   testName: string;
@@ -124,7 +125,7 @@ export function ResultsEntry() {
 
   return (
     <div className="p-8 h-full bg-background">
-      <div className="bg-card shadow-sm h-full flex flex-col border border-border">
+      <div className="bg-card h-full flex flex-col border border-border rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
         <LabBanner className="border-b-2 border-border" />
 
         {/* Page title strip */}
@@ -137,30 +138,31 @@ export function ResultsEntry() {
         <div className="flex-1 overflow-auto p-6 bg-background space-y-6">
 
           {/* Lookup card */}
-          <div className="bg-card border-2 border-border p-6 shadow-sm">
+          <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
             <label className="block text-sm font-semibold text-foreground mb-2">Patient Lookup</label>
             <div className="flex gap-3 mt-2">
               <input
                 data-element-id="patient-lookup-input"
-                className="flex-1 px-4 py-3 border-2 border-border bg-background text-foreground focus:outline-none focus:border-primary transition-colors"
+                className="flex-1 px-4 py-3 border-2 border-border bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                 value={lookupQuery}
                 onChange={e => setLookupQuery(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleFindPatient()}
                 placeholder="Enter Lab Number or Patient Name..."
               />
-              <button 
+              <Button 
+                variant="blue"
                 data-element-id="find-patient-btn"
-                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 font-semibold transition-colors"
                 onClick={handleFindPatient}
+                className="px-6"
               >
                 <Search size={18} />
                 Find Patient
-              </button>
+              </Button>
             </div>
 
             {/* No-match inline message */}
             {noMatch && (
-              <p className="mt-3 text-sm font-medium text-red-600">
+              <p className="mt-3 text-sm font-medium text-destructive">
                 No patient found. Check the lab number or name and try again.
               </p>
             )}
@@ -168,7 +170,7 @@ export function ResultsEntry() {
 
           {/* Patient banner — only when matchedPatient !== null */}
           {matchedPatient && (
-            <div className="bg-primary/10 border border-primary/20 p-5 flex flex-wrap gap-8 shadow-sm">
+            <div className="bg-primary/10 border border-primary/20 p-5 flex flex-wrap gap-8 shadow-sm rounded">
               <div>
                 <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Patient Name</p>
                 <p className="text-base font-bold text-foreground">{matchedPatient.patientName}</p>
@@ -190,8 +192,8 @@ export function ResultsEntry() {
 
           {/* Results table — only when resultRows.length > 0 */}
           {resultRows.length > 0 && (
-            <div className="bg-card border-2 border-border p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-foreground mb-4 pb-2 border-b-2 border-border">Enter Test Results</h3>
+            <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b-2 border-border">Enter Test Results</h3>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -207,7 +209,7 @@ export function ResultsEntry() {
                   </thead>
                   <tbody>
                     {resultRows.map((row, i) => (
-                      <tr key={i} className="border-b border-border hover:bg-muted/50 transition-colors">
+                      <tr key={i} className="border-b border-border odd:bg-background even:bg-muted/30 hover:bg-muted/50 transition-colors">
                         <td className="py-3 px-4">
                           <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-1 min-w-[28px] text-center inline-block">
                             {i + 1}
@@ -219,7 +221,7 @@ export function ResultsEntry() {
                         <td className="py-3 px-4">
                           <input
                             data-element-id={`result-${i + 1}`}
-                            className="w-full px-3 py-2 border-2 border-border bg-background focus:outline-none focus:border-primary transition-colors font-mono font-medium text-foreground"
+                            className="w-full px-3 py-2 border-2 border-border bg-background focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors font-mono font-medium text-foreground rounded"
                             value={row.result}
                             onChange={e => updateResultRow(i, "result", e.target.value)}
                             placeholder="0.00"
@@ -228,7 +230,7 @@ export function ResultsEntry() {
                         <td className="py-3 px-4 text-sm text-muted-foreground">{row.unit}</td>
                         <td className="py-3 px-4">
                           <select
-                            className={`w-full px-3 py-2 border-2 focus:outline-none transition-colors font-semibold text-sm ${
+                            className={`w-full px-3 py-2 border-2 focus:outline-none transition-colors font-semibold text-sm rounded ${
                               row.flag === "Normal" ? "border-border bg-background text-foreground focus:border-primary" :
                               row.flag === "High" ? "border-orange-500/50 bg-orange-500/10 text-orange-600 dark:text-orange-400 focus:border-orange-500" :
                               row.flag === "Low" ? "border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 focus:border-amber-500" :
@@ -250,13 +252,15 @@ export function ResultsEntry() {
               </div>
 
               <div className="flex justify-end mt-6 pt-4 border-t border-border">
-                <button 
+                <Button 
+                  variant="green"
+                  size="lg"
                   data-element-id="submit-results-btn"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 font-bold text-lg transition-all shadow-md hover:shadow-lg border-b-4 border-primary/50"
                   onClick={handleSubmit}
+                  className="px-8 text-lg shadow-md hover:shadow-lg"
                 >
                   Submit Results
-                </button>
+                </Button>
               </div>
             </div>
           )}

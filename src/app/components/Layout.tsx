@@ -46,7 +46,7 @@ export function Layout() {
   const pageLabel = PAGE_LABELS[location.pathname] || "Dashboard";
 
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-background text-foreground transition-colors duration-200">
       {/* Sidebar */}
       <aside 
         className={`fixed left-0 top-0 bottom-0 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-all duration-200 ease-in-out ${
@@ -58,7 +58,7 @@ export function Layout() {
         {/* Logo */}
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 shrink-0 ${!isExpanded ? "mx-auto" : ""}`}></div>
+            <div className={`w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 shrink-0 rounded ${!isExpanded ? "mx-auto" : ""}`}></div>
             <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"}`}>
               <div className="font-bold text-xs text-sidebar-foreground leading-tight">Laboratory Inventory</div>
               <div className="font-bold text-xs text-sidebar-foreground leading-tight">Management System</div>
@@ -75,7 +75,7 @@ export function Layout() {
             const linkContent = (
               <Link
                 to={item.path}
-                className={`flex items-center transition-all duration-200 rounded-md ${
+                className={`flex items-center transition-all duration-200 rounded ${
                   isExpanded ? "gap-3 px-4 py-2.5" : "justify-center w-10 h-10 mx-auto"
                 } ${
                   isActive
@@ -111,7 +111,7 @@ export function Layout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden ml-14">
         {/* Top Bar */}
-        <header className="bg-card border-b border-border px-8 py-4">
+        <header className="bg-card border-b border-border px-8 py-4 transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Pages / {pageLabel}</p>
@@ -125,31 +125,31 @@ export function Layout() {
                 <input
                   type="text"
                   placeholder="Search"
-                  className="pl-10 pr-4 py-2 bg-muted border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background w-64 rounded-md transition-colors"
+                  className="pl-10 pr-4 py-2 bg-muted border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background w-64 rounded transition-colors"
                 />
               </div>
               
               {/* Icons */}
-              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors shrink-0">
+              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0">
                 <Bell size={20} className="text-muted-foreground" />
               </button>
-              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors shrink-0">
+              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0">
                 <Settings size={20} className="text-muted-foreground" />
               </button>
-              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors shrink-0" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
+              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
                 {mounted ? (resolvedTheme === "dark" ? <Sun size={20} className="text-muted-foreground" /> : <Moon size={20} className="text-muted-foreground" />) : <div className="w-5 h-5"></div>}
               </button>
               
               {/* User Avatar */}
               <Link to="/profile" className="shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600"></div>
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded"></div>
               </Link>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto bg-background">
+        <main className="flex-1 overflow-auto bg-background transition-colors duration-200">
           <Outlet />
         </main>
       </div>

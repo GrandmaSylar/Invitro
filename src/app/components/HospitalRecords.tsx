@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Building2, Save, Edit, Trash2 } from "lucide-react";
+import { Building2, Save, Edit, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { LabBanner } from "./LabBanner";
+import { Button } from "./ui/button";
 
 interface HospitalRecord {
   id: string;
@@ -83,37 +84,37 @@ export function HospitalRecords() {
 
   return (
     <div className="p-8 h-full">
-      <div className="bg-white shadow-sm h-full flex flex-col">
+      <div className="bg-card h-full flex flex-col rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
         {/* Lab Header Banner */}
-        <LabBanner className="border-b border-gray-300" />
+        <LabBanner className="border-b border-border" />
 
         {/* Header */}
-        <div className="border-b border-gray-300 px-6 pt-6 pb-4">
+        <div className="border-b border-border px-6 pt-6 pb-4">
           <div className="flex items-center gap-3">
             <Building2 size={28} className="text-blue-600" />
-            <h2 className="text-2xl font-bold text-gray-900">Hospital Records</h2>
+            <h2 className="text-2xl font-bold text-foreground">Hospital Records</h2>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-300 px-6">
+        <div className="border-b border-border px-6">
           <div className="flex gap-1">
             <button
               onClick={() => setActiveTab("hospital")}
-              className={`px-6 py-3 text-sm font-semibold transition-colors border-b-2 ${
+              className={`px-6 py-3 text-sm font-semibold transition-colors duration-150 border-b-2 ${
                 activeTab === "hospital"
-                  ? "border-blue-600 text-blue-600 bg-blue-50"
-                  : "border-transparent text-gray-600 hover:bg-gray-100"
+                  ? "border-primary text-primary bg-primary/10"
+                  : "border-transparent text-muted-foreground hover:bg-muted"
               }`}
             >
               Hospital Register
             </button>
             <button
               onClick={() => setActiveTab("doctor")}
-              className={`px-6 py-3 text-sm font-semibold transition-colors border-b-2 ${
+              className={`px-6 py-3 text-sm font-semibold transition-colors duration-150 border-b-2 ${
                 activeTab === "doctor"
-                  ? "border-blue-600 text-blue-600 bg-blue-50"
-                  : "border-transparent text-gray-600 hover:bg-gray-100"
+                  ? "border-primary text-primary bg-primary/10"
+                  : "border-transparent text-muted-foreground hover:bg-muted"
               }`}
             >
               Doctor's Register
@@ -122,72 +123,79 @@ export function HospitalRecords() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6 bg-gray-50">
+        <div className="flex-1 overflow-auto p-6 bg-background">
           {activeTab === "hospital" ? (
             <form 
               onSubmit={(e) => { e.preventDefault(); toast.success("Hospital saved."); }}
-              className="bg-white border border-gray-300 p-6"
+              className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}
             >
               {/* Top Input Row */}
-              <div className="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 pb-6 border-b border-border">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Hospital Name</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Hospital Name</label>
                   <input 
                     type="text"
                     value={hospitalName}
                     onChange={(e) => setHospitalName(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Location</label>
                   <input 
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Phone Number</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Phone Number</label>
                   <input 
                     type="text"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Hospital Address</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Hospital Address</label>
                   <input 
                     type="text"
                     value={hospitalAddress}
                     onChange={(e) => setHospitalAddress(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
               </div>
 
               {/* Hospital ID and Save Button Row */}
-              <div className="flex items-end justify-between mb-6 pb-6 border-b border-gray-300">
+              <div className="flex items-end justify-between mb-6 pb-6 border-b border-border">
                 <div className="w-48">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Hospital ID</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Hospital ID</label>
                   <input 
                     type="text"
                     value={hospitalId}
                     onChange={(e) => setHospitalId(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
-                <button type="submit" className="px-6 py-1 border border-gray-400 text-xs font-semibold text-green-700 hover:bg-green-50 border-green-400 transition-colors">
-                  <Save size={14} className="inline mr-1" />
+                <Button type="submit" variant="green" size="sm" className="px-6 mt-auto">
+                  <Save size={14} />
                   Save
-                </button>
+                </Button>
               </div>
 
               {/* Hospital Records Table */}
+              {hospitalData.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
+                  <Building2 className="mx-auto text-muted-foreground mb-3" size={40} />
+                  <p className="text-sm font-medium text-muted-foreground">No hospitals registered yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Fill in the form above and click Save to add a record</p>
+                </div>
+              ) : (
               <div 
-                className="border border-gray-300 overflow-auto outline-none" 
+                className="border border-border overflow-auto outline-none rounded" 
                 style={{ maxHeight: "400px" }}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -209,12 +217,12 @@ export function HospitalRecords() {
                 }}
               >
                 <table className="w-full">
-                  <thead className="bg-gray-100 sticky top-0">
+                  <thead className="bg-muted sticky top-0 border-b-2 border-border">
                     <tr>
-                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-bold text-gray-700">Hospital ID</th>
-                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-bold text-gray-700">Profession</th>
-                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-bold text-gray-700">Telephone Number</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700">Affiliate Hospital</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Hospital ID</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Profession</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Telephone Number</th>
+                      <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Affiliate Hospital</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -222,28 +230,33 @@ export function HospitalRecords() {
                       <tr 
                         key={hospital.id}
                         onClick={() => setSelectedHospital(index)}
-                        className={`border-t border-gray-300 cursor-pointer transition-colors ${
+                        className={`border-t border-border cursor-pointer transition-colors ${
                           selectedHospital === index 
-                            ? 'bg-gray-300' 
+                            ? 'bg-primary/10 border-l-4 border-l-primary' 
                             : index === focusedHospitalIndex
-                              ? 'bg-gray-100 ring-2 ring-inset ring-blue-500'
-                              : 'hover:bg-gray-100'
+                              ? 'bg-muted ring-2 ring-inset ring-blue-500'
+                              : index % 2 === 0
+                                ? 'bg-background hover:bg-muted/50'
+                                : 'bg-muted/30 hover:bg-muted/50'
                         }`}
                       >
-                        <td className="border-r border-gray-300 px-3 py-2 text-xs font-semibold text-gray-900">{hospital.hospitalId}</td>
-                        <td className="border-r border-gray-300 px-3 py-2 text-xs text-gray-700">{hospital.profession}</td>
-                        <td className="border-r border-gray-300 px-3 py-2 text-xs text-gray-700">{hospital.telephoneNumber}</td>
-                        <td className="px-3 py-2 text-xs text-gray-700">{hospital.affiliateHospital}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{hospital.hospitalId}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.profession}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.telephoneNumber}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{hospital.affiliateHospital}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              )}
 
               {/* Action Buttons */}
-              <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-                <button 
+              <div className="mt-4 pt-4 border-t border-border flex gap-2">
+                <Button 
                   type="button"
+                  variant="red"
+                  size="sm"
                   onClick={() => {
                     if (selectedHospital !== null) {
                       setHospitalData(prev => prev.filter((_, idx) => idx !== selectedHospital));
@@ -252,83 +265,77 @@ export function HospitalRecords() {
                     }
                   }}
                   disabled={selectedHospital === null}
-                  className={`px-6 py-1 border border-gray-400 text-xs font-semibold transition-colors ${
-                    selectedHospital !== null 
-                      ? 'text-red-700 hover:bg-red-50 border-red-400 cursor-pointer' 
-                      : 'text-gray-400 cursor-not-allowed opacity-50'
-                  }`}
+                  className="px-6 text-xs"
                 >
-                  <Trash2 size={14} className="inline mr-1" />
+                  <Trash2 size={14} />
                   Delete
-                </button>
-                <button 
+                </Button>
+                <Button 
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => { if (selectedHospital !== null) toast("Edit mode."); }}
                   disabled={selectedHospital === null}
-                  className={`px-6 py-1 border border-gray-400 text-xs font-semibold transition-colors ${
-                    selectedHospital !== null 
-                      ? 'text-blue-700 hover:bg-blue-50 border-blue-400 cursor-pointer' 
-                      : 'text-gray-400 cursor-not-allowed opacity-50'
-                  }`}
+                  className="px-6 text-xs"
                 >
-                  <Edit size={14} className="inline mr-1" />
+                  <Edit size={14} />
                   Edit
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
             <form 
               onSubmit={(e) => { e.preventDefault(); toast.success("Doctor saved."); }}
-              className="bg-white border border-gray-300 p-6"
+              className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}
             >
               {/* Top Input Row */}
-              <div className="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 pb-6 border-b border-border">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Doctor's Name</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Doctor's Name</label>
                   <input 
                     type="text"
                     value={doctorName}
                     onChange={(e) => setDoctorName(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Speciality</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Speciality</label>
                   <input 
                     type="text"
                     value={speciality}
                     onChange={(e) => setSpeciality(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Phone Number</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Phone Number</label>
                   <input 
                     type="text"
                     value={doctorPhone}
                     onChange={(e) => setDoctorPhone(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Doctor's E-mail Address</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Doctor's E-mail Address</label>
                   <input 
                     type="email"
                     value={doctorEmail}
                     onChange={(e) => setDoctorEmail(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
               </div>
 
               {/* Second Input Row */}
-              <div className="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-300">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 pb-6 border-b border-border">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Affiliate Hospital</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Affiliate Hospital</label>
                   <select 
                     value={affiliateHospital}
                     onChange={(e) => setAffiliateHospital(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600 bg-white"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   >
                     <option value="">Select Hospital</option>
                     <option value="37 MILITARY HOSPITAL">37 MILITARY HOSPITAL</option>
@@ -339,43 +346,50 @@ export function HospitalRecords() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Location</label>
                   <input 
                     type="text"
                     value={doctorLocation}
                     onChange={(e) => setDoctorLocation(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Address</label>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Address</label>
                   <input 
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   />
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Doctor ID</label>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Doctor ID</label>
                     <input 
                       type="text"
                       value={doctorId}
                       onChange={(e) => setDoctorId(e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-400 text-sm focus:outline-none focus:border-blue-600"
+                      className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                     />
                   </div>
-                  <button type="submit" className="mt-auto px-6 py-1 border border-gray-400 text-xs font-semibold text-green-700 hover:bg-green-50 border-green-400 transition-colors">
-                    <Save size={14} className="inline mr-1" />
+                  <Button type="submit" variant="green" size="sm" className="mt-auto px-6">
+                    <Save size={14} />
                     Save
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               {/* Doctor Records Table */}
+              {doctorData.length === 0 ? (
+                <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
+                  <UserRound className="mx-auto text-muted-foreground mb-3" size={40} />
+                  <p className="text-sm font-medium text-muted-foreground">No doctors registered yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Fill in the form above and click Save to add a record</p>
+                </div>
+              ) : (
               <div 
-                className="border border-gray-300 overflow-auto outline-none" 
+                className="border border-border overflow-auto outline-none rounded" 
                 style={{ maxHeight: "400px" }}
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -397,12 +411,12 @@ export function HospitalRecords() {
                 }}
               >
                 <table className="w-full">
-                  <thead className="bg-gray-100 sticky top-0">
+                  <thead className="bg-muted sticky top-0 border-b-2 border-border">
                     <tr>
-                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-bold text-gray-700">Doctor's Name</th>
-                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-bold text-gray-700">Profession</th>
-                      <th className="border-r border-gray-300 px-3 py-2 text-left text-xs font-bold text-gray-700">Telephone Number</th>
-                      <th className="px-3 py-2 text-left text-xs font-bold text-gray-700">Affiliate Hospital</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Doctor's Name</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Profession</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Telephone Number</th>
+                      <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Affiliate Hospital</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -410,28 +424,32 @@ export function HospitalRecords() {
                       <tr 
                         key={doctor.id}
                         onClick={() => setSelectedDoctor(index)}
-                        className={`border-t border-gray-300 cursor-pointer transition-colors ${
+                        className={`border-t border-border cursor-pointer transition-colors ${
                           selectedDoctor === index 
-                            ? 'bg-gray-300' 
+                            ? 'bg-primary/10 border-l-4 border-l-primary' 
                             : index === focusedDoctorIndex
-                              ? 'bg-gray-100 ring-2 ring-inset ring-blue-500'
-                              : 'hover:bg-gray-100'
+                              ? 'bg-muted ring-2 ring-inset ring-blue-500'
+                              : index % 2 === 0
+                                ? 'bg-background hover:bg-muted/50'
+                                : 'bg-muted/30 hover:bg-muted/50'
                         }`}
                       >
-                        <td className="border-r border-gray-300 px-3 py-2 text-xs font-semibold text-gray-900">{doctor.doctorName}</td>
-                        <td className="border-r border-gray-300 px-3 py-2 text-xs text-gray-700">{doctor.profession}</td>
-                        <td className="border-r border-gray-300 px-3 py-2 text-xs text-gray-700">{doctor.telephoneNumber}</td>
-                        <td className="px-3 py-2 text-xs text-gray-700">{doctor.affiliateHospital}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{doctor.doctorName}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.profession}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.telephoneNumber}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{doctor.affiliateHospital}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+              )}
 
-              {/* Action Buttons */}
-              <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-                <button 
+              <div className="mt-4 pt-4 border-t border-border flex gap-2">
+                <Button 
                   type="button"
+                  variant="red"
+                  size="sm"
                   onClick={() => {
                     if (selectedDoctor !== null) {
                       setDoctorData(prev => prev.filter((_, idx) => idx !== selectedDoctor));
@@ -440,28 +458,22 @@ export function HospitalRecords() {
                     }
                   }}
                   disabled={selectedDoctor === null}
-                  className={`px-6 py-1 border border-gray-400 text-xs font-semibold transition-colors ${
-                    selectedDoctor !== null 
-                      ? 'text-red-700 hover:bg-red-50 border-red-400 cursor-pointer' 
-                      : 'text-gray-400 cursor-not-allowed opacity-50'
-                  }`}
+                  className="px-6 text-xs"
                 >
-                  <Trash2 size={14} className="inline mr-1" />
+                  <Trash2 size={14} />
                   Delete
-                </button>
-                <button 
+                </Button>
+                <Button 
                   type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => { if (selectedDoctor !== null) toast("Edit mode."); }}
                   disabled={selectedDoctor === null}
-                  className={`px-6 py-1 border border-gray-400 text-xs font-semibold transition-colors ${
-                    selectedDoctor !== null 
-                      ? 'text-blue-700 hover:bg-blue-50 border-blue-400 cursor-pointer' 
-                      : 'text-gray-400 cursor-not-allowed opacity-50'
-                  }`}
+                  className="px-6 text-xs"
                 >
-                  <Edit size={14} className="inline mr-1" />
+                  <Edit size={14} />
                   Edit
-                </button>
+                </Button>
               </div>
             </form>
           )}

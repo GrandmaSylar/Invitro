@@ -3,7 +3,9 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Users, TestTube, Building2, FileText, Plus, Trash2, Search, X, UserPlus, UserCheck, FlaskConical, Calendar, DollarSign, User, Phone, Hospital, Stethoscope, ClipboardList } from "lucide-react";
 import { LabBanner } from "./LabBanner";
-
+import { Checkbox } from "./ui/checkbox";
+import { Button } from "./ui/button";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 type Tab = "new-patient" | "existing-patient" | "add-on-test";
 
 interface TestItem {
@@ -135,6 +137,7 @@ const availableTests: AvailableTest[] = [
 ];
 
 export function DashboardAlpha() {
+  const shouldReduceMotion = useReducedMotion();
   const [searchParams] = useSearchParams();
   const tabParam = searchParams.get("tab");
   const validTabs: Tab[] = ["new-patient", "existing-patient", "add-on-test"];
@@ -157,6 +160,7 @@ export function DashboardAlpha() {
   const [focusedTestIndex, setFocusedTestIndex] = useState<number | null>(null);
   const patientNameRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [errors, setErrors] = useState<{ patientName?: string }>({});
 
   useEffect(() => {
     if (isModalOpen && modalRef.current) {
@@ -246,10 +250,12 @@ export function DashboardAlpha() {
   const handleSaveRecord = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!patientName.trim()) {
-      toast.error("Patient name is required.");
+      setErrors({ patientName: "Patient name is required" });
       patientNameRef.current?.focus();
+      toast.error("Please fill in all required fields.");
       return;
     }
+    setErrors({});
     toast.success("Record saved successfully.");
     setPatientName("");
     setGender("");
@@ -264,13 +270,13 @@ export function DashboardAlpha() {
   };
 
   return (
-    <div className="p-8 h-full bg-gray-50">
-      <div className="bg-white shadow-sm h-full flex flex-col">
+    <div className="p-8 h-full bg-background">
+      <div className="bg-card h-full flex flex-col" style={{ boxShadow: 'var(--shadow-card)' }}>
         {/* Lab Header Banner */}
-        <LabBanner className="border-b-2 border-gray-200" />
+        <LabBanner className="border-b-2 border-border" />
 
         {/* Tabs Header */}
-        <div className="border-b-2 border-gray-200 px-6 pt-6 bg-white">
+        <div className="border-b-2 border-border px-6 pt-6 bg-card">
           <div className="flex gap-2 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -280,13 +286,10 @@ export function DashboardAlpha() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all whitespace-nowrap border-b-4 ${
+                  className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all duration-150 whitespace-nowrap border-b-4 ${
                     isActive
-                      ? tab.color === "blue" ? "bg-blue-50 text-blue-700 border-blue-600" :
-                        tab.color === "teal" ? "bg-teal-50 text-teal-700 border-teal-600" :
-                        tab.color === "green" ? "bg-green-50 text-green-700 border-green-600" :
-                        "bg-amber-50 text-amber-700 border-amber-600"
-                      : "text-gray-600 hover:bg-gray-50 border-transparent hover:border-gray-300"
+                      ? "bg-primary/10 text-primary border-primary"
+                      : "text-muted-foreground hover:bg-muted/50 border-transparent hover:border-border"
                   }`}
                 >
                   <Icon size={20} />
@@ -298,20 +301,20 @@ export function DashboardAlpha() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-auto p-6 bg-gray-50">
+        <div className="flex-1 overflow-auto p-6 bg-background">
           {activeTab === "new-patient" && (
             <form onSubmit={handleSaveRecord} className="space-y-6 max-w-7xl mx-auto">
               {/* Lab Number Card */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100">
+                  <div className="p-2 bg-blue-500/15 rounded">
                     <FileText className="text-blue-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Laboratory Record</h2>
+                  <h2 className="text-base font-semibold text-foreground">Laboratory Record</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Lab Number
                     </label>
                     <div className="flex items-center gap-2">
@@ -319,16 +322,16 @@ export function DashboardAlpha() {
                         type="text"
                         value="A1726021073491"
                         readOnly
-                        className="flex-1 px-4 py-3 bg-blue-50 border-2 border-blue-200 text-gray-900 font-mono text-lg font-bold focus:outline-none"
+                        className="flex-1 px-4 py-3 bg-blue-500/10 border-2 border-blue-500/30 text-foreground font-mono text-lg font-bold focus:outline-none rounded"
                       />
-                      <div className="px-4 py-3 bg-gray-100 border-2 border-gray-300">
-                        <Calendar className="text-gray-600" size={20} />
+                      <div className="px-4 py-3 bg-muted border-2 border-border rounded">
+                        <Calendar className="text-muted-foreground" size={20} />
                       </div>
                     </div>
                   </div>
                   <div className="flex items-end">
-                    <div className="w-full p-3 bg-gradient-to-r from-blue-50 to-teal-50 border-2 border-blue-200">
-                      <p className="text-xs text-gray-600 font-semibold mb-1">Status</p>
+                    <div className="w-full p-3 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border-2 border-blue-500/30">
+                      <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
                       <p className="text-sm font-bold text-green-700">● Active Registration</p>
                     </div>
                   </div>
@@ -336,39 +339,49 @@ export function DashboardAlpha() {
               </div>
 
               {/* Patient Information Card */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-600">
-                  <div className="p-2 bg-blue-100">
+                  <div className="p-2 bg-blue-500/15 rounded">
                     <User className="text-blue-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Patient Information</h2>
+                  <h2 className="text-base font-semibold text-foreground">Patient Information</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <User size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <User size={16} className="text-muted-foreground" />
                       Patient Name <span className="text-red-600">*</span>
                     </label>
                     <input
                       ref={patientNameRef}
                       type="text"
                       value={patientName}
-                      onChange={(e) => setPatientName(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-600 transition-colors"
+                      onChange={(e) => {
+                        setPatientName(e.target.value);
+                        if (errors.patientName) setErrors({});
+                      }}
+                      className={`w-full px-4 py-3 bg-background border focus:outline-none text-foreground transition-colors rounded ${
+                        errors.patientName 
+                          ? 'border-destructive focus:border-destructive focus:ring-2 focus:ring-destructive/20' 
+                          : 'border-border focus:border-primary focus:ring-2 focus:ring-primary/20'
+                      }`}
                       placeholder="Enter patient full name"
                     />
+                    {errors.patientName && (
+                      <p className="text-xs text-destructive mt-1">{errors.patientName}</p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Users size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Users size={16} className="text-muted-foreground" />
                       Gender
                     </label>
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-white focus:outline-none focus:border-blue-600 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                     >
                       <option value="">Select gender</option>
                       <option value="Male">Male</option>
@@ -378,29 +391,29 @@ export function DashboardAlpha() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Calendar size={16} className="text-muted-foreground" />
                       Age
                     </label>
                     <input
                       type="number"
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-600 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                       placeholder="Enter age"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Phone size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Phone size={16} className="text-muted-foreground" />
                       Telephone Number
                     </label>
                     <input
                       type="tel"
                       value={telephone}
                       onChange={(e) => setTelephone(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-600 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                       placeholder="Enter phone number"
                     />
                   </div>
@@ -408,24 +421,24 @@ export function DashboardAlpha() {
               </div>
 
               {/* Referral Information Card */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-teal-600">
-                  <div className="p-2 bg-teal-100">
+                  <div className="p-2 bg-teal-500/15 rounded">
                     <Stethoscope className="text-teal-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Referral Information</h2>
+                  <h2 className="text-base font-semibold text-foreground">Referral Information</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <ClipboardList size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <ClipboardList size={16} className="text-muted-foreground" />
                       Referral Option
                     </label>
                     <select
                       value={referralOption}
                       onChange={(e) => setReferralOption(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-white focus:outline-none focus:border-blue-600 transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                     >
                       <option value="None">None</option>
                       <option value="Doctor">Doctor</option>
@@ -436,15 +449,15 @@ export function DashboardAlpha() {
 
                   {(referralOption === "Doctor" || referralOption === "Hospital" || referralOption === "Insurance") && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Stethoscope size={16} className="text-gray-500" />
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Stethoscope size={16} className="text-muted-foreground" />
                         Doctor Name
                       </label>
                       <input
                         type="text"
                         value={doctorName}
                         onChange={(e) => setDoctorName(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-600 transition-colors"
+                        className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                         placeholder="Enter doctor name"
                       />
                     </div>
@@ -452,15 +465,15 @@ export function DashboardAlpha() {
 
                   {(referralOption === "Hospital" || referralOption === "Insurance") && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Hospital size={16} className="text-gray-500" />
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Hospital size={16} className="text-muted-foreground" />
                         Hospital Name
                       </label>
                       <input
                         type="text"
                         value={hospitalName}
                         onChange={(e) => setHospitalName(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-600 transition-colors"
+                        className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
                         placeholder="Enter hospital name"
                       />
                     </div>
@@ -469,51 +482,53 @@ export function DashboardAlpha() {
               </div>
 
               {/* Test Selection Card */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-green-600">
-                  <div className="p-2 bg-green-100">
+                  <div className="p-2 bg-green-500/15 rounded">
                     <TestTube className="text-green-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Test Selection</h2>
+                  <h2 className="text-base font-semibold text-foreground">Test Selection</h2>
                 </div>
                 
                 {/* Test Selection Controls */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
                   <div className="lg:col-span-3">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Select Laboratory Test
                     </label>
                     <select
                       value={selectedTestDropdown}
                       onChange={(e) => setSelectedTestDropdown(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-white focus:outline-none focus:border-blue-600 text-sm transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors rounded"
                     >
                       <option value="">Choose a test from the list...</option>
                       {availableTests.map((test) => (
                         <option key={test.id} value={test.id}>
-                          {test.testName} - {test.department} (${test.testCost.toFixed(2)})
+                          {test.testName} - {test.department} (₵{test.testCost.toFixed(2)})
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="flex items-end gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="blue"
                       onClick={() => setIsModalOpen(true)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold transition-colors"
+                      className="flex-1"
                     >
                       <Search size={20} />
                       Bulk Add
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="blue"
                       onClick={handleAddTest}
                       disabled={!selectedTestDropdown}
-                      className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-3 font-semibold transition-colors"
+                      className="flex-1"
                     >
                       <Plus size={20} />
                       Add
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -522,17 +537,17 @@ export function DashboardAlpha() {
                   <div className="grid lg:grid-cols-3 gap-6">
                     {/* Tests List - Takes 2/3 width */}
                     <div className="lg:col-span-2">
-                      <div className="border-2 border-gray-300 bg-white">
+                      <div className="border-2 border-border bg-card rounded">
                         {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-4 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b-2 border-gray-300">
+                        <div className="grid grid-cols-12 gap-4 bg-gradient-to-r from-muted to-muted px-4 py-3 border-b-2 border-border">
                           <div className="col-span-6">
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Test Name</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Test Name</p>
                           </div>
                           <div className="col-span-3">
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Department</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Department</p>
                           </div>
                           <div className="col-span-3 text-right">
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Cost</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Cost</p>
                           </div>
                         </div>
                         
@@ -562,80 +577,82 @@ export function DashboardAlpha() {
                             <div 
                               key={test.id}
                               onClick={() => toggleTestSelection(test.id)}
-                              className={`grid grid-cols-12 gap-4 px-4 py-3 cursor-pointer transition-all border-b border-gray-200 ${
+                              className={`grid grid-cols-12 gap-4 px-4 py-3 cursor-pointer transition-all border-b border-border ${
                                 selectedTests.includes(test.id) 
-                                  ? "bg-blue-100 border-l-4 border-l-blue-600" 
+                                  ? "bg-primary/10 border-l-4 border-l-primary" 
                                   : index === focusedTestIndex 
-                                    ? "bg-gray-100 ring-2 ring-inset ring-blue-500" 
-                                    : "hover:bg-gray-50"
+                                    ? "bg-muted ring-2 ring-inset ring-blue-500" 
+                                    : index % 2 === 0
+                                      ? "bg-background hover:bg-muted/50"
+                                      : "bg-muted/30 hover:bg-muted/50"
                               }`}
                             >
                               <div className="col-span-6 flex items-center gap-2">
-                                <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 min-w-[28px] text-center">
+                                <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-1 min-w-[28px] text-center">
                                   {index + 1}
                                 </span>
-                                <p className="text-sm font-semibold text-gray-900">{test.testName}</p>
+                                <p className="text-sm font-semibold text-foreground">{test.testName}</p>
                               </div>
                               <div className="col-span-3 flex items-center">
-                                <p className="text-sm text-gray-700">{test.department}</p>
+                                <p className="text-sm text-muted-foreground">{test.department}</p>
                               </div>
                               <div className="col-span-3 flex items-center justify-end">
-                                <p className="text-sm font-bold text-green-700">${test.testCost.toFixed(2)}</p>
+                                <p className="text-sm font-bold text-green-700">₵{test.testCost.toFixed(2)}</p>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 italic">Click on a test row to select it for deletion</p>
+                      <p className="text-xs text-muted-foreground mt-2 italic">Click on a test row to select it for deletion</p>
                     </div>
 
                     {/* Payment Summary Card - Takes 1/3 width */}
                     <div className="lg:col-span-1">
-                      <div className="border-2 border-gray-300 bg-gradient-to-b from-white to-gray-50 p-5 sticky top-0">
+                      <div className="border-2 border-border bg-card p-6 sticky top-0 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                         <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-teal-600">
                           <DollarSign className="text-teal-700" size={20} />
-                          <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide">Payment</h3>
+                          <h3 className="text-base font-bold text-foreground uppercase tracking-wide">Payment</h3>
                         </div>
                         
                         <div className="space-y-4">
-                          <div className="flex justify-between items-center pb-3 border-b border-gray-300">
-                            <span className="text-sm text-gray-600 font-medium">Subtotal</span>
-                            <span className="text-base font-bold text-gray-900 font-mono">${subtotal.toFixed(2)}</span>
+                          <div className="flex justify-between items-center pb-3 border-b border-border">
+                            <span className="text-sm text-muted-foreground font-medium">Subtotal</span>
+                            <span className="text-base font-bold text-foreground font-mono">₵{subtotal.toFixed(2)}</span>
                           </div>
                           
-                          <div className="flex justify-between items-center pb-3 border-b border-gray-300">
-                            <span className="text-sm text-gray-600 font-medium">Total Cost</span>
-                            <span className="text-base font-bold text-gray-900 font-mono">${totalCost.toFixed(2)}</span>
+                          <div className="flex justify-between items-center pb-3 border-b border-border">
+                            <span className="text-sm text-muted-foreground font-medium">Total Cost</span>
+                            <span className="text-base font-bold text-foreground font-mono">₵{totalCost.toFixed(2)}</span>
                           </div>
                           
-                          <div className="pb-3 border-b border-gray-300">
-                            <label className="block text-sm text-gray-600 font-medium mb-2">Amount Paid</label>
+                          <div className="pb-3 border-b border-border">
+                            <label className="block text-sm text-muted-foreground font-medium mb-2">Amount Paid</label>
                             <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">₵</span>
                               <input
                                 type="number"
                                 value={amountPaid}
                                 onChange={(e) => setAmountPaid(Number(e.target.value))}
                                 onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-                                className="w-full pl-8 pr-3 py-2 text-right text-base font-bold text-gray-900 border-2 border-gray-400 focus:outline-none focus:border-blue-600 font-mono transition-colors"
+                                className="w-full pl-8 pr-3 py-2 text-right text-base font-bold text-foreground bg-background border border-border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono transition-colors rounded"
                                 placeholder="0.00"
                                 step="0.01"
                               />
                             </div>
                           </div>
                           
-                          <div className={`flex justify-between items-center pt-3 border-t-2 border-gray-400 px-3 py-3 ${
-                            arrears > 0 ? 'bg-red-50 border-l-4 border-l-red-600' : 'bg-green-50 border-l-4 border-l-green-600'
+                          <div className={`flex justify-between items-center pt-3 border-t-2 border-border px-3 py-3 ${
+                            arrears > 0 ? 'bg-red-500/10 border-l-4 border-l-red-600' : 'bg-green-500/10 border-l-4 border-l-green-600'
                           }`}>
-                            <span className="text-sm font-bold text-gray-700 uppercase">Arrears</span>
+                            <span className="text-sm font-bold text-muted-foreground uppercase">Arrears</span>
                             <span className={`text-lg font-bold font-mono ${
                               arrears > 0 ? 'text-red-700' : 'text-green-700'
                             }`}>
-                              ${arrears.toFixed(2)}
+                              ₵{arrears.toFixed(2)}
                             </span>
                           </div>
 
-                          <div className="pt-2 text-xs text-gray-500 space-y-1">
+                          <div className="pt-2 text-xs text-muted-foreground space-y-1">
                             <p>• Total Tests: <span className="font-bold">{tests.length}</span></p>
                             <p>• Balance Due: <span className={`font-bold ${arrears > 0 ? 'text-red-600' : 'text-green-600'}`}>
                               {arrears > 0 ? 'Pending' : 'Cleared'}
@@ -646,43 +663,45 @@ export function DashboardAlpha() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-16 border-2 border-dashed border-gray-300 bg-gray-50">
-                    <TestTube className="mx-auto text-gray-400 mb-4" size={48} />
-                    <p className="text-gray-500 font-medium">No tests added yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Select a test from the dropdown above to begin</p>
+                  <div className="text-center py-16 border-2 border-dashed border-border bg-muted/50">
+                    <TestTube className="mx-auto text-muted-foreground mb-4" size={48} />
+                    <p className="text-muted-foreground font-medium">No tests added yet</p>
+                    <p className="text-muted-foreground text-sm mt-1">Select a test from the dropdown above to begin</p>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-4 justify-between items-center bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="flex flex-wrap gap-4 justify-between items-center bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex gap-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="red"
                     onClick={handleDeleteSelected}
                     disabled={selectedTests.length === 0}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-500 text-white px-6 py-3 font-semibold transition-colors border-2 border-transparent disabled:border-gray-400"
                   >
                     <Trash2 size={18} />
                     Delete Selected ({selectedTests.length})
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="red"
                     onClick={handleDeleteAll}
                     disabled={tests.length === 0}
-                    className="flex items-center gap-2 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 text-red-700 border-2 border-red-600 disabled:border-gray-400 px-6 py-3 font-semibold transition-colors"
                   >
                     <Trash2 size={18} />
                     Delete All Tests
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   type="submit"
-                  className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-10 py-3 font-bold text-lg transition-all shadow-lg hover:shadow-xl border-b-4 border-blue-900"
+                  variant="green"
+                  size="lg"
+                  className="px-10 text-lg shadow-lg hover:shadow-xl"
                 >
                   <FileText size={20} />
                   Save Record
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -690,27 +709,27 @@ export function DashboardAlpha() {
           {activeTab === "existing-patient" && (
             <div className="space-y-6 max-w-7xl mx-auto">
               {/* Info Banner */}
-              <div className="bg-teal-50 border-l-4 border-teal-600 p-5 shadow-sm">
+              <div className="bg-teal-500/10 border-l-4 border-teal-600 p-5 shadow-sm">
                 <div className="flex items-center gap-3">
                   <UserCheck className="text-teal-700" size={24} />
                   <div>
-                    <h3 className="font-bold text-teal-900">Existing Patient View</h3>
-                    <p className="text-sm text-teal-700">Patient information is locked. Only viewing is allowed for existing records.</p>
+                    <h3 className="font-bold text-teal-700 dark:text-teal-400">Existing Patient View</h3>
+                    <p className="text-sm text-teal-700 dark:text-teal-400">Patient information is locked. Only viewing is allowed for existing records.</p>
                   </div>
                 </div>
               </div>
 
               {/* Lab Number Card */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm opacity-75">
+              <div className="bg-card border-2 border-border p-6 opacity-75 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100">
+                  <div className="p-2 bg-blue-500/15 rounded">
                     <FileText className="text-blue-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Laboratory Record</h2>
+                  <h2 className="text-base font-semibold text-foreground">Laboratory Record</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Lab Number
                     </label>
                     <div className="flex items-center gap-2">
@@ -718,16 +737,16 @@ export function DashboardAlpha() {
                         type="text"
                         value="A1726021073491"
                         readOnly
-                        className="flex-1 px-4 py-3 bg-blue-50 border-2 border-blue-200 text-gray-900 font-mono text-lg font-bold focus:outline-none"
+                        className="flex-1 px-4 py-3 bg-blue-500/10 border-2 border-blue-500/30 text-foreground font-mono text-lg font-bold focus:outline-none rounded"
                       />
-                      <div className="px-4 py-3 bg-gray-100 border-2 border-gray-300">
-                        <Calendar className="text-gray-600" size={20} />
+                      <div className="px-4 py-3 bg-muted border-2 border-border rounded">
+                        <Calendar className="text-muted-foreground" size={20} />
                       </div>
                     </div>
                   </div>
                   <div className="flex items-end">
-                    <div className="w-full p-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200">
-                      <p className="text-xs text-gray-600 font-semibold mb-1">Status</p>
+                    <div className="w-full p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30">
+                      <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
                       <p className="text-sm font-bold text-amber-700">● View Only Mode</p>
                     </div>
                   </div>
@@ -735,38 +754,38 @@ export function DashboardAlpha() {
               </div>
 
               {/* Patient Information Card - Disabled */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm opacity-75 pointer-events-none">
+              <div className="bg-card border-2 border-border p-6 opacity-75 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-600">
-                  <div className="p-2 bg-blue-100">
+                  <div className="p-2 bg-blue-500/15 rounded">
                     <User className="text-blue-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Patient Information</h2>
+                  <h2 className="text-base font-semibold text-foreground">Patient Information</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <User size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <User size={16} className="text-muted-foreground" />
                       Patient Name <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="text"
                       value={patientName}
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                       placeholder="Enter patient full name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Users size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Users size={16} className="text-muted-foreground" />
                       Gender
                     </label>
                     <select
                       value={gender}
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                     >
                       <option value="">Select gender</option>
                       <option value="Male">Male</option>
@@ -776,29 +795,29 @@ export function DashboardAlpha() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Calendar size={16} className="text-muted-foreground" />
                       Age
                     </label>
                     <input
                       type="number"
                       value={age}
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                       placeholder="Enter age"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Phone size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Phone size={16} className="text-muted-foreground" />
                       Telephone Number
                     </label>
                     <input
                       type="tel"
                       value={telephone}
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                       placeholder="Enter phone number"
                     />
                   </div>
@@ -806,24 +825,24 @@ export function DashboardAlpha() {
               </div>
 
               {/* Referral Information Card - Disabled */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm opacity-75 pointer-events-none">
+              <div className="bg-card border-2 border-border p-6 opacity-75 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-teal-600">
-                  <div className="p-2 bg-teal-100">
+                  <div className="p-2 bg-teal-500/15 rounded">
                     <Stethoscope className="text-teal-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Referral Information</h2>
+                  <h2 className="text-base font-semibold text-foreground">Referral Information</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <ClipboardList size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <ClipboardList size={16} className="text-muted-foreground" />
                       Referral Option
                     </label>
                     <select
                       value={referralOption}
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                     >
                       <option value="None">None</option>
                       <option value="Doctor">Doctor</option>
@@ -834,15 +853,15 @@ export function DashboardAlpha() {
 
                   {(referralOption === "Doctor" || referralOption === "Hospital" || referralOption === "Insurance") && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Stethoscope size={16} className="text-gray-500" />
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Stethoscope size={16} className="text-muted-foreground" />
                         Doctor Name
                       </label>
                       <input
                         type="text"
                         value={doctorName}
                         disabled
-                        className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                        className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                         placeholder="Enter doctor name"
                       />
                     </div>
@@ -850,15 +869,15 @@ export function DashboardAlpha() {
 
                   {(referralOption === "Hospital" || referralOption === "Insurance") && (
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                        <Hospital size={16} className="text-gray-500" />
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Hospital size={16} className="text-muted-foreground" />
                         Hospital Name
                       </label>
                       <input
                         type="text"
                         value={hospitalName}
                         disabled
-                        className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                        className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                         placeholder="Enter hospital name"
                       />
                     </div>
@@ -867,100 +886,103 @@ export function DashboardAlpha() {
               </div>
 
               {/* Test Selection Card - Disabled */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm opacity-50 pointer-events-none">
+              <div className="bg-card border-2 border-border p-6 opacity-50 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-green-600">
-                  <div className="p-2 bg-green-100">
+                  <div className="p-2 bg-green-500/15 rounded">
                     <TestTube className="text-green-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Test Selection</h2>
+                  <h2 className="text-base font-semibold text-foreground">Test Selection</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
                   <div className="lg:col-span-3">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Select Laboratory Test
                     </label>
                     <select
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed text-sm"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed text-sm rounded"
                     >
                       <option value="">Choose a test from the list...</option>
                     </select>
                   </div>
                   <div className="flex items-end">
-                    <button
+                    <Button
                       disabled
-                      className="w-full flex items-center justify-center gap-2 bg-gray-400 text-white px-6 py-3 font-semibold cursor-not-allowed"
+                      variant="blue"
+                      className="w-full"
                     >
                       <Plus size={20} />
                       Add Test
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
                 {tests.length > 0 ? (
-                  <div className="border-2 border-gray-300 bg-gray-50">
-                    <div className="grid grid-cols-12 gap-4 bg-gray-200 px-4 py-3 border-b-2 border-gray-300">
+                  <div className="border-2 border-border bg-muted/50 rounded">
+                    <div className="grid grid-cols-12 gap-4 bg-muted px-4 py-3 border-b-2 border-border">
                       <div className="col-span-6">
-                        <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Test Name</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Test Name</p>
                       </div>
                       <div className="col-span-3">
-                        <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Department</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Department</p>
                       </div>
                       <div className="col-span-3 text-right">
-                        <p className="text-xs font-bold text-gray-600 uppercase tracking-wide">Cost</p>
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Cost</p>
                       </div>
                     </div>
                     {tests.map((test, index) => (
-                      <div key={test.id} className="grid grid-cols-12 gap-4 px-4 py-3 border-b border-gray-200">
+                      <div key={test.id} className={`grid grid-cols-12 gap-4 px-4 py-3 border-b border-border ${index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}`}>
                         <div className="col-span-6 flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-400 bg-gray-200 px-2 py-1 min-w-[28px] text-center">
+                          <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-1 min-w-[28px] text-center">
                             {index + 1}
                           </span>
-                          <p className="text-sm font-semibold text-gray-600">{test.testName}</p>
+                          <p className="text-sm font-semibold text-muted-foreground">{test.testName}</p>
                         </div>
                         <div className="col-span-3 flex items-center">
-                          <p className="text-sm text-gray-500">{test.department}</p>
+                          <p className="text-sm text-muted-foreground">{test.department}</p>
                         </div>
                         <div className="col-span-3 flex items-center justify-end">
-                          <p className="text-sm font-bold text-gray-600">${test.testCost.toFixed(2)}</p>
+                          <p className="text-sm font-bold text-muted-foreground">₵{test.testCost.toFixed(2)}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-16 border-2 border-dashed border-gray-300 bg-gray-50">
-                    <TestTube className="mx-auto text-gray-300 mb-4" size={48} />
-                    <p className="text-gray-400 font-medium">No tests recorded</p>
+                  <div className="text-center py-16 border-2 border-dashed border-border bg-muted/50">
+                    <TestTube className="mx-auto text-muted-foreground mb-4" size={48} />
+                    <p className="text-muted-foreground font-medium">No tests recorded</p>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons - Disabled */}
-              <div className="flex flex-wrap gap-4 justify-between items-center bg-white border-2 border-gray-200 p-6 shadow-sm opacity-50 pointer-events-none">
+              <div className="flex flex-wrap gap-4 justify-between items-center bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex gap-3">
-                  <button
+                  <Button
                     disabled
-                    className="flex items-center gap-2 bg-gray-300 text-gray-500 px-6 py-3 font-semibold border-2 border-gray-400"
+                    variant="red"
                   >
                     <Trash2 size={18} />
                     Delete Selected (0)
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     disabled
-                    className="flex items-center gap-2 bg-gray-100 text-gray-400 border-2 border-gray-400 px-6 py-3 font-semibold"
+                    variant="red"
                   >
                     <Trash2 size={18} />
                     Delete All Tests
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   disabled
-                  className="flex items-center gap-2 bg-gray-400 text-white px-10 py-3 font-bold text-lg border-b-4 border-gray-500"
+                  variant="green"
+                  size="lg"
+                  className="px-10 text-lg"
                 >
                   <FileText size={20} />
                   Save Record
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -968,27 +990,27 @@ export function DashboardAlpha() {
           {activeTab === "add-on-test" && (
             <div className="space-y-6 max-w-7xl mx-auto">
               {/* Info Banner */}
-              <div className="bg-green-50 border-l-4 border-green-600 p-5 shadow-sm">
+              <div className="bg-green-500/10 border-l-4 border-green-600 p-5 shadow-sm">
                 <div className="flex items-center gap-3">
                   <FlaskConical className="text-green-700" size={24} />
                   <div>
-                    <h3 className="font-bold text-green-900">Add-on Test Mode</h3>
-                    <p className="text-sm text-green-700">Patient information is locked. You can only add additional tests to this existing record.</p>
+                    <h3 className="font-bold text-green-700 dark:text-green-400">Add-on Test Mode</h3>
+                    <p className="text-sm text-green-700 dark:text-green-400">Patient information is locked. You can only add additional tests to this existing record.</p>
                   </div>
                 </div>
               </div>
 
               {/* Lab Number Card */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-100">
+                  <div className="p-2 bg-blue-500/15 rounded">
                     <FileText className="text-blue-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Laboratory Record</h2>
+                  <h2 className="text-base font-semibold text-foreground">Laboratory Record</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Lab Number
                     </label>
                     <div className="flex items-center gap-2">
@@ -996,16 +1018,16 @@ export function DashboardAlpha() {
                         type="text"
                         value="A1726021073491"
                         readOnly
-                        className="flex-1 px-4 py-3 bg-blue-50 border-2 border-blue-200 text-gray-900 font-mono text-lg font-bold focus:outline-none"
+                        className="flex-1 px-4 py-3 bg-blue-500/10 border-2 border-blue-500/30 text-foreground font-mono text-lg font-bold focus:outline-none rounded"
                       />
-                      <div className="px-4 py-3 bg-gray-100 border-2 border-gray-300">
-                        <Calendar className="text-gray-600" size={20} />
+                      <div className="px-4 py-3 bg-muted border-2 border-border rounded">
+                        <Calendar className="text-muted-foreground" size={20} />
                       </div>
                     </div>
                   </div>
                   <div className="flex items-end">
-                    <div className="w-full p-3 bg-gradient-to-r from-green-50 to-teal-50 border-2 border-green-200">
-                      <p className="text-xs text-gray-600 font-semibold mb-1">Status</p>
+                    <div className="w-full p-3 bg-gradient-to-r from-green-500/10 to-teal-500/10 border-2 border-green-500/30">
+                      <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
                       <p className="text-sm font-bold text-green-700">● Add-on Test Mode</p>
                     </div>
                   </div>
@@ -1013,64 +1035,64 @@ export function DashboardAlpha() {
               </div>
 
               {/* Patient Information Card - Disabled */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm opacity-60 pointer-events-none">
+              <div className="bg-card border-2 border-border p-6 opacity-60 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-600">
-                  <div className="p-2 bg-blue-100">
+                  <div className="p-2 bg-blue-500/15 rounded">
                     <User className="text-blue-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Patient Information</h2>
-                  <span className="ml-auto text-xs bg-gray-200 px-3 py-1 font-semibold text-gray-600">LOCKED</span>
+                  <h2 className="text-base font-semibold text-foreground">Patient Information</h2>
+                  <span className="ml-auto text-xs bg-muted px-3 py-1 font-semibold text-muted-foreground">LOCKED</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <User size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <User size={16} className="text-muted-foreground" />
                       Patient Name <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="text"
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                       placeholder="Enter patient full name"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Users size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Users size={16} className="text-muted-foreground" />
                       Gender
                     </label>
                     <select
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                     >
                       <option value="">Select gender</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Calendar size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Calendar size={16} className="text-muted-foreground" />
                       Age
                     </label>
                     <input
                       type="number"
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                       placeholder="Enter age"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <Phone size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <Phone size={16} className="text-muted-foreground" />
                       Telephone Number
                     </label>
                     <input
                       type="tel"
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                       placeholder="Enter phone number"
                     />
                   </div>
@@ -1078,24 +1100,24 @@ export function DashboardAlpha() {
               </div>
 
               {/* Referral Information Card - Disabled */}
-              <div className="bg-white border-2 border-gray-200 p-6 shadow-sm opacity-60 pointer-events-none">
+              <div className="bg-card border-2 border-border p-6 opacity-60 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-teal-600">
-                  <div className="p-2 bg-teal-100">
+                  <div className="p-2 bg-teal-500/15 rounded">
                     <Stethoscope className="text-teal-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Referral Information</h2>
-                  <span className="ml-auto text-xs bg-gray-200 px-3 py-1 font-semibold text-gray-600">LOCKED</span>
+                  <h2 className="text-base font-semibold text-foreground">Referral Information</h2>
+                  <span className="ml-auto text-xs bg-muted px-3 py-1 font-semibold text-muted-foreground">LOCKED</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                      <ClipboardList size={16} className="text-gray-500" />
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                      <ClipboardList size={16} className="text-muted-foreground" />
                       Referral Option
                     </label>
                     <select
                       disabled
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed"
+                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
                     >
                       <option value="None">None</option>
                     </select>
@@ -1104,52 +1126,54 @@ export function DashboardAlpha() {
               </div>
 
               {/* Test Selection Card - ACTIVE */}
-              <div className="bg-white border-2 border-green-400 p-6 shadow-lg">
+              <div className="bg-card border-2 border-green-400 p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-green-600">
-                  <div className="p-2 bg-green-100">
+                  <div className="p-2 bg-green-500/15 rounded">
                     <TestTube className="text-green-700" size={24} />
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900">Test Selection</h2>
-                  <span className="ml-auto text-xs bg-green-100 px-3 py-1 font-semibold text-green-700">ACTIVE</span>
+                  <h2 className="text-base font-semibold text-foreground">Test Selection</h2>
+                  <span className="ml-auto text-xs bg-green-500/15 px-3 py-1 font-semibold text-green-700 dark:text-green-400">ACTIVE</span>
                 </div>
                 
                 {/* Test Selection Controls */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
                   <div className="lg:col-span-3">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Select Laboratory Test
                     </label>
                     <select
                       value={selectedTestDropdown}
                       onChange={(e) => setSelectedTestDropdown(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 bg-white focus:outline-none focus:border-blue-600 text-sm transition-colors"
+                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 text-sm transition-colors rounded"
                     >
                       <option value="">Choose a test from the list...</option>
                       {availableTests.map((test) => (
                         <option key={test.id} value={test.id}>
-                          {test.testName} - {test.department} (${test.testCost.toFixed(2)})
+                          {test.testName} - {test.department} (₵{test.testCost.toFixed(2)})
                         </option>
                       ))}
                     </select>
                   </div>
                   <div className="flex items-end gap-2">
-                    <button
+                    <Button
                       type="button"
+                      variant="blue"
                       onClick={() => setIsModalOpen(true)}
-                      className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 font-semibold transition-colors"
+                      className="flex-1"
                     >
                       <Search size={20} />
                       Bulk Add
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="blue"
                       onClick={handleAddTest}
                       disabled={!selectedTestDropdown}
-                      className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-4 py-3 font-semibold transition-colors"
+                      className="flex-1"
                     >
                       <Plus size={20} />
                       Add
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -1158,17 +1182,17 @@ export function DashboardAlpha() {
                   <div className="grid lg:grid-cols-3 gap-6">
                     {/* Tests List - Takes 2/3 width */}
                     <div className="lg:col-span-2">
-                      <div className="border-2 border-gray-300 bg-white">
+                      <div className="border-2 border-border bg-card rounded">
                         {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-4 bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b-2 border-gray-300">
+                        <div className="grid grid-cols-12 gap-4 bg-gradient-to-r from-muted to-muted px-4 py-3 border-b-2 border-border">
                           <div className="col-span-6">
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Test Name</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Test Name</p>
                           </div>
                           <div className="col-span-3">
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Department</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Department</p>
                           </div>
                           <div className="col-span-3 text-right">
-                            <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Cost</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Cost</p>
                           </div>
                         </div>
                         
@@ -1198,79 +1222,81 @@ export function DashboardAlpha() {
                             <div 
                               key={test.id}
                               onClick={() => toggleTestSelection(test.id)}
-                              className={`grid grid-cols-12 gap-4 px-4 py-3 cursor-pointer transition-all border-b border-gray-200 ${
+                              className={`grid grid-cols-12 gap-4 px-4 py-3 cursor-pointer transition-all border-b border-border ${
                                 selectedTests.includes(test.id) 
-                                  ? "bg-blue-100 border-l-4 border-l-blue-600" 
+                                  ? "bg-primary/10 border-l-4 border-l-primary" 
                                   : index === focusedTestIndex 
-                                    ? "bg-gray-100 ring-2 ring-inset ring-blue-500" 
-                                    : "hover:bg-gray-50"
+                                    ? "bg-muted ring-2 ring-inset ring-blue-500" 
+                                    : index % 2 === 0
+                                      ? "bg-background hover:bg-muted/50"
+                                      : "bg-muted/30 hover:bg-muted/50"
                               }`}
                             >
                               <div className="col-span-6 flex items-center gap-2">
-                                <span className="text-xs font-bold text-gray-500 bg-gray-200 px-2 py-1 min-w-[28px] text-center">
+                                <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-1 min-w-[28px] text-center">
                                   {index + 1}
                                 </span>
-                                <p className="text-sm font-semibold text-gray-900">{test.testName}</p>
+                                <p className="text-sm font-semibold text-foreground">{test.testName}</p>
                               </div>
                               <div className="col-span-3 flex items-center">
-                                <p className="text-sm text-gray-700">{test.department}</p>
+                                <p className="text-sm text-muted-foreground">{test.department}</p>
                               </div>
                               <div className="col-span-3 flex items-center justify-end">
-                                <p className="text-sm font-bold text-green-700">${test.testCost.toFixed(2)}</p>
+                                <p className="text-sm font-bold text-green-700">₵{test.testCost.toFixed(2)}</p>
                               </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500 mt-2 italic">Click on a test row to select it for deletion</p>
+                      <p className="text-xs text-muted-foreground mt-2 italic">Click on a test row to select it for deletion</p>
                     </div>
 
                     {/* Payment Summary Card - Takes 1/3 width */}
                     <div className="lg:col-span-1">
-                      <div className="border-2 border-gray-300 bg-gradient-to-b from-white to-gray-50 p-5 sticky top-0">
+                      <div className="border-2 border-border bg-card p-6 sticky top-0 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                         <div className="flex items-center gap-2 mb-4 pb-3 border-b-2 border-teal-600">
                           <DollarSign className="text-teal-700" size={20} />
-                          <h3 className="text-base font-bold text-gray-900 uppercase tracking-wide">Payment</h3>
+                          <h3 className="text-base font-bold text-foreground uppercase tracking-wide">Payment</h3>
                         </div>
                         
                         <div className="space-y-4">
-                          <div className="flex justify-between items-center pb-3 border-b border-gray-300">
-                            <span className="text-sm text-gray-600 font-medium">Subtotal</span>
-                            <span className="text-base font-bold text-gray-900 font-mono">${subtotal.toFixed(2)}</span>
+                          <div className="flex justify-between items-center pb-3 border-b border-border">
+                            <span className="text-sm text-muted-foreground font-medium">Subtotal</span>
+                            <span className="text-base font-bold text-foreground font-mono">₵{subtotal.toFixed(2)}</span>
                           </div>
                           
-                          <div className="flex justify-between items-center pb-3 border-b border-gray-300">
-                            <span className="text-sm text-gray-600 font-medium">Total Cost</span>
-                            <span className="text-base font-bold text-gray-900 font-mono">${totalCost.toFixed(2)}</span>
+                          <div className="flex justify-between items-center pb-3 border-b border-border">
+                            <span className="text-sm text-muted-foreground font-medium">Total Cost</span>
+                            <span className="text-base font-bold text-foreground font-mono">₵{totalCost.toFixed(2)}</span>
                           </div>
                           
-                          <div className="pb-3 border-b border-gray-300">
-                            <label className="block text-sm text-gray-600 font-medium mb-2">Amount Paid</label>
+                          <div className="pb-3 border-b border-border">
+                            <label className="block text-sm text-muted-foreground font-medium mb-2">Amount Paid</label>
                             <div className="relative">
-                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">₵</span>
                               <input
                                 type="number"
                                 value={amountPaid}
                                 onChange={(e) => setAmountPaid(Number(e.target.value))}
-                                className="w-full pl-8 pr-3 py-2 text-right text-base font-bold text-gray-900 border-2 border-gray-400 focus:outline-none focus:border-blue-600 font-mono transition-colors"
+                                className="w-full pl-8 pr-3 py-2 text-right text-base font-bold text-foreground bg-background border border-border focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 font-mono transition-colors rounded"
                                 placeholder="0.00"
                                 step="0.01"
                               />
                             </div>
                           </div>
                           
-                          <div className={`flex justify-between items-center pt-3 border-t-2 border-gray-400 px-3 py-3 ${
-                            arrears > 0 ? 'bg-red-50 border-l-4 border-l-red-600' : 'bg-green-50 border-l-4 border-l-green-600'
+                          <div className={`flex justify-between items-center pt-3 border-t-2 border-border px-3 py-3 ${
+                            arrears > 0 ? 'bg-red-500/10 border-l-4 border-l-red-600' : 'bg-green-500/10 border-l-4 border-l-green-600'
                           }`}>
-                            <span className="text-sm font-bold text-gray-700 uppercase">Arrears</span>
+                            <span className="text-sm font-bold text-muted-foreground uppercase">Arrears</span>
                             <span className={`text-lg font-bold font-mono ${
                               arrears > 0 ? 'text-red-700' : 'text-green-700'
                             }`}>
-                              ${arrears.toFixed(2)}
+                              ₵{arrears.toFixed(2)}
                             </span>
                           </div>
 
-                          <div className="pt-2 text-xs text-gray-500 space-y-1">
+                          <div className="pt-2 text-xs text-muted-foreground space-y-1">
                             <p>• Total Tests: <span className="font-bold">{tests.length}</span></p>
                             <p>• Balance Due: <span className={`font-bold ${arrears > 0 ? 'text-red-600' : 'text-green-600'}`}>
                               {arrears > 0 ? 'Pending' : 'Cleared'}
@@ -1281,43 +1307,45 @@ export function DashboardAlpha() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-16 border-2 border-dashed border-gray-300 bg-gray-50">
-                    <TestTube className="mx-auto text-gray-400 mb-4" size={48} />
-                    <p className="text-gray-500 font-medium">No tests added yet</p>
-                    <p className="text-gray-400 text-sm mt-1">Select a test from the dropdown above to begin</p>
+                  <div className="text-center py-16 border-2 border-dashed border-border bg-muted/50">
+                    <TestTube className="mx-auto text-muted-foreground mb-4" size={48} />
+                    <p className="text-muted-foreground font-medium">No tests added yet</p>
+                    <p className="text-muted-foreground text-sm mt-1">Select a test from the dropdown above to begin</p>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-wrap gap-4 justify-between items-center bg-white border-2 border-gray-200 p-6 shadow-sm">
+              <div className="flex flex-wrap gap-4 justify-between items-center bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
                 <div className="flex gap-3">
-                  <button
+                  <Button
                     type="button"
+                    variant="red"
                     onClick={handleDeleteSelected}
                     disabled={selectedTests.length === 0}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-500 text-white px-6 py-3 font-semibold transition-colors border-2 border-transparent disabled:border-gray-400"
                   >
                     <Trash2 size={18} />
                     Delete Selected ({selectedTests.length})
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
+                    variant="red"
                     onClick={handleDeleteAll}
                     disabled={tests.length === 0}
-                    className="flex items-center gap-2 bg-white hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 text-red-700 border-2 border-red-600 disabled:border-gray-400 px-6 py-3 font-semibold transition-colors"
                   >
                     <Trash2 size={18} />
                     Delete All Tests
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   onClick={handleSaveRecord}
-                  className="flex items-center gap-2 bg-blue-700 hover:bg-blue-800 text-white px-10 py-3 font-bold text-lg transition-all shadow-lg hover:shadow-xl border-b-4 border-blue-900"
+                  variant="green"
+                  size="lg"
+                  className="px-10 text-lg shadow-lg hover:shadow-xl"
                 >
                   <FileText size={20} />
                   Save Record
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -1325,23 +1353,34 @@ export function DashboardAlpha() {
       </div>
 
       {/* Add Test Modal */}
-      {isModalOpen && (
-        <div 
-          ref={modalRef}
-          tabIndex={-1}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setIsModalOpen(false);
-          }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 outline-none"
-        >
-          <div className="bg-white border-2 border-gray-400 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <AnimatePresence mode="wait">
+        {isModalOpen && (
+          <motion.div 
+            ref={modalRef}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.15, ease: "easeOut" }}
+            tabIndex={-1}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setIsModalOpen(false);
+            }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 outline-none rounded"
+          >
+            <motion.div 
+              initial={shouldReduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={shouldReduceMotion ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.15, ease: "easeOut" }}
+              className="bg-card border-2 border-border shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col rounded"
+            >
             {/* Modal Header */}
-            <div className="border-b-2 border-gray-400 p-6">
+            <div className="border-b-2 border-border p-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold text-gray-900 border-b-2 border-gray-900 pb-2">Select Test</h3>
+                <h3 className="text-xl font-bold text-foreground border-b-2 border-foreground pb-2">Select Test</h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-900 hover:bg-gray-100 p-2 transition-colors"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted p-2 transition-colors rounded"
                 >
                   <X size={24} />
                 </button>
@@ -1349,14 +1388,14 @@ export function DashboardAlpha() {
             </div>
 
             {/* Search Bar */}
-            <div className="p-6 border-b border-gray-300">
+            <div className="p-6 border-b border-border">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-400 focus:outline-none focus:border-blue-600"
+                  className="w-full pl-10 pr-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
                   placeholder="Search by test name or department..."
                 />
               </div>
@@ -1364,27 +1403,25 @@ export function DashboardAlpha() {
 
             {/* Test List */}
             <div className="flex-1 overflow-auto p-6">
-              <div className="border border-gray-400">
+              <div className="border border-border rounded">
                 <table className="w-full">
-                  <thead className="bg-gray-200 sticky top-0">
+                  <thead className="bg-muted sticky top-0 border-b-2 border-border">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 border-b border-r border-gray-400 w-12">
-                        <input
-                          type="checkbox"
+                      <th className="px-4 py-3 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground border-r border-border w-12">
+                        <Checkbox
                           checked={selectedAvailableTests.length === filteredAvailableTests.length && filteredAvailableTests.length > 0}
-                          onChange={(e) => {
-                            if (e.target.checked) {
+                          onCheckedChange={(checked) => {
+                            if (checked) {
                               setSelectedAvailableTests(filteredAvailableTests.map(t => t.id));
                             } else {
                               setSelectedAvailableTests([]);
                             }
                           }}
-                          className="w-4 h-4"
                         />
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 border-b border-r border-gray-400">Test Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 border-b border-r border-gray-400">Department</th>
-                      <th className="px-4 py-3 text-right text-sm font-bold text-gray-900 border-b border-gray-400 bg-amber-50">Test Cost</th>
+                      <th className="px-4 py-3 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground border-r border-border">Test Name</th>
+                      <th className="px-4 py-3 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground border-r border-border">Department</th>
+                      <th className="px-4 py-3 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground">Test Cost</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1392,24 +1429,22 @@ export function DashboardAlpha() {
                       <tr 
                         key={test.id} 
                         onClick={() => toggleAvailableTestSelection(test.id)}
-                        className={`cursor-pointer hover:bg-gray-100 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                        className={`cursor-pointer transition-colors ${index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'}`}
                       >
-                        <td className="px-4 py-3 border-b border-r border-gray-300">
-                          <input
-                            type="checkbox"
+                        <td className="px-4 py-3 border-b border-r border-border">
+                          <Checkbox
                             checked={selectedAvailableTests.includes(test.id)}
-                            onChange={() => toggleAvailableTestSelection(test.id)}
-                            className="w-4 h-4"
+                            onCheckedChange={() => toggleAvailableTestSelection(test.id)}
                           />
                         </td>
-                        <td className="px-4 py-3 border-b border-r border-gray-300">
-                          <span className="text-sm font-medium text-gray-900">{test.testName}</span>
+                        <td className="px-4 py-3 border-b border-r border-border">
+                          <span className="text-sm font-medium text-foreground">{test.testName}</span>
                         </td>
-                        <td className="px-4 py-3 border-b border-r border-gray-300">
-                          <span className="text-sm text-gray-700">{test.department}</span>
+                        <td className="px-4 py-3 border-b border-r border-border">
+                          <span className="text-sm text-muted-foreground">{test.department}</span>
                         </td>
-                        <td className="px-4 py-3 text-right border-b border-gray-300 bg-amber-50">
-                          <span className="text-sm font-semibold text-gray-900">${test.testCost.toFixed(2)}</span>
+                        <td className="px-4 py-3 text-right border-b border-border bg-amber-500/10">
+                          <span className="text-sm font-semibold text-foreground">₵{test.testCost.toFixed(2)}</span>
                         </td>
                       </tr>
                     ))}
@@ -1418,37 +1453,42 @@ export function DashboardAlpha() {
               </div>
 
               {filteredAvailableTests.length === 0 && (
-                <div className="text-center py-12 text-gray-500">
-                  <p className="font-medium">No tests found matching your search</p>
+                <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded bg-muted/30 m-6">
+                  <TestTube className="mx-auto text-muted-foreground mb-3" size={40} />
+                  <p className="text-sm font-medium">No tests found matching your search</p>
+                  <p className="text-xs mt-1">Try a different search term or check department names</p>
                 </div>
               )}
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t-2 border-gray-400 p-6 flex justify-between items-center">
-              <p className="text-sm text-gray-600">
+            <div className="border-t-2 border-border p-6 flex justify-between items-center">
+              <p className="text-sm text-muted-foreground">
                 <span className="font-semibold">{selectedAvailableTests.length}</span> test(s) selected
               </p>
               <div className="flex gap-3">
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-2 border-2 border-gray-400 text-gray-700 font-semibold hover:bg-gray-100 transition-colors"
+                  className="px-6"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="green"
                   onClick={handleAddSelectedTests}
                   disabled={selectedAvailableTests.length === 0}
-                  className="flex items-center gap-2 px-6 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold transition-colors"
+                  className="px-6"
                 >
                   <Plus size={18} />
                   Add Selected Tests
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
+  </div>
   );
 }

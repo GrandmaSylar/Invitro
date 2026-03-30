@@ -26,11 +26,11 @@ export function MainDashboard() {
   return (
     <div className="p-4">
       {/* Row 1: KPI Strip */}
-      <div className="grid grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
         {/* 1. Patients Today */}
-        <div className="bg-card border border-border text-card-foreground p-4" style={{ borderRadius: 0 }}>
+        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-blue-100 flex items-center justify-center" style={{ borderRadius: 0 }}>
+            <div className="w-8 h-8 bg-blue-100 flex items-center justify-center rounded">
               <Users className="text-blue-600" size={16} />
             </div>
             <div className="text-xs text-muted-foreground">Patients Today</div>
@@ -40,9 +40,9 @@ export function MainDashboard() {
         </div>
 
         {/* 2. Tests Run Today */}
-        <div className="bg-card border border-border text-card-foreground p-4" style={{ borderRadius: 0 }}>
+        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-purple-100 flex items-center justify-center" style={{ borderRadius: 0 }}>
+            <div className="w-8 h-8 bg-purple-100 flex items-center justify-center rounded">
               <TestTube className="text-purple-600" size={16} />
             </div>
             <div className="text-xs text-muted-foreground">Tests Run Today</div>
@@ -52,21 +52,21 @@ export function MainDashboard() {
         </div>
 
         {/* 3. Monthly Revenue */}
-        <div className="bg-card border border-border text-card-foreground p-4" style={{ borderRadius: 0 }}>
+        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-green-100 flex items-center justify-center" style={{ borderRadius: 0 }}>
+            <div className="w-8 h-8 bg-green-100 flex items-center justify-center rounded">
               <TrendingUp className="text-green-600" size={16} />
             </div>
             <div className="text-xs text-muted-foreground">Monthly Revenue</div>
           </div>
-          <div className="text-2xl font-bold mb-1">$84,600</div>
+          <div className="text-2xl font-bold mb-1">₵84,600</div>
           <div className="text-xs text-green-600">↑ 12.5% vs last month</div>
         </div>
 
         {/* 4. Pending Results */}
-        <div className="bg-card border border-border text-card-foreground p-4" style={{ borderRadius: 0 }}>
+        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-amber-100 flex items-center justify-center" style={{ borderRadius: 0 }}>
+            <div className="w-8 h-8 bg-amber-100 flex items-center justify-center rounded">
               <Activity className="text-amber-600" size={16} />
             </div>
             <div className="text-xs text-muted-foreground">Pending Results</div>
@@ -81,8 +81,8 @@ export function MainDashboard() {
         {/* Left Column */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           {/* Patient Traffic Chart */}
-          <div className="bg-card border border-border p-4" style={{ borderRadius: 0 }}>
-            <h3 className="text-sm font-bold text-foreground mb-4">Patient Traffic</h3>
+          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <h3 className="text-base font-semibold text-foreground mb-4">Patient Traffic</h3>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={weeklyData}>
                 <CartesianGrid key="bar-grid" strokeDasharray="3 3" stroke="var(--border)" />
@@ -91,7 +91,7 @@ export function MainDashboard() {
                 <Tooltip
                   key="bar-tooltip"
                   contentStyle={{
-                    borderRadius: 0,
+                    borderRadius: 8,
                     border: '1px solid var(--border)',
                     backgroundColor: 'var(--background)',
                     color: 'var(--foreground)'
@@ -105,8 +105,8 @@ export function MainDashboard() {
           </div>
 
           {/* Revenue Chart */}
-          <div className="bg-card border border-border p-4" style={{ borderRadius: 0 }}>
-            <h3 className="text-sm font-bold text-foreground mb-4">Revenue Trend</h3>
+          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <h3 className="text-base font-semibold text-foreground mb-4">Revenue Trend</h3>
             <ResponsiveContainer width="100%" height={180}>
               <LineChart data={weeklyData}>
                 <CartesianGrid key="line-grid" strokeDasharray="3 3" stroke="var(--border)" />
@@ -115,7 +115,7 @@ export function MainDashboard() {
                 <Tooltip
                   key="line-tooltip"
                   contentStyle={{
-                    borderRadius: 0,
+                    borderRadius: 8,
                     border: '1px solid var(--border)',
                     backgroundColor: 'var(--background)',
                     color: 'var(--foreground)'
@@ -128,7 +128,7 @@ export function MainDashboard() {
                   dataKey="revenue"
                   stroke="#10b981"
                   strokeWidth={2}
-                  name="Revenue ($)"
+                  name="Revenue (₵)"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -138,8 +138,8 @@ export function MainDashboard() {
         {/* Right Column */}
         <div className="lg:col-span-1 flex flex-col gap-4">
           {/* Patients Health Stats */}
-          <div className="bg-card border border-border p-4" style={{ borderRadius: 0 }}>
-            <h3 className="text-sm font-bold text-foreground mb-6">Patients Health Stats</h3>
+          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+            <h3 className="text-base font-semibold text-foreground mb-6">Patients Health Stats</h3>
             
             {/* Bar visualization */}
             <div className="space-y-3 mb-6">
@@ -152,12 +152,11 @@ export function MainDashboard() {
                     </div>
                     <span className="text-xs font-semibold text-foreground">{item.percentage}%</span>
                   </div>
-                  <div className="w-full bg-muted h-2" style={{ borderRadius: 0 }}>
+                  <div className="w-full bg-muted h-2 rounded">
                     <div
                       className={`h-2 ${item.color}`}
                       style={{
-                        width: `${item.percentage}%`,
-                        borderRadius: 0
+                        width: `${item.percentage}%`
                       }}
                     />
                   </div>
@@ -171,14 +170,14 @@ export function MainDashboard() {
           </div>
 
           {/* Today's Schedule */}
-          <div className="bg-card border border-border p-4" style={{ borderRadius: 0 }}>
+          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="text-blue-600" size={16} />
-              <h3 className="text-sm font-bold text-foreground">Today's Schedule</h3>
+              <h3 className="text-base font-semibold text-foreground">Today's Schedule</h3>
             </div>
             <div className="space-y-3">
               <div className="flex items-start gap-3 pb-3 border-b border-border">
-                <div className="w-1 h-12 bg-orange-600" style={{ borderRadius: 0 }}></div>
+                <div className="w-1 h-12 bg-orange-600 rounded"></div>
                 <div className="flex-1">
                   <div className="text-xs font-semibold text-foreground mb-1">Lunch</div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -188,7 +187,7 @@ export function MainDashboard() {
                 </div>
               </div>
               <div className="flex items-start gap-3 pb-3 border-b border-border">
-                <div className="w-1 h-12 bg-purple-600" style={{ borderRadius: 0 }}></div>
+                <div className="w-1 h-12 bg-purple-600 rounded"></div>
                 <div className="flex-1">
                   <div className="text-xs font-semibold text-foreground mb-1">Results Review</div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -198,7 +197,7 @@ export function MainDashboard() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-1 h-12 bg-green-600" style={{ borderRadius: 0 }}></div>
+                <div className="w-1 h-12 bg-green-600 rounded"></div>
                 <div className="flex-1">
                   <div className="text-xs font-semibold text-foreground mb-1">Revenue Calculation</div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -213,14 +212,14 @@ export function MainDashboard() {
       </div>
 
       {/* Row 3: Quick Actions */}
-      <div className="bg-card border border-border p-4 flex items-center gap-3" style={{ borderRadius: 0 }}>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => navigate("/patients?tab=new-patient")}>
+      <div className="bg-card border border-border p-6 flex items-center gap-3 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+        <Button variant="blue" onClick={() => navigate("/patients?tab=new-patient")}>
           + New Patient
         </Button>
-        <Button className="bg-teal-600 hover:bg-teal-700 text-white" onClick={() => navigate("/patients?tab=existing-patient")}>
+        <Button variant="blue" onClick={() => navigate("/patients?tab=existing-patient")}>
           Existing Patients
         </Button>
-        <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => navigate("/results-entry")}>
+        <Button variant="blue" onClick={() => navigate("/results-entry")}>
           Test Results Entry
         </Button>
         <Button variant="outline" className="ml-auto" onClick={() => window.print()}>
