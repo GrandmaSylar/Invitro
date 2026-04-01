@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Users, TestTube, Building2, FileText, Plus, Trash2, Search, X, UserPlus, UserCheck, FlaskConical, Calendar, DollarSign, User, Phone, Hospital, Stethoscope, ClipboardList } from "lucide-react";
+import { Users, TestTube, Building2, FileText, Plus, Trash2, Search, X, UserPlus, UserCheck, FlaskConical, Calendar, DollarSign, User, Phone, Hospital, Stethoscope, ClipboardList, Circle } from "lucide-react";
 import { LabBanner } from "./LabBanner";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
@@ -332,7 +332,7 @@ export function DashboardAlpha() {
                   <div className="flex items-end">
                     <div className="w-full p-3 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border-2 border-blue-500/30">
                       <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
-                      <p className="text-sm font-bold text-green-700">● Active Registration</p>
+                      <p className="text-sm font-bold text-green-700 flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-current" /> Active Registration</p>
                     </div>
                   </div>
                 </div>
@@ -747,7 +747,7 @@ export function DashboardAlpha() {
                   <div className="flex items-end">
                     <div className="w-full p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30">
                       <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
-                      <p className="text-sm font-bold text-amber-700">● View Only Mode</p>
+                      <p className="text-sm font-bold text-amber-700 flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-current" /> View Only Mode</p>
                     </div>
                   </div>
                 </div>
@@ -1028,7 +1028,7 @@ export function DashboardAlpha() {
                   <div className="flex items-end">
                     <div className="w-full p-3 bg-gradient-to-r from-green-500/10 to-teal-500/10 border-2 border-green-500/30">
                       <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
-                      <p className="text-sm font-bold text-green-700">● Add-on Test Mode</p>
+                      <p className="text-sm font-bold text-green-700 flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-current" /> Add-on Test Mode</p>
                     </div>
                   </div>
                 </div>

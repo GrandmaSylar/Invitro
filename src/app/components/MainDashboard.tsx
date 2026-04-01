@@ -1,4 +1,4 @@
-import { Activity, Users, TestTube, TrendingUp, Calendar, Clock } from "lucide-react";
+import { Activity, Users, TestTube, TrendingUp, Calendar, Clock, AlertTriangle, Download } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
@@ -36,7 +36,7 @@ export function MainDashboard() {
             <div className="text-xs text-muted-foreground">Patients Today</div>
           </div>
           <div className="text-2xl font-bold mb-1">287</div>
-          <div className="text-xs text-green-600">↑ 8% vs yesterday</div>
+          <div className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> 8% vs yesterday</div>
         </div>
 
         {/* 2. Tests Run Today */}
@@ -48,7 +48,7 @@ export function MainDashboard() {
             <div className="text-xs text-muted-foreground">Tests Run Today</div>
           </div>
           <div className="text-2xl font-bold mb-1">541</div>
-          <div className="text-xs text-green-600">↑ 12% vs yesterday</div>
+          <div className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> 12% vs yesterday</div>
         </div>
 
         {/* 3. Monthly Revenue */}
@@ -60,7 +60,7 @@ export function MainDashboard() {
             <div className="text-xs text-muted-foreground">Monthly Revenue</div>
           </div>
           <div className="text-2xl font-bold mb-1">₵84,600</div>
-          <div className="text-xs text-green-600">↑ 12.5% vs last month</div>
+          <div className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> 12.5% vs last month</div>
         </div>
 
         {/* 4. Pending Results */}
@@ -72,7 +72,7 @@ export function MainDashboard() {
             <div className="text-xs text-muted-foreground">Pending Results</div>
           </div>
           <div className="text-2xl font-bold mb-1">34</div>
-          <div className="text-xs text-amber-500">⚠ Needs attention</div>
+          <div className="text-xs text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Needs attention</div>
         </div>
       </div>
 
@@ -223,7 +223,7 @@ export function MainDashboard() {
           Test Results Entry
         </Button>
         <Button variant="outline" className="ml-auto" onClick={() => window.print()}>
-          ⬇ Download Full Report
+          <span className="inline-flex items-center gap-1.5"><Download className="h-4 w-4" /> Download Full Report</span>
         </Button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, Link, useLocation, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import {
   Users,
@@ -10,19 +10,84 @@ import {
   Moon,
   Sun,
   Settings,
-  LayoutDashboard
+  LayoutDashboard,
+  Shield,
+  UserCog
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Toaster } from "./ui/sonner";
+import { useAuth } from "../../hooks/useAuth";
+import { usePermission } from "../../hooks/usePermission";
+import { PERMISSIONS } from "../../lib/permissions";
+import { MyPermissionsModal } from "./MyPermissionsModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+} from "./ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "./ui/alert-dialog";
 
 const navItems = [
-  { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-  { name: "Patients", icon: Users, path: "/patients" },
-  { name: "Test Register", icon: TestTube, path: "/test-register" },
-  { name: "Hospital Records", icon: Building2, path: "/hospital-records" },
-  { name: "Results Entry", icon: FileText, path: "/results-entry" },
+  { name: "Dashboard", icon: LayoutDashboard, path: "/", permissionKey: PERMISSIONS['dashboard.view'] },
+  { name: "Patients", icon: Users, path: "/patients", permissionKey: PERMISSIONS['patients.view'] },
+  { name: "Test Register", icon: TestTube, path: "/test-register", permissionKey: PERMISSIONS['test_register.view'] },
+  { name: "Hospital Records", icon: Building2, path: "/hospital-records", permissionKey: PERMISSIONS['hospital_records.view'] },
+  { name: "Results Entry", icon: FileText, path: "/results-entry", permissionKey: PERMISSIONS['results_entry.view'] },
+  { name: "Users", icon: UserCog, path: "/rbac/users", permissionKey: PERMISSIONS['rbac.manage_users'] },
+  { name: "Permissions", icon: Shield, path: "/rbac/permissions", permissionKey: PERMISSIONS['rbac.manage_roles'] },
 ];
+
+function NavLink({ item, isExpanded, isActive }: { item: any; isExpanded: boolean; isActive: boolean }) {
+  const hasPermission = usePermission(item.permissionKey);
+  if (!hasPermission) return null;
+
+  const Icon = item.icon;
+  const linkContent = (
+    <Link
+      to={item.path}
+      className={`flex items-center transition-all duration-200 rounded ${
+        isExpanded ? "gap-3 px-4 py-2.5" : "justify-center w-10 h-10 mx-auto"
+      } ${
+        isActive
+          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      }`}
+    >
+      <Icon size={20} className="shrink-0" />
+      <span className={`text-sm font-semibold overflow-hidden whitespace-nowrap transition-all duration-200 ${
+        isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"
+      }`}>
+        {item.name}
+      </span>
+    </Link>
+  );
+
+  return isExpanded ? (
+    <div>{linkContent}</div>
+  ) : (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        {linkContent}
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        {item.name}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 const PAGE_LABELS: Record<string, string> = {
   "/": "Dashboard",
@@ -30,14 +95,22 @@ const PAGE_LABELS: Record<string, string> = {
   "/test-register": "Test Register",
   "/hospital-records": "Hospital Records",
   "/results-entry": "Results Entry",
-  "/profile": "Profile"
+  "/profile": "Profile",
+  "/rbac/users": "User Management",
+  "/rbac/permissions": "Permission Management",
+  "/settings": "Settings"
 };
 
 export function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  
+  const { user, logout } = useAuth();
+  const [showPermissions, setShowPermissions] = useState(false);
+  const [showSignOut, setShowSignOut] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -68,43 +141,14 @@ export function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 py-6 flex flex-col gap-1 px-2">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
-            const linkContent = (
-              <Link
-                to={item.path}
-                className={`flex items-center transition-all duration-200 rounded ${
-                  isExpanded ? "gap-3 px-4 py-2.5" : "justify-center w-10 h-10 mx-auto"
-                } ${
-                  isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                }`}
-              >
-                <Icon size={20} className="shrink-0" />
-                <span className={`text-sm font-semibold overflow-hidden whitespace-nowrap transition-all duration-200 ${
-                  isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"
-                }`}>
-                  {item.name}
-                </span>
-              </Link>
-            );
-
-            return isExpanded ? (
-              <div key={item.path}>{linkContent}</div>
-            ) : (
-              <Tooltip key={item.path}>
-                <TooltipTrigger asChild>
-                  {linkContent}
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  {item.name}
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink 
+              key={item.path}
+              item={item} 
+              isExpanded={isExpanded} 
+              isActive={location.pathname === item.path} 
+            />
+          ))}
         </nav>
       </aside>
 
@@ -133,7 +177,10 @@ export function Layout() {
               <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0">
                 <Bell size={20} className="text-muted-foreground" />
               </button>
-              <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0">
+              <button 
+                onClick={() => navigate('/settings')}
+                className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0"
+              >
                 <Settings size={20} className="text-muted-foreground" />
               </button>
               <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
@@ -141,9 +188,39 @@ export function Layout() {
               </button>
               
               {/* User Avatar */}
-              <Link to="/profile" className="shrink-0">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded"></div>
-              </Link>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="shrink-0 outline-none flex items-center gap-2 hover:bg-accent p-1 -mr-1 rounded-md transition-colors">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      {user?.fullName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
+                    </div>
+                    <span className="text-sm font-medium truncate max-w-[150px] hidden sm:block pr-2">
+                      {user?.fullName}
+                    </span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user?.fullName}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPermissions(true)} className="cursor-pointer">
+                    My Permissions
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowSignOut(true)} className="text-destructive cursor-pointer">
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
@@ -154,6 +231,30 @@ export function Layout() {
         </main>
       </div>
       <Toaster />
+      
+      <MyPermissionsModal open={showPermissions} onOpenChange={setShowPermissions} />
+      
+      <AlertDialog open={showSignOut} onOpenChange={setShowSignOut}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be signed out. Are you sure you want to continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                logout();
+                navigate('/login', { replace: true });
+              }}
+            >
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
