@@ -8,13 +8,11 @@ import { useSettingsStore } from '../../stores/useSettingsStore';
 import { CheckCircle2, Play } from 'lucide-react';
 
 export default function SystemHealthSection() {
-  const { dbConfigs } = useSettingsStore();
-
   const [diagRunning, setDiagRunning] = useState(false);
   const [diagComplete, setDiagComplete] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const activeDb = dbConfigs.find(c => c.isActive);
+  const activeDbName = import.meta.env.VITE_SUPABASE_URL ? 'Supabase' : 'None';
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -61,8 +59,8 @@ export default function SystemHealthSection() {
             </div>
             <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
               <Label className="text-muted-foreground text-xs uppercase tracking-wider">Active DB Connection</Label>
-              <div className="font-semibold text-lg truncate" title={activeDb?.name || 'None'}>
-                {activeDb?.name || 'None'}
+              <div className="font-semibold text-lg truncate" title={activeDbName}>
+                {activeDbName}
               </div>
             </div>
             <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">

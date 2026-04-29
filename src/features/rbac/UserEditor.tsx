@@ -4,12 +4,12 @@ import { rbacService } from '../../services/rbacService';
 import { User, Role, PermissionMap } from '../../lib/types';
 import { PERMISSION_MODULES } from '../../lib/permissions';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '../../app/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../../app/components/ui/dialog';
 import { Input } from '../../app/components/ui/input';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../../app/components/ui/select';
 import {
@@ -45,6 +45,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
     fullName: '',
     email: '',
     username: '',
+    password: '',
     roleId: '',
     sendInvite: true,
   });
@@ -59,6 +60,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
           fullName: user.fullName,
           email: user.email,
           username: user.username,
+          password: '',
           roleId: user.roleId,
           sendInvite: false,
         });
@@ -68,6 +70,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
           fullName: '',
           email: '',
           username: '',
+          password: '',
           roleId: roles.length > 0 ? roles[0].id : '',
           sendInvite: true,
         });
@@ -111,6 +114,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
           fullName: formData.fullName,
           email: formData.email,
           username: formData.username,
+          password: formData.password || undefined,
           roleId: formData.roleId,
           status: 'active' as const,
           twoFactorEnabled: false,
@@ -140,18 +144,18 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md flex flex-col h-full z-[100]">
-        <SheetHeader>
-          <SheetTitle>{mode === 'create' ? 'Invite New User' : 'Edit User'}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full sm:max-w-2xl flex flex-col max-h-[90vh] z-[100] p-0 gap-0 overflow-hidden backdrop-blur-sm">
+        <DialogHeader className="px-6 py-4 border-b">
+          <DialogTitle>{mode === 'create' ? 'Invite New User' : 'Edit User'}</DialogTitle>
+          <DialogDescription>
             {mode === 'create' 
               ? 'Add a new user to the system and assign their role.' 
               : 'Update user details and role assignment.'}
-          </SheetDescription>
-        </SheetHeader>
+          </DialogDescription>
+        </DialogHeader>
         
-        <ScrollArea className="flex-1 -mx-6 px-6 py-4">
+        <div className="flex-1 px-6 py-4 overflow-y-auto">
           <div className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -189,6 +193,19 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
                 </p>
               )}
             </div>
+
+            {mode === 'create' && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Initial Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  placeholder="Leave empty to use default (tempPassword123!)"
+                />
+              </div>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="roleId">Role Assignment</Label>
@@ -322,9 +339,9 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
         
-        <div className="pt-6 border-t mt-auto space-y-4">
+        <div className="px-6 py-4 border-t mt-auto space-y-4 bg-muted/10">
           <div className="flex items-center justify-between">
             {mode === 'edit' && user ? (
               <AlertDialog>
@@ -362,7 +379,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
             </div>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

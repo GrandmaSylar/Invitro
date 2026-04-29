@@ -25,116 +25,7 @@ interface AvailableTest {
   testCost: number;
 }
 
-const availableTests: AvailableTest[] = [
-  { id: "test1", testName: "Complete Blood Count (CBC)", department: "Hematology", testCost: 45.00 },
-  { id: "test2", testName: "Lipid Panel", department: "Biochemistry", testCost: 65.00 },
-  { id: "test3", testName: "Thyroid Panel (TSH, T3, T4)", department: "Endocrinology", testCost: 120.00 },
-  { id: "test4", testName: "Glucose Fasting", department: "Biochemistry", testCost: 25.00 },
-  { id: "test5", testName: "HbA1c (Glycated Hemoglobin)", department: "Biochemistry", testCost: 55.00 },
-  { id: "test6", testName: "Liver Function Test (LFT)", department: "Biochemistry", testCost: 75.00 },
-  { id: "test7", testName: "Kidney Function Test (KFT)", department: "Biochemistry", testCost: 70.00 },
-  { id: "test8", testName: "Urine Analysis", department: "Pathology", testCost: 30.00 },
-  { id: "test9", testName: "Stool Analysis", department: "Microbiology", testCost: 35.00 },
-  { id: "test10", testName: "Malaria Test", department: "Parasitology", testCost: 20.00 },
-  { id: "test11", testName: "HIV Test", department: "Serology", testCost: 40.00 },
-  { id: "test12", testName: "Hepatitis B Surface Antigen", department: "Serology", testCost: 50.00 },
-  { id: "test13", testName: "Hepatitis C Antibody", department: "Serology", testCost: 55.00 },
-  { id: "test14", testName: "Blood Group & Rh Typing", department: "Hematology", testCost: 30.00 },
-  { id: "test15", testName: "Pregnancy Test (Beta-hCG)", department: "Endocrinology", testCost: 35.00 },
-  { id: "test16", testName: "Prostate Specific Antigen (PSA)", department: "Biochemistry", testCost: 80.00 },
-  { id: "test17", testName: "Vitamin D Test", department: "Biochemistry", testCost: 90.00 },
-  { id: "test18", testName: "Electrolytes Panel", department: "Biochemistry", testCost: 60.00 },
-  { id: "test19", testName: "C-Reactive Protein (CRP)", department: "Immunology", testCost: 45.00 },
-  { id: "test20", testName: "Erythrocyte Sedimentation Rate (ESR)", department: "Hematology", testCost: 25.00 },
-  { id: "test21", testName: "Prothrombin Time (PT)", department: "Hematology", testCost: 40.00 },
-  { id: "test22", testName: "Partial Thromboplastin Time (PTT)", department: "Hematology", testCost: 42.00 },
-  { id: "test23", testName: "International Normalized Ratio (INR)", department: "Hematology", testCost: 38.00 },
-  { id: "test24", testName: "D-Dimer Test", department: "Hematology", testCost: 65.00 },
-  { id: "test25", testName: "Reticulocyte Count", department: "Hematology", testCost: 35.00 },
-  { id: "test26", testName: "Iron Studies (Serum Iron, TIBC, Ferritin)", department: "Biochemistry", testCost: 85.00 },
-  { id: "test27", testName: "Vitamin B12 Test", department: "Biochemistry", testCost: 55.00 },
-  { id: "test28", testName: "Folate (Folic Acid) Test", department: "Biochemistry", testCost: 50.00 },
-  { id: "test29", testName: "Serum Calcium", department: "Biochemistry", testCost: 30.00 },
-  { id: "test30", testName: "Serum Magnesium", department: "Biochemistry", testCost: 32.00 },
-  { id: "test31", testName: "Serum Phosphorus", department: "Biochemistry", testCost: 30.00 },
-  { id: "test32", testName: "Uric Acid Test", department: "Biochemistry", testCost: 28.00 },
-  { id: "test33", testName: "Creatinine Test", department: "Biochemistry", testCost: 25.00 },
-  { id: "test34", testName: "Blood Urea Nitrogen (BUN)", department: "Biochemistry", testCost: 25.00 },
-  { id: "test35", testName: "Total Protein", department: "Biochemistry", testCost: 28.00 },
-  { id: "test36", testName: "Albumin Test", department: "Biochemistry", testCost: 26.00 },
-  { id: "test37", testName: "Globulin Test", department: "Biochemistry", testCost: 28.00 },
-  { id: "test38", testName: "Bilirubin Total and Direct", department: "Biochemistry", testCost: 35.00 },
-  { id: "test39", testName: "Alkaline Phosphatase (ALP)", department: "Biochemistry", testCost: 32.00 },
-  { id: "test40", testName: "Alanine Aminotransferase (ALT)", department: "Biochemistry", testCost: 30.00 },
-  { id: "test41", testName: "Aspartate Aminotransferase (AST)", department: "Biochemistry", testCost: 30.00 },
-  { id: "test42", testName: "Gamma-Glutamyl Transferase (GGT)", department: "Biochemistry", testCost: 35.00 },
-  { id: "test43", testName: "Lactate Dehydrogenase (LDH)", department: "Biochemistry", testCost: 38.00 },
-  { id: "test44", testName: "Amylase Test", department: "Biochemistry", testCost: 40.00 },
-  { id: "test45", testName: "Lipase Test", department: "Biochemistry", testCost: 42.00 },
-  { id: "test46", testName: "Creatine Kinase (CK)", department: "Biochemistry", testCost: 45.00 },
-  { id: "test47", testName: "Troponin I/T Test", department: "Biochemistry", testCost: 95.00 },
-  { id: "test48", testName: "Brain Natriuretic Peptide (BNP)", department: "Biochemistry", testCost: 110.00 },
-  { id: "test49", testName: "Cortisol Test", department: "Endocrinology", testCost: 70.00 },
-  { id: "test50", testName: "ACTH Test", department: "Endocrinology", testCost: 85.00 },
-  { id: "test51", testName: "Growth Hormone Test", department: "Endocrinology", testCost: 90.00 },
-  { id: "test52", testName: "Prolactin Test", department: "Endocrinology", testCost: 65.00 },
-  { id: "test53", testName: "Luteinizing Hormone (LH)", department: "Endocrinology", testCost: 60.00 },
-  { id: "test54", testName: "Follicle Stimulating Hormone (FSH)", department: "Endocrinology", testCost: 60.00 },
-  { id: "test55", testName: "Testosterone Total", department: "Endocrinology", testCost: 70.00 },
-  { id: "test56", testName: "Estradiol Test", department: "Endocrinology", testCost: 65.00 },
-  { id: "test57", testName: "Progesterone Test", department: "Endocrinology", testCost: 62.00 },
-  { id: "test58", testName: "DHEA-S Test", department: "Endocrinology", testCost: 75.00 },
-  { id: "test59", testName: "Parathyroid Hormone (PTH)", department: "Endocrinology", testCost: 95.00 },
-  { id: "test60", testName: "Insulin Fasting", department: "Endocrinology", testCost: 55.00 },
-  { id: "test61", testName: "C-Peptide Test", department: "Endocrinology", testCost: 80.00 },
-  { id: "test62", testName: "Anti-Thyroid Peroxidase Antibodies (Anti-TPO)", department: "Immunology", testCost: 75.00 },
-  { id: "test63", testName: "Antinuclear Antibody (ANA)", department: "Immunology", testCost: 65.00 },
-  { id: "test64", testName: "Rheumatoid Factor (RF)", department: "Immunology", testCost: 45.00 },
-  { id: "test65", testName: "Anti-CCP Antibodies", department: "Immunology", testCost: 85.00 },
-  { id: "test66", testName: "Immunoglobulin A (IgA)", department: "Immunology", testCost: 50.00 },
-  { id: "test67", testName: "Immunoglobulin G (IgG)", department: "Immunology", testCost: 50.00 },
-  { id: "test68", testName: "Immunoglobulin M (IgM)", department: "Immunology", testCost: 50.00 },
-  { id: "test69", testName: "Immunoglobulin E (IgE) Total", department: "Immunology", testCost: 60.00 },
-  { id: "test70", testName: "Complement C3", department: "Immunology", testCost: 55.00 },
-  { id: "test71", testName: "Complement C4", department: "Immunology", testCost: 55.00 },
-  { id: "test72", testName: "Allergen Specific IgE Panel", department: "Immunology", testCost: 120.00 },
-  { id: "test73", testName: "Tuberculosis (TB) Gold Test", department: "Microbiology", testCost: 95.00 },
-  { id: "test74", testName: "Mantoux Test (TB Skin Test)", department: "Microbiology", testCost: 40.00 },
-  { id: "test75", testName: "Sputum Culture", department: "Microbiology", testCost: 55.00 },
-  { id: "test76", testName: "Blood Culture", department: "Microbiology", testCost: 85.00 },
-  { id: "test77", testName: "Urine Culture", department: "Microbiology", testCost: 50.00 },
-  { id: "test78", testName: "Wound Swab Culture", department: "Microbiology", testCost: 50.00 },
-  { id: "test79", testName: "Throat Swab Culture", department: "Microbiology", testCost: 45.00 },
-  { id: "test80", testName: "H. Pylori Antibody Test", department: "Microbiology", testCost: 55.00 },
-  { id: "test81", testName: "H. Pylori Stool Antigen", department: "Microbiology", testCost: 60.00 },
-  { id: "test82", testName: "Dengue NS1 Antigen", department: "Serology", testCost: 50.00 },
-  { id: "test83", testName: "Dengue IgG/IgM Antibodies", department: "Serology", testCost: 55.00 },
-  { id: "test84", testName: "Typhoid IgG/IgM", department: "Serology", testCost: 45.00 },
-  { id: "test85", testName: "Widal Test", department: "Serology", testCost: 35.00 },
-  { id: "test86", testName: "VDRL Test (Syphilis)", department: "Serology", testCost: 40.00 },
-  { id: "test87", testName: "RPR Test (Syphilis)", department: "Serology", testCost: 42.00 },
-  { id: "test88", testName: "Toxoplasma IgG/IgM", department: "Parasitology", testCost: 70.00 },
-  { id: "test89", testName: "Rubella IgG/IgM", department: "Serology", testCost: 65.00 },
-  { id: "test90", testName: "Cytomegalovirus (CMV) IgG/IgM", department: "Serology", testCost: 70.00 },
-  { id: "test91", testName: "Herpes Simplex Virus (HSV) IgG/IgM", department: "Serology", testCost: 75.00 },
-  { id: "test92", testName: "Epstein-Barr Virus (EBV) Panel", department: "Serology", testCost: 85.00 },
-  { id: "test93", testName: "COVID-19 RT-PCR", department: "Molecular Biology", testCost: 100.00 },
-  { id: "test94", testName: "COVID-19 Antibody Test", department: "Serology", testCost: 50.00 },
-  { id: "test95", testName: "Influenza A/B Rapid Test", department: "Microbiology", testCost: 60.00 },
-  { id: "test96", testName: "Chlamydia/Gonorrhea PCR", department: "Molecular Biology", testCost: 120.00 },
-  { id: "test97", testName: "Pap Smear Test", department: "Cytology", testCost: 65.00 },
-  { id: "test98", testName: "HPV DNA Test", department: "Molecular Biology", testCost: 130.00 },
-  { id: "test99", testName: "Semen Analysis", department: "Andrology", testCost: 70.00 },
-  { id: "test100", testName: "Fecal Occult Blood Test", department: "Pathology", testCost: 35.00 },
-  { id: "test101", testName: "Urinary Microalbumin", department: "Biochemistry", testCost: 45.00 },
-  { id: "test102", testName: "24-Hour Urine Protein", department: "Biochemistry", testCost: 55.00 },
-  { id: "test103", testName: "Urinary Creatinine Clearance", department: "Biochemistry", testCost: 50.00 },
-  { id: "test104", testName: "Carcinoembryonic Antigen (CEA)", department: "Tumor Markers", testCost: 90.00 },
-  { id: "test105", testName: "CA 125 (Ovarian Cancer Marker)", department: "Tumor Markers", testCost: 95.00 },
-  { id: "test106", testName: "CA 19-9 (Pancreatic Cancer Marker)", department: "Tumor Markers", testCost: 95.00 },
-  { id: "test107", testName: "CA 15-3 (Breast Cancer Marker)", department: "Tumor Markers", testCost: 90.00 },
-  { id: "test108", testName: "Alpha-Fetoprotein (AFP)", department: "Tumor Markers", testCost: 80.00 },
-];
+const availableTests: AvailableTest[] = [];
 
 export function DashboardAlpha() {
   const shouldReduceMotion = useReducedMotion();
@@ -145,8 +36,24 @@ export function DashboardAlpha() {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [patientName, setPatientName] = useState("");
   const [gender, setGender] = useState("");
+  const [dob, setDob] = useState("");
   const [age, setAge] = useState("");
   const [telephone, setTelephone] = useState("");
+
+  useEffect(() => {
+    if (dob) {
+      const today = new Date();
+      const birthDate = new Date(dob);
+      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+      const m = today.getMonth() - birthDate.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        calculatedAge--;
+      }
+      setAge(Math.max(0, calculatedAge).toString());
+    } else {
+      setAge("");
+    }
+  }, [dob]);
   const [referralOption, setReferralOption] = useState("None");
   const [doctorName, setDoctorName] = useState("");
   const [hospitalName, setHospitalName] = useState("");
@@ -259,6 +166,7 @@ export function DashboardAlpha() {
     toast.success("Record saved successfully.");
     setPatientName("");
     setGender("");
+    setDob("");
     setAge("");
     setTelephone("");
     setReferralOption("None");
@@ -270,13 +178,11 @@ export function DashboardAlpha() {
   };
 
   return (
-    <div className="p-8 h-full bg-background">
-      <div className="bg-card h-full flex flex-col" style={{ boxShadow: 'var(--shadow-card)' }}>
-        {/* Lab Header Banner */}
-        <LabBanner className="border-b-2 border-border" />
+    <div className="p-4 sm:p-6 h-full space-y-6">
+      <div className="bg-card flex flex-col rounded-2xl shadow-sm border border-border/50 overflow-hidden">
 
         {/* Tabs Header */}
-        <div className="border-b-2 border-border px-6 pt-6 bg-card">
+        <div className="border-b border-border/50 px-6 pt-4 bg-muted/20">
           <div className="flex gap-2 overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -305,7 +211,7 @@ export function DashboardAlpha() {
           {activeTab === "new-patient" && (
             <form onSubmit={handleSaveRecord} className="space-y-6 max-w-7xl mx-auto">
               {/* Lab Number Card */}
-              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-blue-500/15 rounded">
                     <FileText className="text-blue-700" size={24} />
@@ -322,15 +228,15 @@ export function DashboardAlpha() {
                         type="text"
                         value="A1726021073491"
                         readOnly
-                        className="flex-1 px-4 py-3 bg-blue-500/10 border-2 border-blue-500/30 text-foreground font-mono text-lg font-bold focus:outline-none rounded"
+                        className="flex-1 px-4 py-3 bg-blue-500/5 border border-blue-500/20 text-blue-700 dark:text-blue-400 font-mono text-lg font-bold focus:outline-none rounded-l-xl"
                       />
-                      <div className="px-4 py-3 bg-muted border-2 border-border rounded">
+                      <div className="px-4 py-3 bg-muted border border-l-0 border-border/60 rounded-r-xl">
                         <Calendar className="text-muted-foreground" size={20} />
                       </div>
                     </div>
                   </div>
                   <div className="flex items-end">
-                    <div className="w-full p-3 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border-2 border-blue-500/30">
+                    <div className="w-full p-4 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border border-blue-500/20 rounded-xl">
                       <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
                       <p className="text-sm font-bold text-green-700 flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-current" /> Active Registration</p>
                     </div>
@@ -339,8 +245,8 @@ export function DashboardAlpha() {
               </div>
 
               {/* Patient Information Card */}
-              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-600">
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-blue-500/15 rounded">
                     <User className="text-blue-700" size={24} />
                   </div>
@@ -381,7 +287,7 @@ export function DashboardAlpha() {
                     <select
                       value={gender}
                       onChange={(e) => setGender(e.target.value)}
-                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
+                      className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                     >
                       <option value="">Select gender</option>
                       <option value="Male">Male</option>
@@ -390,18 +296,31 @@ export function DashboardAlpha() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-                      <Calendar size={16} className="text-muted-foreground" />
-                      Age
-                    </label>
-                    <input
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
-                      placeholder="Enter age"
-                    />
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Calendar size={16} className="text-muted-foreground" />
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={dob}
+                        onChange={(e) => setDob(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        value={age}
+                        readOnly
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-muted/50 text-muted-foreground text-sm font-medium focus:outline-none cursor-not-allowed"
+                        placeholder="Age"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -413,7 +332,7 @@ export function DashboardAlpha() {
                       type="tel"
                       value={telephone}
                       onChange={(e) => setTelephone(e.target.value)}
-                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
+                      className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                       placeholder="Enter phone number"
                     />
                   </div>
@@ -421,8 +340,8 @@ export function DashboardAlpha() {
               </div>
 
               {/* Referral Information Card */}
-              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-teal-600">
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-teal-500/15 rounded">
                     <Stethoscope className="text-teal-700" size={24} />
                   </div>
@@ -438,7 +357,7 @@ export function DashboardAlpha() {
                     <select
                       value={referralOption}
                       onChange={(e) => setReferralOption(e.target.value)}
-                      className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
+                      className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                     >
                       <option value="None">None</option>
                       <option value="Doctor">Doctor</option>
@@ -457,7 +376,7 @@ export function DashboardAlpha() {
                         type="text"
                         value={doctorName}
                         onChange={(e) => setDoctorName(e.target.value)}
-                        className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                         placeholder="Enter doctor name"
                       />
                     </div>
@@ -473,7 +392,7 @@ export function DashboardAlpha() {
                         type="text"
                         value={hospitalName}
                         onChange={(e) => setHospitalName(e.target.value)}
-                        className="w-full px-4 py-3 bg-background border border-border text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors rounded"
+                        className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                         placeholder="Enter hospital name"
                       />
                     </div>
@@ -482,8 +401,8 @@ export function DashboardAlpha() {
               </div>
 
               {/* Test Selection Card */}
-              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-green-600">
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-green-500/15 rounded">
                     <TestTube className="text-green-700" size={24} />
                   </div>
@@ -537,7 +456,7 @@ export function DashboardAlpha() {
                   <div className="grid lg:grid-cols-3 gap-6">
                     {/* Tests List - Takes 2/3 width */}
                     <div className="lg:col-span-2">
-                      <div className="border-2 border-border bg-card rounded">
+                      <div className="border border-border/60 bg-card rounded-xl overflow-hidden shadow-sm hover:shadow">
                         {/* Table Header */}
                         <div className="grid grid-cols-12 gap-4 bg-gradient-to-r from-muted to-muted px-4 py-3 border-b-2 border-border">
                           <div className="col-span-6">
@@ -737,15 +656,15 @@ export function DashboardAlpha() {
                         type="text"
                         value="A1726021073491"
                         readOnly
-                        className="flex-1 px-4 py-3 bg-blue-500/10 border-2 border-blue-500/30 text-foreground font-mono text-lg font-bold focus:outline-none rounded"
+                        className="flex-1 px-4 py-3 bg-blue-500/5 border border-blue-500/20 text-blue-700 dark:text-blue-400 font-mono text-lg font-bold focus:outline-none rounded-l-xl"
                       />
-                      <div className="px-4 py-3 bg-muted border-2 border-border rounded">
+                      <div className="px-4 py-3 bg-muted border border-l-0 border-border/60 rounded-r-xl">
                         <Calendar className="text-muted-foreground" size={20} />
                       </div>
                     </div>
                   </div>
                   <div className="flex items-end">
-                    <div className="w-full p-3 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30">
+                    <div className="w-full p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl">
                       <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
                       <p className="text-sm font-bold text-amber-700 flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-current" /> View Only Mode</p>
                     </div>
@@ -755,7 +674,7 @@ export function DashboardAlpha() {
 
               {/* Patient Information Card - Disabled */}
               <div className="bg-card border-2 border-border p-6 opacity-75 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-600">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-blue-500/15 rounded">
                     <User className="text-blue-700" size={24} />
                   </div>
@@ -794,18 +713,31 @@ export function DashboardAlpha() {
                     </select>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
-                      <Calendar size={16} className="text-muted-foreground" />
-                      Age
-                    </label>
-                    <input
-                      type="number"
-                      value={age}
-                      disabled
-                      className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
-                      placeholder="Enter age"
-                    />
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        <Calendar size={16} className="text-muted-foreground" />
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={dob}
+                        disabled
+                        className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label className="block text-sm font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                        Age
+                      </label>
+                      <input
+                        type="number"
+                        value={age}
+                        disabled
+                        className="w-full px-4 py-3 border-2 border-border bg-muted text-muted-foreground opacity-60 cursor-not-allowed rounded"
+                        placeholder="Age"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -826,7 +758,7 @@ export function DashboardAlpha() {
 
               {/* Referral Information Card - Disabled */}
               <div className="bg-card border-2 border-border p-6 opacity-75 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-teal-600">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-teal-500/15 rounded">
                     <Stethoscope className="text-teal-700" size={24} />
                   </div>
@@ -887,7 +819,7 @@ export function DashboardAlpha() {
 
               {/* Test Selection Card - Disabled */}
               <div className="bg-card border-2 border-border p-6 opacity-50 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-green-600">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-green-500/15 rounded">
                     <TestTube className="text-green-700" size={24} />
                   </div>
@@ -1001,7 +933,7 @@ export function DashboardAlpha() {
               </div>
 
               {/* Lab Number Card */}
-              <div className="bg-card border-2 border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-blue-500/15 rounded">
                     <FileText className="text-blue-700" size={24} />
@@ -1018,9 +950,9 @@ export function DashboardAlpha() {
                         type="text"
                         value="A1726021073491"
                         readOnly
-                        className="flex-1 px-4 py-3 bg-blue-500/10 border-2 border-blue-500/30 text-foreground font-mono text-lg font-bold focus:outline-none rounded"
+                        className="flex-1 px-4 py-3 bg-blue-500/5 border border-blue-500/20 text-blue-700 dark:text-blue-400 font-mono text-lg font-bold focus:outline-none rounded-l-xl"
                       />
-                      <div className="px-4 py-3 bg-muted border-2 border-border rounded">
+                      <div className="px-4 py-3 bg-muted border border-l-0 border-border/60 rounded-r-xl">
                         <Calendar className="text-muted-foreground" size={20} />
                       </div>
                     </div>
@@ -1036,7 +968,7 @@ export function DashboardAlpha() {
 
               {/* Patient Information Card - Disabled */}
               <div className="bg-card border-2 border-border p-6 opacity-60 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-blue-600">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-blue-500/15 rounded">
                     <User className="text-blue-700" size={24} />
                   </div>
@@ -1101,7 +1033,7 @@ export function DashboardAlpha() {
 
               {/* Referral Information Card - Disabled */}
               <div className="bg-card border-2 border-border p-6 opacity-60 pointer-events-none rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-teal-600">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-teal-500/15 rounded">
                     <Stethoscope className="text-teal-700" size={24} />
                   </div>
@@ -1127,7 +1059,7 @@ export function DashboardAlpha() {
 
               {/* Test Selection Card - ACTIVE */}
               <div className="bg-card border-2 border-green-400 p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-green-600">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border/60">
                   <div className="p-2 bg-green-500/15 rounded">
                     <TestTube className="text-green-700" size={24} />
                   </div>
@@ -1182,7 +1114,7 @@ export function DashboardAlpha() {
                   <div className="grid lg:grid-cols-3 gap-6">
                     {/* Tests List - Takes 2/3 width */}
                     <div className="lg:col-span-2">
-                      <div className="border-2 border-border bg-card rounded">
+                      <div className="border border-border/60 bg-card rounded-xl overflow-hidden shadow-sm hover:shadow">
                         {/* Table Header */}
                         <div className="grid grid-cols-12 gap-4 bg-gradient-to-r from-muted to-muted px-4 py-3 border-b-2 border-border">
                           <div className="col-span-6">

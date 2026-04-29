@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import { Button } from "./ui/button";
 
 export function Profile() {
-  const [displayName, setDisplayName] = useState("Aelita Poklonn");
-  const [email, setEmail] = useState("a.poklonn@invitro.lab");
-  const [phone, setPhone] = useState("+233 20 000 0000");
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   const [resultAlerts, setResultAlerts] = useState(true);
   const [systemNotifications, setSystemNotifications] = useState(true);
@@ -27,10 +27,10 @@ export function Profile() {
       {/* User Info Card */}
       <div className="bg-card rounded p-6 flex flex-col md:flex-row items-center gap-6" style={{ boxShadow: 'var(--shadow-card)' }}>
         <div className="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center shadow-lg">
-          <span className="text-white text-3xl font-bold">AP</span>
+          <span className="text-white text-3xl font-bold">U</span>
         </div>
         <div className="flex-1">
-          <h2 className="text-2xl font-bold text-foreground">Aelita Poklonn</h2>
+          <h2 className="text-2xl font-bold text-foreground">User Name</h2>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
             <div>
               <p className="text-xs text-muted-foreground">Role</p>
@@ -42,11 +42,11 @@ export function Profile() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Employee ID</p>
-              <p className="font-semibold text-foreground">EMP-0042</p>
+              <p className="font-semibold text-foreground"></p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Email</p>
-              <p className="font-semibold text-foreground">a.poklonn@invitro.lab</p>
+              <p className="font-semibold text-foreground"></p>
             </div>
           </div>
         </div>

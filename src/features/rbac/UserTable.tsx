@@ -54,7 +54,8 @@ function getInitials(name: string) {
 }
 
 export function UserTable() {
-  const { users, roles } = useRbacStore();
+  const { users, roles, setUsers } = useRbacStore();
+  const [isLoading, setIsLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [page, setPage] = useState(0);
@@ -64,6 +65,24 @@ export function UserTable() {
   const [selectedUser, setSelectedUser] = useState<User | undefined>(undefined);
   
   const [deactivateTarget, setDeactivateTarget] = useState<User | undefined>(undefined);
+
+  const refreshUsers = React.useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await rbacService.getUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to sync users:', err);
+      toast.error('Failed to sync users with database');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setUsers]);
+
+  // Sync with database on mount
+  React.useEffect(() => {
+    refreshUsers();
+  }, [refreshUsers]);
 
   // Derived data
   const filteredUsers = users.filter((user: User) => {
@@ -81,6 +100,7 @@ export function UserTable() {
     try {
       await rbacService.deactivateUser(deactivateTarget.id);
       toast.success('User deactivated successfully');
+      await refreshUsers();
     } catch (error) {
       toast.error('Failed to deactivate user');
     } finally {
@@ -92,6 +112,7 @@ export function UserTable() {
     try {
       await rbacService.updateUser(userId, { status: 'active' });
       toast.success('User reactivated successfully');
+      await refreshUsers();
     } catch (error) {
       toast.error('Failed to reactivate user');
     }

@@ -10,11 +10,9 @@ import { Profile } from "./components/Profile";
 import { useAuthStore } from "../stores/useAuthStore";
 import { PERMISSIONS } from "../lib/permissions";
 import { SettingsPage } from "../features/settings/SettingsPage";
-import { SetupWizard } from "../features/setup/SetupWizard";
+
 import { LoginPage } from "../features/auth/LoginPage";
-import { SignupPage } from "../features/auth/SignupPage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
-import { TwoFactorPage } from "../features/auth/TwoFactorPage";
 import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage";
 import { AccessDenied } from "./components/AccessDenied";
 import { PermissionMatrix } from "../features/rbac/PermissionMatrix";
@@ -22,7 +20,7 @@ import { UserTable } from "../features/rbac/UserTable";
 import { useRbacStore } from "../stores/useRbacStore";
 
 const requireAuth = (request: Request) => {
-  const { isAuthenticated, pendingTwoFactor } = useAuthStore.getState();
+  const { isAuthenticated } = useAuthStore.getState();
   const url = new URL(request.url);
 
   if (!isAuthenticated) {
@@ -36,10 +34,6 @@ const requireAuth = (request: Request) => {
       useAuthStore.getState().logout();
       throw redirect('/login');
     }
-  }
-
-  if (pendingTwoFactor) {
-    throw redirect('/2fa?redirect=' + encodeURIComponent(url.pathname + url.search));
   }
 
   return null;
@@ -83,34 +77,9 @@ const withPermission = (WrappedComponent: React.ComponentType) => {
 export const router = createBrowserRouter([
   {
     path: "/",
-    loader: ({ request }) => {
-      const url = new URL(request.url);
-      if (url.pathname === '/setup') {
-        return null;
-      }
-
-      const dbConfigured = localStorage.getItem('db_configured');
-      if (!dbConfigured) {
-        throw redirect('/setup');
-      }
-      return null;
-    },
     children: [
-      {
-        path: "setup",
-        Component: SetupWizard,
-        loader: () => {
-          const dbConfigured = localStorage.getItem('db_configured');
-          if (dbConfigured) {
-            throw redirect('/');
-          }
-            return null;
-        },
-      },
       { path: "login", Component: LoginPage },
-      { path: "signup", Component: SignupPage },
       { path: "reset-password", Component: ResetPasswordPage },
-      { path: "2fa", Component: TwoFactorPage },
       { path: "forgot-password", Component: ForgotPasswordPage },
       {
         path: "/",

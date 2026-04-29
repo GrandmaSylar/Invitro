@@ -3,7 +3,6 @@ import { useRbacStore } from '../../stores/useRbacStore';
 import { rbacService } from '../../services/rbacService';
 import { PERMISSION_MODULES } from '../../lib/permissions';
 import { PermissionMap } from '../../lib/types';
-import { SEED_ROLES } from '../../lib/mockData';
 import { Button } from '../../app/components/ui/button';
 import { Switch } from '../../app/components/ui/switch';
 import { Badge } from '../../app/components/ui/badge';
@@ -26,7 +25,8 @@ import { toast } from 'sonner';
 import { Edit, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 
 export function PermissionMatrix() {
-  const { roles, users } = useRbacStore();
+  const { roles, users, setRoles } = useRbacStore();
+  const [isLoading, setIsLoading] = useState(false);
   
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
   const [localPermissions, setLocalPermissions] = useState<PermissionMap>({});
@@ -40,6 +40,23 @@ export function PermissionMatrix() {
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => {
     return PERMISSION_MODULES.reduce((acc, mod) => ({ ...acc, [mod.label]: true }), {});
   });
+
+  // Sync with database on mount
+  useEffect(() => {
+    const fetchRoles = async () => {
+      setIsLoading(true);
+      try {
+        const data = await rbacService.getRoles();
+        setRoles(data);
+      } catch (err) {
+        console.error('Failed to sync roles:', err);
+        toast.error('Failed to sync roles with database');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchRoles();
+  }, [setRoles]);
 
   // Initialize selectedRoleId
   useEffect(() => {
@@ -100,17 +117,11 @@ export function PermissionMatrix() {
     setIsSaving(true);
     try {
       let resetPermissions: PermissionMap = {};
-      const factoryRole = SEED_ROLES.find(r => r.id === selectedRole.id);
-      
-      if (factoryRole) {
-        resetPermissions = { ...factoryRole.permissions };
-      } else {
-        // Custom role: default reset is all permissions false
-        resetPermissions = Object.keys(localPermissions).reduce((acc, key) => {
-          acc[key] = false;
-          return acc;
-        }, {} as PermissionMap);
-      }
+      // For custom or system roles, reset to basically empty if no template
+      resetPermissions = Object.keys(localPermissions).reduce((acc, key) => {
+        acc[key] = false;
+        return acc;
+      }, {} as PermissionMap);
       
       await rbacService.updateRolePermissions(selectedRole.id, resetPermissions);
       setLocalPermissions(resetPermissions);

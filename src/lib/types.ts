@@ -1,3 +1,13 @@
+// ════════════════════════════════════════════════════════════════
+// Bloo LIMS — Shared TypeScript Interfaces
+//
+// Every domain entity has a corresponding interface here.
+// DB columns are snake_case; these interfaces are camelCase.
+// Mappers in `lib/mappers.ts` bridge the gap.
+// ════════════════════════════════════════════════════════════════
+
+// ── Auth & RBAC ────────────────────────────────────────────────
+
 export interface User {
   id: string;
   fullName: string;
@@ -33,6 +43,148 @@ export interface AuthSession {
   loginMethod: string | null;
 }
 
+// ── Patients ───────────────────────────────────────────────────
+
+export interface Patient {
+  id: string;
+  patientName: string;
+  gender?: string;
+  dob?: string;
+  age?: number;
+  telephone?: string;
+  createdAt: string;
+}
+
+export interface PatientFilters {
+  search?: string;
+  gender?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// ── Hospitals & Doctors ────────────────────────────────────────
+
+export interface Hospital {
+  id: string;
+  hospitalName: string;
+  location?: string;
+  phoneNumber?: string;
+  address?: string;
+  createdAt: string;
+}
+
+export interface Doctor {
+  id: string;
+  doctorName: string;
+  speciality?: string;
+  phoneNumber?: string;
+  email?: string;
+  affiliateHospitalId?: string;
+  location?: string;
+  address?: string;
+  createdAt: string;
+}
+
+// ── Test Catalog ───────────────────────────────────────────────
+
+export interface Test {
+  id: string;
+  testName: string;
+  department: string;
+  testCost: number;
+  resultHeader?: string;
+  referenceRange?: string;
+  includeComprehensive: boolean;
+  createdAt: string;
+  /** Joined relation — only present when queried with parameters */
+  parameters?: Parameter[];
+}
+
+export interface Parameter {
+  id: string;
+  parameterName: string;
+  units?: string;
+  referenceRange?: string;
+  parameterOrderId?: number;
+  trimesterType?: string;
+  createdAt: string;
+}
+
+export interface Antibiotic {
+  id: string;
+  antibioticName: string;
+  createdAt: string;
+}
+
+export interface TestFilters {
+  department?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// ── Lab Records ────────────────────────────────────────────────
+
+export interface LabRecord {
+  id: string;
+  labNumber: string;
+  patientId: string;
+  recordDate: string;
+  status: string;
+  referralOption?: string;
+  referralDoctorId?: string;
+  referralHospitalId?: string;
+  subtotal: number;
+  totalCost: number;
+  amountPaid: number;
+  arrears: number;
+  createdById?: string;
+  createdAt: string;
+  /** Joined relation — only present when queried with patient */
+  patient?: Patient;
+}
+
+export interface LabRecordTest {
+  id: string;
+  labRecordId: string;
+  testId: string;
+  testName: string;
+  department: string;
+  testCost: number;
+  totalCost: number;
+  amountPaid: number;
+  arrears: number;
+}
+
+export interface LabRecordFilters {
+  patientId?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// ── Test Results ───────────────────────────────────────────────
+
+export type ResultFlag = 'Normal' | 'Abnormal' | 'Critical';
+
+export interface TestResult {
+  id: string;
+  labRecordTestId: string;
+  testName: string;
+  department: string;
+  referenceRange?: string;
+  unit?: string;
+  result?: string;
+  flag: ResultFlag;
+  enteredById?: string;
+  enteredAt: string;
+}
+
+// ── Audit ──────────────────────────────────────────────────────
+
 export interface AuditEvent {
   id: string;
   timestamp: string;
@@ -45,25 +197,17 @@ export interface AuditEvent {
   detail: string;
 }
 
-export interface DatabaseConfig {
-  id: string;
-  name: string;
-  dbType: 'postgresql' | 'mysql' | 'sqlite' | 'sqlserver' | string;
-  host?: string;
-  port?: number;
-  dbName?: string;
-  username?: string;
-  password?: string;
-  ssl?: boolean;
-  sslCertificate?: string;
-  connectionString?: string;
-  poolSize?: number;
-  timeoutMs?: number;
-  advancedOptions?: Record<string, string>;
-  isActive: boolean;
-  lastTestedAt?: string;
-  lastTestResult?: 'success' | 'failure' | null;
+export interface AuditFilters {
+  actorId?: string;
+  action?: string;
+  targetType?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
 }
+
+// ── Settings ───────────────────────────────────────────────────
 
 export interface AppSettings {
   general: {
@@ -115,4 +259,13 @@ export interface ApiKey {
   createdAt: string;
   lastUsed?: string;
   permissions: string[];
+}
+
+// ── Dashboard ──────────────────────────────────────────────────
+
+export interface DashboardStats {
+  patientsToday: number;
+  testsToday: number;
+  pendingResults: number;
+  revenueThisMonth: number;
 }

@@ -1,230 +1,113 @@
-import { Activity, Users, TestTube, TrendingUp, Calendar, Clock, AlertTriangle, Download } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Activity, Users, TestTube, TrendingUp, FlaskConical, Clock } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
-
-const weeklyData = [
-  { day: 'Mon', patients: 42, tests: 87, revenue: 12500 },
-  { day: 'Tue', patients: 38, tests: 76, revenue: 11200 },
-  { day: 'Wed', patients: 51, tests: 102, revenue: 15800 },
-  { day: 'Thu', patients: 45, tests: 91, revenue: 13600 },
-  { day: 'Fri', patients: 48, tests: 95, revenue: 14200 },
-  { day: 'Sat', patients: 35, tests: 68, revenue: 9800 },
-  { day: 'Sun', patients: 28, tests: 52, revenue: 7500 },
-];
-
-const patientsHealthStats = [
-  { status: 'Critical', count: 8, percentage: 5, color: 'bg-red-500' },
-  { status: 'Moderate', count: 42, percentage: 25, color: 'bg-yellow-500' },
-  { status: 'Stable', count: 75, percentage: 45, color: 'bg-blue-500' },
-  { status: 'Healthy', count: 42, percentage: 25, color: 'bg-green-500' },
-];
+import { useAuthStore } from "../../stores/useAuthStore";
+import { useDashboardStats } from "../../hooks/useDashboardStats";
 
 export function MainDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   return (
-    <div className="p-4">
-      {/* Row 1: KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        {/* 1. Patients Today */}
-        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-blue-100 flex items-center justify-center rounded">
-              <Users className="text-blue-600" size={16} />
-            </div>
-            <div className="text-xs text-muted-foreground">Patients Today</div>
-          </div>
-          <div className="text-2xl font-bold mb-1">287</div>
-          <div className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> 8% vs yesterday</div>
-        </div>
-
-        {/* 2. Tests Run Today */}
-        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-purple-100 flex items-center justify-center rounded">
-              <TestTube className="text-purple-600" size={16} />
-            </div>
-            <div className="text-xs text-muted-foreground">Tests Run Today</div>
-          </div>
-          <div className="text-2xl font-bold mb-1">541</div>
-          <div className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> 12% vs yesterday</div>
-        </div>
-
-        {/* 3. Monthly Revenue */}
-        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-green-100 flex items-center justify-center rounded">
-              <TrendingUp className="text-green-600" size={16} />
-            </div>
-            <div className="text-xs text-muted-foreground">Monthly Revenue</div>
-          </div>
-          <div className="text-2xl font-bold mb-1">₵84,600</div>
-          <div className="text-xs text-green-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> 12.5% vs last month</div>
-        </div>
-
-        {/* 4. Pending Results */}
-        <div className="bg-card border border-border text-card-foreground p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 bg-amber-100 flex items-center justify-center rounded">
-              <Activity className="text-amber-600" size={16} />
-            </div>
-            <div className="text-xs text-muted-foreground">Pending Results</div>
-          </div>
-          <div className="text-2xl font-bold mb-1">34</div>
-          <div className="text-xs text-amber-500 flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Needs attention</div>
-        </div>
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back, {user?.fullName || "User"}!</h1>
+        <p className="text-muted-foreground mt-2">What would you like to do today?</p>
       </div>
 
-      {/* Row 2: Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        {/* Left Column */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          {/* Patient Traffic Chart */}
-          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-            <h3 className="text-base font-semibold text-foreground mb-4">Patient Traffic</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={weeklyData}>
-                <CartesianGrid key="bar-grid" strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis key="bar-xaxis" dataKey="day" stroke="var(--muted-foreground)" />
-                <YAxis key="bar-yaxis" stroke="var(--muted-foreground)" />
-                <Tooltip
-                  key="bar-tooltip"
-                  contentStyle={{
-                    borderRadius: 8,
-                    border: '1px solid var(--border)',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--foreground)'
-                  }}
-                />
-                <Legend key="bar-legend" />
-                <Bar key="patients-bar" dataKey="patients" fill="#3b82f6" name="Patients" />
-                <Bar key="tests-bar" dataKey="tests" fill="#8b5cf6" name="Tests" />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Button 
+          variant="outline" 
+          className="h-32 flex flex-col items-center justify-center gap-4 text-lg hover:border-primary hover:bg-primary/5 transition-colors"
+          onClick={() => navigate("/patients?tab=new-patient")}
+        >
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+            <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
-
-          {/* Revenue Chart */}
-          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-            <h3 className="text-base font-semibold text-foreground mb-4">Revenue Trend</h3>
-            <ResponsiveContainer width="100%" height={180}>
-              <LineChart data={weeklyData}>
-                <CartesianGrid key="line-grid" strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis key="line-xaxis" dataKey="day" stroke="var(--muted-foreground)" />
-                <YAxis key="line-yaxis" stroke="var(--muted-foreground)" />
-                <Tooltip
-                  key="line-tooltip"
-                  contentStyle={{
-                    borderRadius: 8,
-                    border: '1px solid var(--border)',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--foreground)'
-                  }}
-                />
-                <Legend key="line-legend" />
-                <Line
-                  key="revenue-line"
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Revenue (₵)"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="lg:col-span-1 flex flex-col gap-4">
-          {/* Patients Health Stats */}
-          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-            <h3 className="text-base font-semibold text-foreground mb-6">Patients Health Stats</h3>
-            
-            {/* Bar visualization */}
-            <div className="space-y-3 mb-6">
-              {patientsHealthStats.map((item, index) => (
-                <div key={index}>
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{item.status}</span>
-                      <span className="text-xs text-muted-foreground">({item.count})</span>
-                    </div>
-                    <span className="text-xs font-semibold text-foreground">{item.percentage}%</span>
-                  </div>
-                  <div className="w-full bg-muted h-2 rounded">
-                    <div
-                      className={`h-2 ${item.color}`}
-                      style={{
-                        width: `${item.percentage}%`
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="text-xs text-muted-foreground text-center">
-              Total patients: {patientsHealthStats.reduce((sum, item) => sum + item.count, 0)}
-            </div>
-          </div>
-
-          {/* Today's Schedule */}
-          <div className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-            <div className="flex items-center gap-2 mb-4">
-              <Calendar className="text-blue-600" size={16} />
-              <h3 className="text-base font-semibold text-foreground">Today's Schedule</h3>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-start gap-3 pb-3 border-b border-border">
-                <div className="w-1 h-12 bg-orange-600 rounded"></div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold text-foreground mb-1">Lunch</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock size={12} />
-                    <span>12:00 PM - 1:00 PM</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 pb-3 border-b border-border">
-                <div className="w-1 h-12 bg-purple-600 rounded"></div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold text-foreground mb-1">Results Review</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock size={12} />
-                    <span>3:30 PM - 4:00 PM</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-1 h-12 bg-green-600 rounded"></div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold text-foreground mb-1">Revenue Calculation</div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock size={12} />
-                    <span>4:30 PM - 5:00 PM</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 3: Quick Actions */}
-      <div className="bg-card border border-border p-6 flex items-center gap-3 rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-        <Button variant="blue" onClick={() => navigate("/patients?tab=new-patient")}>
-          + New Patient
+          Register New Patient
         </Button>
-        <Button variant="blue" onClick={() => navigate("/patients?tab=existing-patient")}>
+
+        <Button 
+          variant="outline" 
+          className="h-32 flex flex-col items-center justify-center gap-4 text-lg hover:border-primary hover:bg-primary/5 transition-colors"
+          onClick={() => navigate("/patients?tab=existing-patient")}
+        >
+          <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-full">
+            <Activity className="h-8 w-8 text-teal-600 dark:text-teal-400" />
+          </div>
           Existing Patients
         </Button>
-        <Button variant="blue" onClick={() => navigate("/results-entry")}>
+
+        <Button 
+          variant="outline" 
+          className="h-32 flex flex-col items-center justify-center gap-4 text-lg hover:border-primary hover:bg-primary/5 transition-colors"
+          onClick={() => navigate("/results-entry")}
+        >
+          <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+            <TestTube className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+          </div>
           Test Results Entry
         </Button>
-        <Button variant="outline" className="ml-auto" onClick={() => window.print()}>
-          <span className="inline-flex items-center gap-1.5"><Download className="h-4 w-4" /> Download Full Report</span>
-        </Button>
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Patients Today</h3>
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+              <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">
+              {statsLoading ? "..." : stats?.patientsToday ?? 0}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Tests Ordered Today</h3>
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+              <FlaskConical className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">
+              {statsLoading ? "..." : stats?.testsToday ?? 0}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Pending Results</h3>
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">
+              {statsLoading ? "..." : stats?.pendingResults ?? 0}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground">Revenue (Month)</h3>
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
+              <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+          <div>
+            <p className="text-3xl font-bold text-foreground">
+              {statsLoading ? "..." : `GH₵ ${(stats?.revenueThisMonth ?? 0).toLocaleString()}`}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

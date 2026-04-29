@@ -1,60 +1,168 @@
-import { useRbacStore } from '../stores/useRbacStore';
-import { Role, User, PermissionMap } from '../lib/types';
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-const randomDelay = () => delay(Math.floor(Math.random() * 300) + 300);
+/**
+ * RBAC Service — Users & Roles CRUD via Supabase.
+ *
+ * This service is a pure data layer. It does NOT touch Zustand stores.
+ * Stores/hooks call this service and update themselves on success.
+ */
+import { supabase } from '../lib/supabase';
+import { mapUserRow, mapRoleRow } from '../lib/mappers';
+import type { Role, User, PermissionMap } from '../lib/types';
 
 export const rbacService = {
+  // ── ROLES ────────────────────────────────────────────────────
+
   getRoles: async (): Promise<Role[]> => {
-    await randomDelay();
-    return useRbacStore.getState().roles;
-  },
-  
-  updateRolePermissions: async (roleId: string, permissions: PermissionMap) => {
-    await randomDelay();
-    return useRbacStore.getState().updateRolePermissions(roleId, permissions);
-  },
-  
-  createRole: async (role: Omit<Role, 'id' | 'createdAt'>) => {
-    await randomDelay();
-    return useRbacStore.getState().createRole(role);
-  },
-  
-  deleteRole: async (roleId: string) => {
-    await randomDelay();
-    return useRbacStore.getState().deleteRole(roleId);
-  },
-  
-  getUsers: async (): Promise<User[]> => {
-    await randomDelay();
-    return useRbacStore.getState().users;
+    const { data, error } = await supabase
+      .from('roles')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) throw new Error(`Failed to fetch roles: ${error.message}`);
+    return (data ?? []).map(mapRoleRow);
   },
 
-  createUser: async (data: Omit<User, 'id' | 'createdAt' | 'permissionOverrides' | 'lastLogin'> & { sendInvite?: boolean }) => {
-    await randomDelay();
-    const newUser: User = {
-      ...data,
-      id: 'usr_' + crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      permissionOverrides: {},
-      lastLogin: undefined
-    };
-    useRbacStore.getState().upsertUser(newUser);
-    return newUser;
+  updateRolePermissions: async (roleId: string, permissions: PermissionMap): Promise<Role> => {
+    const { data, error } = await supabase
+      .from('roles')
+      .update({ permissions: permissions as any })
+      .eq('id', roleId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update role permissions: ${error.message}`);
+    return mapRoleRow(data);
   },
-  
-  updateUserOverrides: async (userId: string, permissionOverrides: PermissionMap) => {
-    await randomDelay();
-    return useRbacStore.getState().updateUserOverrides(userId, permissionOverrides);
+
+  createRole: async (role: Omit<Role, 'id' | 'createdAt'>): Promise<Role> => {
+    const newId = `role_${crypto.randomUUID()}`;
+    const { data, error } = await supabase
+      .from('roles')
+      .insert({
+        id: newId,
+        name: role.name,
+        label: role.label,
+        description: role.description ?? null,
+        is_system: role.isSystem ?? false,
+        permissions: (role.permissions ?? {}) as any,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to create role: ${error.message}`);
+    return mapRoleRow(data);
   },
-  
-  updateUser: async (userId: string, data: Partial<User>) => {
-    await randomDelay();
-    return useRbacStore.getState().updateUser(userId, data);
+
+  deleteRole: async (roleId: string): Promise<void> => {
+    const { error } = await supabase
+      .from('roles')
+      .delete()
+      .eq('id', roleId);
+
+    if (error) throw new Error(`Failed to delete role: ${error.message}`);
   },
-  
-  deactivateUser: async (userId: string) => {
-    await randomDelay();
-    return useRbacStore.getState().deactivateUser(userId);
-  }
+
+  // ── USERS ────────────────────────────────────────────────────
+
+  getUsers: async (): Promise<User[]> => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) throw new Error(`Failed to fetch users: ${error.message}`);
+    return (data ?? []).map(mapUserRow);
+  },
+
+  createUser: async (
+    userData: Omit<User, 'id' | 'createdAt' | 'permissionOverrides' | 'lastLogin'> & {
+      sendInvite?: boolean;
+      password?: string;
+    }
+  ): Promise<User> => {
+    const password = userData.password || 'tempPassword123!';
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password,
+      options: {
+        data: {
+          full_name: userData.fullName,
+          username: userData.username,
+        },
+      },
+    });
+
+    if (authError) throw new Error(`Auth signup failed: ${authError.message}`);
+
+    const userId = authData.user?.id
+      || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+    const { data, error } = await supabase
+      .from('users')
+      .insert({
+        id: userId,
+        full_name: userData.fullName,
+        email: userData.email,
+        username: userData.username,
+        password_hash: '(managed_by_supabase_auth)',
+        phone: userData.phone ?? null,
+        role_id: userData.roleId,
+        permission_overrides: {},
+        two_factor_enabled: userData.twoFactorEnabled ?? false,
+        two_factor_method: userData.twoFactorMethod ?? null,
+        status: userData.status ?? 'active',
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to create user profile: ${error.message}`);
+    return mapUserRow(data);
+  },
+
+  updateUser: async (userId: string, userData: Partial<User>): Promise<User> => {
+    const updates: Record<string, any> = {};
+    if (userData.fullName !== undefined) updates.full_name = userData.fullName;
+    if (userData.email !== undefined) updates.email = userData.email;
+    if (userData.username !== undefined) updates.username = userData.username;
+    if (userData.phone !== undefined) updates.phone = userData.phone;
+    if (userData.roleId !== undefined) updates.role_id = userData.roleId;
+    if (userData.permissionOverrides !== undefined) updates.permission_overrides = userData.permissionOverrides;
+    if (userData.twoFactorEnabled !== undefined) updates.two_factor_enabled = userData.twoFactorEnabled;
+    if (userData.twoFactorMethod !== undefined) updates.two_factor_method = userData.twoFactorMethod;
+    if (userData.status !== undefined) updates.status = userData.status;
+
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update user: ${error.message}`);
+    return mapUserRow(data);
+  },
+
+  updateUserOverrides: async (userId: string, permissionOverrides: PermissionMap): Promise<User> => {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ permission_overrides: permissionOverrides as any })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update user overrides: ${error.message}`);
+    return mapUserRow(data);
+  },
+
+  deactivateUser: async (userId: string): Promise<User> => {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ status: 'inactive' })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to deactivate user: ${error.message}`);
+    return mapUserRow(data);
+  },
 };

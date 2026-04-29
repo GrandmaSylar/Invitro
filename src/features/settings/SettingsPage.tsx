@@ -2,7 +2,7 @@ import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { Card, CardContent } from '../../app/components/ui/card';
 import { Separator } from '../../app/components/ui/separator';
 import { SettingsPlaceholder } from '../../app/components/placeholders';
-import { Settings, Bell, Shield, Users, Mail, Key, Database, FileText, Activity, Server } from 'lucide-react';
+import { Settings, Bell, Shield, Users, Mail, Key, Database, FileText, Activity, Server, Info } from 'lucide-react';
 import { cn } from '../../app/components/ui/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 
@@ -15,8 +15,7 @@ const ApiKeysSection = React.lazy(() => import('./ApiKeysSection'));
 const BackupSection = React.lazy(() => import('./BackupSection'));
 const AuditLogSection = React.lazy(() => import('./AuditLogSection'));
 const SystemHealthSection = React.lazy(() => import('./SystemHealthSection'));
-const DatabaseSection = React.lazy(() => import('./DatabaseSection'));
-
+const AboutSection = React.lazy(() => import('./AboutSection'));
 const SETTINGS_SECTIONS = [
   { id: 'general', label: 'General', icon: Settings, permissionKey: 'settings.general', group: 'General' },
   { id: 'notifications', label: 'Notifications', icon: Bell, permissionKey: 'settings.notifications', group: 'General' },
@@ -27,7 +26,7 @@ const SETTINGS_SECTIONS = [
   { id: 'backup', label: 'Backup & Restore', icon: Database, permissionKey: 'settings.backup', group: 'System' },
   { id: 'audit_log', label: 'Audit Log', icon: FileText, permissionKey: 'settings.audit_log', group: 'System' },
   { id: 'health', label: 'System Health', icon: Activity, permissionKey: 'settings.health', group: 'System' },
-  { id: 'database', label: 'Database', icon: Server, permissionKey: 'settings.database', group: 'System' },
+  { id: 'about', label: 'About & Version', icon: Info, permissionKey: 'settings.general', group: 'System' },
 ];
 
 export function SettingsPage() {
@@ -86,8 +85,8 @@ export function SettingsPage() {
         return <AuditLogSection />;
       case 'health':
         return <SystemHealthSection />;
-      case 'database':
-        return <DatabaseSection />;
+      case 'about':
+        return <AboutSection />;
       default:
         // Render placeholder for sections built yet
         return <SettingsPlaceholder />;

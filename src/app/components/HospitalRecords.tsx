@@ -1,30 +1,16 @@
 import { useState } from "react";
-import { Building2, Save, Edit, Trash2, UserRound } from "lucide-react";
+import { Building2, Save, Edit, Trash2, UserRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { LabBanner } from "./LabBanner";
+import { motion } from "motion/react";
 import { Button } from "./ui/button";
-
-interface HospitalRecord {
-  id: string;
-  hospitalId: string;
-  profession: string;
-  telephoneNumber: string;
-  affiliateHospital: string;
-}
-
-interface DoctorRecord {
-  id: string;
-  doctorName: string;
-  profession: string;
-  telephoneNumber: string;
-  affiliateHospital: string;
-}
+import { cn } from "./ui/utils";
+import { useHospitals, useCreateHospital, useDeleteHospital, useDoctors, useCreateDoctor, useDeleteDoctor } from "../../hooks/useRegistry";
 
 export function HospitalRecords() {
   const [activeTab, setActiveTab] = useState<"hospital" | "doctor">("hospital");
 
   // Hospital Register State
-  const [hospitalId, setHospitalId] = useState("hd_112");
   const [hospitalName, setHospitalName] = useState("");
   const [location, setLocation] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -40,85 +26,56 @@ export function HospitalRecords() {
   const [affiliateHospital, setAffiliateHospital] = useState("");
   const [doctorLocation, setDoctorLocation] = useState("");
   const [address, setAddress] = useState("");
-  const [doctorId, setDoctorId] = useState("dt_86");
   const [selectedDoctor, setSelectedDoctor] = useState<number | null>(null);
   const [focusedDoctorIndex, setFocusedDoctorIndex] = useState<number | null>(null);
 
-  const [hospitalData, setHospitalData] = useState<HospitalRecord[]>([
-    { id: "1", hospitalId: "hd_18", profession: "37 MILITARY HOSPITAL", telephoneNumber: "ACCRA", affiliateHospital: "" },
-    { id: "2", hospitalId: "hd_44", profession: "ADJUENA HC", telephoneNumber: "ADJUENA", affiliateHospital: "" },
-    { id: "3", hospitalId: "hd_24", profession: "AKOSOMBO INDUSTRIAL C...", telephoneNumber: "AKOSOMBO", affiliateHospital: "AFJI" },
-    { id: "4", hospitalId: "hd_26", profession: "AKUSE GOVERNMENT HOS...", telephoneNumber: "AKUSE", affiliateHospital: "" },
-    { id: "5", hospitalId: "hd_36", profession: "ASHAOYAMAN DISTRICT...", telephoneNumber: "ATIMPOKU", affiliateHospital: "" },
-    { id: "6", hospitalId: "hd_5", profession: "ATUABO HEALTH CENTRE", telephoneNumber: "ATIMPOKU", affiliateHospital: "" },
-    { id: "7", hospitalId: "hd_10", profession: "ATUA GOVERNMENT HOSP...", telephoneNumber: "ATUA", affiliateHospital: "" },
-    { id: "8", hospitalId: "hd_78", profession: "BEACOIN INTERNATIONAL S...", telephoneNumber: "ABURI", affiliateHospital: "" },
-    { id: "9", hospitalId: "hd_12", profession: "CENTRE FOR PLANT MED...", telephoneNumber: "MAMPONG", affiliateHospital: "" },
-    { id: "10", hospitalId: "hd_108", profession: "CORPRECHE SCHOOL", telephoneNumber: "AKOSOMBO", affiliateHospital: "" },
-    { id: "11", hospitalId: "hd_86", profession: "CUDDLE ME MONTESSORI", telephoneNumber: "AKOSOMBO", affiliateHospital: "" },
-    { id: "12", hospitalId: "hd_46", profession: "EPI CHURCH AKOSOMBO", telephoneNumber: "AKOSOMBO", affiliateHospital: "" },
-    { id: "13", hospitalId: "hd_76", profession: "EVERGREEN NATURAL WE...", telephoneNumber: "", affiliateHospital: "" },
-    { id: "14", hospitalId: "hd_52", profession: "FREE HEART HERBAL CEN...", telephoneNumber: "ADJUENA", affiliateHospital: "" },
-    { id: "15", hospitalId: "hd_8", profession: "GA WEST PRESBYTERY", telephoneNumber: "ACCRA", affiliateHospital: "" },
-    { id: "16", hospitalId: "hd_11", profession: "GA PRESBYTERY", telephoneNumber: "ACCRA", affiliateHospital: "" },
-  ]);
-
-  const [doctorData, setDoctorData] = useState<DoctorRecord[]>([
-    { id: "1", doctorName: "ASADIE FRANCISCA", profession: "", telephoneNumber: "", affiliateHospital: "37 MARTINDE PORRES H..." },
-    { id: "2", doctorName: "DR. ASANTE", profession: "", telephoneNumber: "", affiliateHospital: "37 MARTINDE PORRES H..." },
-    { id: "3", doctorName: "DR. BANSAH", profession: "", telephoneNumber: "", affiliateHospital: "37 MARTINDE PORRES H..." },
-    { id: "4", doctorName: "DR. FRIMPONG", profession: "", telephoneNumber: "", affiliateHospital: "37 MARTINDE PORRES H..." },
-    { id: "5", doctorName: "DR. OSMAN", profession: "", telephoneNumber: "", affiliateHospital: "37 MARTINDE PORRES H..." },
-    { id: "6", doctorName: "DR. TETTEY", profession: "", telephoneNumber: "", affiliateHospital: "GA PRESBYTERY" },
-    { id: "7", doctorName: "DR. TETTEY", profession: "", telephoneNumber: "", affiliateHospital: "GA PRESBYTERY" },
-    { id: "8", doctorName: "DR. TETTEY (GP)", profession: "", telephoneNumber: "", affiliateHospital: "GA PRESBYTERY" },
-    { id: "9", doctorName: "DR. TETTEY (GW)", profession: "", telephoneNumber: "", affiliateHospital: "GA PRESBYTERY" },
-    { id: "10", doctorName: "MEDICAL SCREENING", profession: "", telephoneNumber: "", affiliateHospital: "CUDDLE ME MONTESSORI" },
-    { id: "11", doctorName: "MEDICAL SCREENING", profession: "", telephoneNumber: "", affiliateHospital: "MEDICAL SCREENING" },
-    { id: "12", doctorName: "THY DOCTOR", profession: "", telephoneNumber: "", affiliateHospital: "THY HOSPITAL" },
-    { id: "13", doctorName: "UNKNOWN", profession: "", telephoneNumber: "", affiliateHospital: "" },
-    { id: "14", doctorName: "UNKNOWN", profession: "", telephoneNumber: "", affiliateHospital: "VOLTA RIVER ESTATE LIM..." },
-    { id: "15", doctorName: "UNKNOWN", profession: "", telephoneNumber: "", affiliateHospital: "NYAHO MEDICAL CENTRE" },
-    { id: "16", doctorName: "UNKNOWN", profession: "", telephoneNumber: "", affiliateHospital: "GYANGYANLE SCHOOL" },
-  ]);
+  // React Query hooks
+  const { data: hospitalData = [], isLoading: hospitalsLoading } = useHospitals();
+  const createHospital = useCreateHospital();
+  const deleteHospital = useDeleteHospital();
+  const { data: doctorData = [], isLoading: doctorsLoading } = useDoctors();
+  const createDoctor = useCreateDoctor();
+  const deleteDoctor = useDeleteDoctor();
 
   return (
-    <div className="p-8 h-full">
-      <div className="bg-card h-full flex flex-col rounded" style={{ boxShadow: 'var(--shadow-card)' }}>
-        {/* Lab Header Banner */}
-        <LabBanner className="border-b border-border" />
-
-        {/* Header */}
-        <div className="border-b border-border px-6 pt-6 pb-4">
-          <div className="flex items-center gap-3">
-            <Building2 size={28} className="text-blue-600" />
-            <h2 className="text-2xl font-bold text-foreground">Hospital Records</h2>
-          </div>
+    <div className="p-4 sm:p-6 h-full space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
+          <Building2 size={24} />
         </div>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">Hospital Records</h2>
+          <p className="text-sm text-muted-foreground">Manage Hospitals and Doctors</p>
+        </div>
+      </div>
+
+      <div className="bg-card flex flex-col rounded-2xl shadow-sm border border-border/50 overflow-hidden">
 
         {/* Tabs */}
-        <div className="border-b border-border px-6">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setActiveTab("hospital")}
-              className={`px-6 py-3 text-sm font-semibold transition-colors duration-150 border-b-2 ${
-                activeTab === "hospital"
-                  ? "border-primary text-primary bg-primary/10"
-                  : "border-transparent text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              Hospital Register
-            </button>
-            <button
-              onClick={() => setActiveTab("doctor")}
-              className={`px-6 py-3 text-sm font-semibold transition-colors duration-150 border-b-2 ${
-                activeTab === "doctor"
-                  ? "border-primary text-primary bg-primary/10"
-                  : "border-transparent text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              Doctor's Register
-            </button>
+        <div className="border-b border-border/50 px-6 bg-muted/20">
+          <div className="flex gap-4">
+            {(["hospital", "doctor"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="relative px-2 py-4 text-sm font-semibold transition-colors duration-200 outline-none"
+              >
+                <span className={cn(
+                  "relative z-10",
+                  activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}>
+                  {tab === "hospital" ? "Hospital Register" : "Doctor's Register"}
+                </span>
+                {activeTab === tab && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -126,18 +83,36 @@ export function HospitalRecords() {
         <div className="flex-1 overflow-auto p-6 bg-background">
           {activeTab === "hospital" ? (
             <form 
-              onSubmit={(e) => { e.preventDefault(); toast.success("Hospital saved."); }}
-              className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}
+              onSubmit={async (e) => { 
+                e.preventDefault(); 
+                if (!hospitalName) return toast.error("Hospital name is required");
+                try {
+                  await createHospital.mutateAsync({
+                    hospitalName,
+                    location: location || undefined,
+                    phoneNumber: phoneNumber || undefined,
+                    address: hospitalAddress || undefined,
+                  });
+                  toast.success("Hospital saved.");
+                  setHospitalName("");
+                  setLocation("");
+                  setPhoneNumber("");
+                  setHospitalAddress("");
+                } catch (error: any) {
+                  toast.error(error.message);
+                }
+              }}
+              className="bg-card border border-border/50 p-6 sm:p-8 rounded-2xl shadow-sm space-y-8"
             >
               {/* Top Input Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 pb-6 border-b border-border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">Hospital Name</label>
                   <input 
                     type="text"
                     value={hospitalName}
                     onChange={(e) => setHospitalName(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -146,7 +121,7 @@ export function HospitalRecords() {
                     type="text"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -155,7 +130,7 @@ export function HospitalRecords() {
                     type="text"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -164,30 +139,25 @@ export function HospitalRecords() {
                     type="text"
                     value={hospitalAddress}
                     onChange={(e) => setHospitalAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
 
-              {/* Hospital ID and Save Button Row */}
-              <div className="flex items-end justify-between mb-6 pb-6 border-b border-border">
-                <div className="w-48">
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">Hospital ID</label>
-                  <input 
-                    type="text"
-                    value={hospitalId}
-                    onChange={(e) => setHospitalId(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
-                  />
-                </div>
-                <Button type="submit" variant="green" size="sm" className="px-6 mt-auto">
-                  <Save size={14} />
+              {/* Save Button Row */}
+              <div className="flex justify-end mb-6 pb-6 border-b border-border">
+                <Button type="submit" variant="green" size="sm" className="px-6" disabled={createHospital.isPending}>
+                  {createHospital.isPending ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
                   Save
                 </Button>
               </div>
 
               {/* Hospital Records Table */}
-              {hospitalData.length === 0 ? (
+              {hospitalsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="animate-spin text-muted-foreground" size={40} />
+                </div>
+              ) : hospitalData.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
                   <Building2 className="mx-auto text-muted-foreground mb-3" size={40} />
                   <p className="text-sm font-medium text-muted-foreground">No hospitals registered yet</p>
@@ -219,10 +189,10 @@ export function HospitalRecords() {
                 <table className="w-full">
                   <thead className="bg-muted sticky top-0 border-b-2 border-border">
                     <tr>
-                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Hospital ID</th>
-                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Profession</th>
-                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Telephone Number</th>
-                      <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Affiliate Hospital</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Hospital Name</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Location</th>
+                      <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Phone Number</th>
+                      <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Address</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -240,10 +210,10 @@ export function HospitalRecords() {
                                 : 'bg-muted/30 hover:bg-muted/50'
                         }`}
                       >
-                        <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{hospital.hospitalId}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.profession}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.telephoneNumber}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{hospital.affiliateHospital}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{hospital.hospitalName}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.location}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.phoneNumber}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{hospital.address}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -257,14 +227,19 @@ export function HospitalRecords() {
                   type="button"
                   variant="red"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedHospital !== null) {
-                      setHospitalData(prev => prev.filter((_, idx) => idx !== selectedHospital));
-                      setSelectedHospital(null);
-                      toast("Record deleted.");
+                      const hospital = hospitalData[selectedHospital];
+                      try {
+                        await deleteHospital.mutateAsync(hospital.id);
+                        setSelectedHospital(null);
+                        toast("Record deleted.");
+                      } catch (err: any) {
+                        toast.error("Failed to delete record.");
+                      }
                     }
                   }}
-                  disabled={selectedHospital === null}
+                  disabled={selectedHospital === null || deleteHospital.isPending}
                   className="px-6 text-xs"
                 >
                   <Trash2 size={14} />
@@ -285,7 +260,31 @@ export function HospitalRecords() {
             </form>
           ) : (
             <form 
-              onSubmit={(e) => { e.preventDefault(); toast.success("Doctor saved."); }}
+              onSubmit={async (e) => { 
+                e.preventDefault(); 
+                if (!doctorName) return toast.error("Doctor's name is required");
+                try {
+                  await createDoctor.mutateAsync({
+                    doctorName,
+                    speciality: speciality || undefined,
+                    phoneNumber: doctorPhone || undefined,
+                    email: doctorEmail || undefined,
+                    affiliateHospitalId: affiliateHospital || undefined,
+                    location: doctorLocation || undefined,
+                    address: address || undefined,
+                  });
+                  toast.success("Doctor saved.");
+                  setDoctorName("");
+                  setSpeciality("");
+                  setDoctorPhone("");
+                  setDoctorEmail("");
+                  setAffiliateHospital("");
+                  setDoctorLocation("");
+                  setAddress("");
+                } catch (error: any) {
+                  toast.error(error.message);
+                }
+              }}
               className="bg-card border border-border p-6 rounded" style={{ boxShadow: 'var(--shadow-card)' }}
             >
               {/* Top Input Row */}
@@ -296,7 +295,7 @@ export function HospitalRecords() {
                     type="text"
                     value={doctorName}
                     onChange={(e) => setDoctorName(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -305,7 +304,7 @@ export function HospitalRecords() {
                     type="text"
                     value={speciality}
                     onChange={(e) => setSpeciality(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -314,7 +313,7 @@ export function HospitalRecords() {
                     type="text"
                     value={doctorPhone}
                     onChange={(e) => setDoctorPhone(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -323,7 +322,7 @@ export function HospitalRecords() {
                     type="email"
                     value={doctorEmail}
                     onChange={(e) => setDoctorEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
               </div>
@@ -335,14 +334,12 @@ export function HospitalRecords() {
                   <select 
                     value={affiliateHospital}
                     onChange={(e) => setAffiliateHospital(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   >
-                    <option value="">Select Hospital</option>
-                    <option value="37 MILITARY HOSPITAL">37 MILITARY HOSPITAL</option>
-                    <option value="ADJUENA HC">ADJUENA HC</option>
-                    <option value="AKOSOMBO INDUSTRIAL">AKOSOMBO INDUSTRIAL</option>
-                    <option value="GA PRESBYTERY">GA PRESBYTERY</option>
-                    <option value="CUDDLE ME MONTESSORI">CUDDLE ME MONTESSORI</option>
+                    <option value="">Select Hospital (Optional)</option>
+                    {hospitalData.map(h => (
+                      <option key={h.id} value={h.id}>{h.hospitalName}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -351,7 +348,7 @@ export function HospitalRecords() {
                     type="text"
                     value={doctorLocation}
                     onChange={(e) => setDoctorLocation(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
                 <div>
@@ -360,28 +357,23 @@ export function HospitalRecords() {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
+                    className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   />
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Doctor ID</label>
-                    <input 
-                      type="text"
-                      value={doctorId}
-                      onChange={(e) => setDoctorId(e.target.value)}
-                      className="w-full px-3 py-2 border border-border bg-background text-foreground text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 rounded"
-                    />
-                  </div>
-                  <Button type="submit" variant="green" size="sm" className="mt-auto px-6">
-                    <Save size={14} />
+                <div className="flex justify-end pt-2">
+                  <Button type="submit" variant="green" size="sm" className="mt-auto px-6" disabled={createDoctor.isPending}>
+                    {createDoctor.isPending ? <Loader2 size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
                     Save
                   </Button>
                 </div>
               </div>
 
               {/* Doctor Records Table */}
-              {doctorData.length === 0 ? (
+              {doctorsLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <Loader2 className="animate-spin text-muted-foreground" size={40} />
+                </div>
+              ) : doctorData.length === 0 ? (
                 <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
                   <UserRound className="mx-auto text-muted-foreground mb-3" size={40} />
                   <p className="text-sm font-medium text-muted-foreground">No doctors registered yet</p>
@@ -435,9 +427,9 @@ export function HospitalRecords() {
                         }`}
                       >
                         <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{doctor.doctorName}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.profession}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.telephoneNumber}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{doctor.affiliateHospital}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.speciality}</td>
+                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.phoneNumber}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">{hospitalData.find(h => h.id === doctor.affiliateHospitalId)?.hospitalName ?? '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -450,14 +442,19 @@ export function HospitalRecords() {
                   type="button"
                   variant="red"
                   size="sm"
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedDoctor !== null) {
-                      setDoctorData(prev => prev.filter((_, idx) => idx !== selectedDoctor));
-                      setSelectedDoctor(null);
-                      toast("Record deleted.");
+                      const doctor = doctorData[selectedDoctor];
+                      try {
+                        await deleteDoctor.mutateAsync(doctor.id);
+                        setSelectedDoctor(null);
+                        toast("Record deleted.");
+                      } catch (err: any) {
+                        toast.error("Failed to delete record.");
+                      }
                     }
                   }}
-                  disabled={selectedDoctor === null}
+                  disabled={selectedDoctor === null || deleteDoctor.isPending}
                   className="px-6 text-xs"
                 >
                   <Trash2 size={14} />

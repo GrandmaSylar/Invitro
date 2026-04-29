@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Role, User, PermissionMap } from '../lib/types';
-import { SEED_ROLES, SEED_USERS } from '../lib/mockData';
 import { useAuditStore } from './useAuditStore';
 
 interface RbacStore {
@@ -15,13 +14,18 @@ interface RbacStore {
   updateUserOverrides: (userId: string, permissionOverrides: PermissionMap) => void;
   updateUser: (userId: string, data: Partial<User>) => void;
   deactivateUser: (userId: string) => void;
+  setUsers: (users: User[]) => void;
+  setRoles: (roles: Role[]) => void;
 }
 
 export const useRbacStore = create<RbacStore>()(
   persist(
     (set, get) => ({
-      roles: SEED_ROLES,
-      users: SEED_USERS,
+      roles: [],
+      users: [],
+      
+      setUsers: (users) => set({ users }),
+      setRoles: (roles) => set({ roles }),
       
       updateRolePermissions: (roleId, permissions) => {
         useAuditStore.getState().addEvent({
