@@ -93,6 +93,10 @@ export const catalogService = {
     if (error) throw new Error(`Failed to delete test: ${error.message}`);
   },
 
+  // ── DEPARTMENTS ──────────────────────────────────────────────
+  // Departments are stored as plain TEXT on the tests.department column.
+  // These helpers derive the distinct department list from existing tests.
+
   getDepartments: async (): Promise<string[]> => {
     const { data, error } = await supabase
       .from('tests')
@@ -100,8 +104,9 @@ export const catalogService = {
       .order('department', { ascending: true });
 
     if (error) throw new Error(`Failed to fetch departments: ${error.message}`);
-    // Deduplicate
-    return [...new Set((data ?? []).map((row: any) => row.department as string))];
+    // Return unique department names
+    const unique = [...new Set((data ?? []).map((r: any) => r.department as string).filter(Boolean))];
+    return unique;
   },
 
   // ── TEST ↔ PARAMETER LINKS ──────────────────────────────────

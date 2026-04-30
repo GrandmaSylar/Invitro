@@ -87,6 +87,14 @@ export interface Doctor {
 
 // ── Test Catalog ───────────────────────────────────────────────
 
+export interface TestItem {
+  testId: string;
+  testName: string;
+  department: string;
+  testCost: number;
+}
+
+
 export interface Test {
   id: string;
   testName: string;
@@ -142,6 +150,8 @@ export interface LabRecord {
   createdAt: string;
   /** Joined relation — only present when queried with patient */
   patient?: Patient;
+  /** Joined aggregate — only present when queried with lab_record_tests(count) */
+  testCount?: number;
 }
 
 export interface LabRecordTest {
@@ -268,4 +278,34 @@ export interface DashboardStats {
   testsToday: number;
   pendingResults: number;
   revenueThisMonth: number;
+}
+
+// ── Dashboard Charts ───────────────────────────────────────────
+
+export interface DailyTrendPoint {
+  date: string;       // e.g. "Apr 24"
+  patients: number;
+  tests: number;
+}
+
+export interface DepartmentBreakdown {
+  department: string;
+  count: number;
+}
+
+export interface RevenueTrendPoint {
+  date: string;
+  revenue: number;
+}
+
+export interface ResultFlagBreakdown {
+  flag: string;
+  count: number;
+}
+
+export interface DashboardChartData {
+  dailyTrend: DailyTrendPoint[];
+  departmentBreakdown: DepartmentBreakdown[];
+  revenueTrend: RevenueTrendPoint[];
+  resultFlags: ResultFlagBreakdown[];
 }

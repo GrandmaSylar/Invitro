@@ -153,6 +153,7 @@ export function mapLabRecordRow(row: any): LabRecord {
     createdAt: row.created_at,
     // Joined relations (optional — only present when queried with select joins)
     patient: row.patients ? mapPatientRow(row.patients) : undefined,
+    testCount: row.lab_record_tests ? row.lab_record_tests[0]?.count : undefined,
   };
 }
 

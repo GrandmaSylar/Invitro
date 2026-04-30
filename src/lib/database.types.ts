@@ -63,9 +63,9 @@ export interface Database {
         Update: { id?: string; antibiotic_name?: string; created_at?: string };
       };
       patients: {
-        Row: { id: string; patient_name: string; gender: string | null; age: number | null; telephone: string | null; created_at: string };
-        Insert: { id?: string; patient_name: string; gender?: string | null; age?: number | null; telephone?: string | null; created_at?: string };
-        Update: { id?: string; patient_name?: string; gender?: string | null; age?: number | null; telephone?: string | null; created_at?: string };
+        Row: { id: string; patient_name: string; gender: string | null; dob: string | null; age: number | null; telephone: string | null; created_at: string };
+        Insert: { id?: string; patient_name: string; gender?: string | null; dob?: string | null; age?: number | null; telephone?: string | null; created_at?: string };
+        Update: { id?: string; patient_name?: string; gender?: string | null; dob?: string | null; age?: number | null; telephone?: string | null; created_at?: string };
       };
       lab_records: {
         Row: { id: string; lab_number: string; patient_id: string; record_date: string; status: string; referral_option: string | null; referral_doctor_id: string | null; referral_hospital_id: string | null; subtotal: number; total_cost: number; amount_paid: number; arrears: number; created_by_id: string | null; created_at: string };

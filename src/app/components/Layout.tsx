@@ -5,7 +5,6 @@ import {
   TestTube,
   Building2,
   FileText,
-  Search,
   Bell,
   Moon,
   Sun,
@@ -163,16 +162,6 @@ export function Layout() {
             </div>
             
             <div className="flex items-center gap-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                <input
-                  type="text"
-                  placeholder="Search"
-                  className="pl-10 pr-4 py-2 bg-muted border border-border text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:bg-background w-64 rounded transition-colors"
-                />
-              </div>
-              
               {/* Icons */}
               <button className="p-2 hover:bg-accent hover:text-accent-foreground rounded transition-colors duration-150 shrink-0">
                 <Bell size={20} className="text-muted-foreground" />

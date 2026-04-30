@@ -10,8 +10,9 @@ import {
   useParameters, useCreateParameter, useDeleteParameter,
   useAntibiotics, useCreateAntibiotic, useDeleteAntibiotic 
 } from "../../hooks/useCatalog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog";
 
-type Tab = "test-list" | "antibiotics";
+type Tab = "test-list" | "antibiotics" | "departments";
 
 export function TestRegister() {
   const [activeTab, setActiveTab] = useState<Tab>("test-list");
@@ -28,7 +29,8 @@ export function TestRegister() {
   const { data: antibiotics = [], isLoading: antibioticsLoading } = useAntibiotics();
   const createAntibiotic = useCreateAntibiotic();
   const deleteAntibiotic = useDeleteAntibiotic();
-  const { data: departments = [] } = useDepartments();
+  
+  const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
 
   // Parameter State
   const [parameterName, setParameterName] = useState("");
@@ -48,6 +50,7 @@ export function TestRegister() {
   // Antibiotic State
   const [antibioticName, setAntibioticName] = useState("");
 
+
   const [selectedParameter, setSelectedParameter] = useState<number | null>(null);
   const [selectedTest, setSelectedTest] = useState<number | null>(null);
   const [focusedParameterIndex, setFocusedParameterIndex] = useState<number | null>(null);
@@ -55,6 +58,7 @@ export function TestRegister() {
 
   const tabs = [
     { id: "test-list" as Tab, label: "Test List", icon: ClipboardList, color: "blue" },
+    { id: "departments" as Tab, label: "Departments", icon: FlaskConical, color: "emerald" },
     { id: "antibiotics" as Tab, label: "Antibiotics", icon: Pill, color: "purple" },
   ];
 
@@ -311,7 +315,7 @@ export function TestRegister() {
                   try {
                     await createTest.mutateAsync({
                       testName,
-                      department: department || undefined,
+                      department: department || '',
                       resultHeader: resultHeader || undefined,
                       referenceRange: testReferenceRange || undefined,
                       testCost: testCost ? parseFloat(testCost) : undefined,
@@ -506,6 +510,51 @@ export function TestRegister() {
                   </Button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {activeTab === "departments" && (
+            <div className="space-y-6 flex-1 flex flex-col">
+              {/* Header Section */}
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="border-l-4 border-emerald-500 pl-4">
+                  <h2 className="text-2xl font-bold text-foreground">Department Registry</h2>
+                  <p className="text-muted-foreground mt-2">Departments are derived from existing tests. Add a test with a new department name to register it here.</p>
+                </div>
+              </div>
+
+              {/* Departments Table Panel */}
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b-2 border-border">
+                  Registered Departments
+                </h3>
+                {departmentsLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
+                ) : departments.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
+                    <FlaskConical className="mx-auto text-muted-foreground mb-3" size={40} />
+                    <p className="text-sm font-medium text-muted-foreground">No departments found</p>
+                    <p className="text-xs text-muted-foreground mt-1">Create a test with a department name to see it here</p>
+                  </div>
+                ) : (
+                  <div className="border border-border max-h-64 overflow-auto rounded">
+                    <table className="w-full">
+                      <thead className="bg-muted sticky top-0 border-b-2 border-border">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Name</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {departments.map((dep, index) => (
+                          <tr key={dep} className={index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'}>
+                            <td className="px-3 py-2 text-sm text-foreground font-medium">{dep}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

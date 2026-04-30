@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS patients (
     id              TEXT        NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
     patient_name    TEXT        NOT NULL,
     gender          TEXT,
+    dob             DATE,
     age             INTEGER,
     telephone       TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()

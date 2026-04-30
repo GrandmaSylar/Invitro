@@ -11,11 +11,21 @@ import type { LabRecord, LabRecordTest, LabRecordFilters } from '../lib/types';
 // ── Lab Number Generation ──────────────────────────────────────
 
 /**
- * Generates a unique lab number in format "A" + timestamp.
- * Example: "A1714412345678"
+ * Generates a unique lab number via the Supabase RPC function
+ * `generate_lab_number()` which uses a PostgreSQL sequence.
+ * Format: "LAB-00001", "LAB-00002", etc.
+ *
+ * Falls back to a client-side timestamp-based number if the
+ * RPC function is not yet deployed.
  */
-export function generateLabNumber(): string {
-  return `A${Date.now()}`;
+export async function generateLabNumber(): Promise<string> {
+  const { data, error } = await supabase.rpc('generate_lab_number');
+  if (error || !data) {
+    // Fallback for environments where Migration 003 hasn't been applied
+    console.warn('generate_lab_number RPC not available, using fallback:', error?.message);
+    return `LAB-${Date.now()}`;
+  }
+  return data as string;
 }
 
 // ── Service ────────────────────────────────────────────────────
@@ -24,7 +34,7 @@ export const labRecordService = {
   getLabRecords: async (filters?: LabRecordFilters): Promise<LabRecord[]> => {
     let query = supabase
       .from('lab_records')
-      .select('*, patients(*)')
+      .select('*, patients(*), lab_record_tests(count)')
       .order('record_date', { ascending: false });
 
     if (filters?.patientId) {
@@ -57,7 +67,7 @@ export const labRecordService = {
   getLabRecordById: async (id: string): Promise<LabRecord> => {
     const { data, error } = await supabase
       .from('lab_records')
-      .select('*, patients(*)')
+      .select('*, patients(*), lab_record_tests(count)')
       .eq('id', id)
       .single();
 
@@ -68,7 +78,7 @@ export const labRecordService = {
   getLabRecordByLabNumber: async (labNumber: string): Promise<LabRecord> => {
     const { data, error } = await supabase
       .from('lab_records')
-      .select('*, patients(*)')
+      .select('*, patients(*), lab_record_tests(count)')
       .eq('lab_number', labNumber)
       .single();
 
@@ -78,12 +88,14 @@ export const labRecordService = {
 
   createLabRecord: async (recordData: {
     patientId: string;
+    labNumber?: string;
     referralOption?: string;
     referralDoctorId?: string;
     referralHospitalId?: string;
     createdById?: string;
   }): Promise<LabRecord> => {
-    const labNumber = generateLabNumber();
+    // Generate lab number server-side if not provided
+    const labNumber = recordData.labNumber ?? await generateLabNumber();
 
     const { data, error } = await supabase
       .from('lab_records')
@@ -100,7 +112,7 @@ export const labRecordService = {
         arrears: 0,
         created_by_id: recordData.createdById ?? null,
       })
-      .select('*, patients(*)')
+      .select('*, patients(*), lab_record_tests(count)')
       .single();
 
     if (error) throw new Error(`Failed to create lab record: ${error.message}`);
@@ -126,7 +138,7 @@ export const labRecordService = {
       .from('lab_records')
       .update(dbUpdates)
       .eq('id', id)
-      .select('*, patients(*)')
+      .select('*, patients(*), lab_record_tests(count)')
       .single();
 
     if (error) throw new Error(`Failed to update lab record: ${error.message}`);
@@ -201,7 +213,7 @@ export const labRecordService = {
       .from('lab_records')
       .update({ amount_paid: amountPaid, arrears })
       .eq('id', labRecordId)
-      .select('*, patients(*)')
+      .select('*, patients(*), lab_record_tests(count)')
       .single();
 
     if (error) throw new Error(`Failed to update payment: ${error.message}`);

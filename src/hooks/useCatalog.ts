@@ -28,7 +28,10 @@ export function useCreateTest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Omit<Test, 'id' | 'createdAt'>) => catalogService.createTest(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tests'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tests'] });
+      qc.invalidateQueries({ queryKey: ['departments'] }); // new test may introduce a new department
+    },
   });
 }
 
@@ -37,7 +40,10 @@ export function useUpdateTest() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Test, 'id' | 'createdAt'>> }) =>
       catalogService.updateTest(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tests'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tests'] });
+      qc.invalidateQueries({ queryKey: ['departments'] });
+    },
   });
 }
 
@@ -45,9 +51,14 @@ export function useDeleteTest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => catalogService.deleteTest(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tests'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tests'] });
+      qc.invalidateQueries({ queryKey: ['departments'] });
+    },
   });
 }
+
+// ── Departments (derived from tests.department column) ─────────
 
 export function useDepartments() {
   return useQuery({

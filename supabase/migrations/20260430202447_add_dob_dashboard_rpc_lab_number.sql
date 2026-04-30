@@ -1,12 +1,9 @@
--- ============================================================
--- Bloo LIMS — Schema Migrations
--- Run these in Supabase SQL Editor after the initial schema
--- ============================================================
+-- ── Migration: Add DOB column, Dashboard RPC, and Lab Number Sequence ──
 
--- ── Migration 001: Add DOB column to patients ──────────────
+-- 1. Add DOB column to patients
 ALTER TABLE patients ADD COLUMN IF NOT EXISTS dob DATE;
 
--- ── Migration 002: Dashboard stats RPC function ────────────
+-- 2. Dashboard stats RPC function
 -- Returns the count of lab_record_tests that have no results yet.
 CREATE OR REPLACE FUNCTION count_pending_results()
 RETURNS INTEGER AS $$
@@ -18,7 +15,7 @@ RETURNS INTEGER AS $$
   );
 $$ LANGUAGE SQL SECURITY DEFINER;
 
--- ── Migration 003: Auto-generated lab number sequence ──────
+-- 3. Auto-generated lab number sequence
 -- Creates a sequence and a function that returns a unique lab
 -- number in the format "LAB-00001", "LAB-00002", etc.
 
@@ -28,4 +25,3 @@ CREATE OR REPLACE FUNCTION generate_lab_number()
 RETURNS TEXT AS $$
   SELECT 'LAB-' || LPAD(nextval('lab_number_seq')::TEXT, 5, '0');
 $$ LANGUAGE SQL SECURITY DEFINER;
-
