@@ -20,19 +20,38 @@ const gitPlugin = () => {
       if (id === resolvedVirtualModuleId) {
         let version = 'unknown';
         let changelog: any[] = [];
+        
         try {
           const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8'));
-          const hash = execSync('git rev-parse --short HEAD').toString().trim();
+          
+          let hash = process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || 'latest';
+          try {
+            hash = execSync('git rev-parse --short HEAD', { stdio: 'ignore' }).toString().trim();
+          } catch (e) {
+            // ignore git error
+          }
+          
           version = `v${pkg.version} (Build ${hash})`;
           
-          const logStr = execSync('git log -n 10 --pretty=format:"%h|%s|%cr|%an"').toString();
-          changelog = logStr.split('\n').filter(Boolean).map((line: string) => {
-            const [hash, rawMsg, time, author] = line.split('|');
-            let msg = rawMsg.replace(/^(feat|fix|chore|docs|refactor|style|test|perf|build|ci|revert)(\([a-zA-Z0-9\-\_]+\))?:\s*/i, '');
-            msg = msg.charAt(0).toUpperCase() + msg.slice(1);
-            return { hash, msg, time, author };
-          });
-        } catch(e) {}
+          // Parse CHANGELOG.md for the most recent version
+          try {
+            const md = readFileSync(path.resolve(__dirname, 'CHANGELOG.md'), 'utf8');
+            // Find the first section under ## [version]
+            const match = md.match(/## \[[^\]]+\][^\n]*\n([\s\S]*?)(?=## \[|$)/);
+            if (match && match[1]) {
+              const lines = match[1].split('\n').filter(l => l.trim().startsWith('-'));
+              changelog = lines.map((line, i) => {
+                // Keep the styling clean for the UI
+                const msg = line.replace(/^- \*\*(.*?)\*\*:\s*/, '$1: ').replace(/^- /, '');
+                return { hash: `log-${i}`, msg, time: new Date().toLocaleDateString(), author: 'Release Team' };
+              });
+            }
+          } catch (e) {
+            console.error('Failed to parse CHANGELOG.md', e);
+          }
+        } catch(e) {
+          console.error('Failed to generate virtual git info', e);
+        }
         return `export const version = ${JSON.stringify(version)}; export const changelog = ${JSON.stringify(changelog)};`
       }
     },

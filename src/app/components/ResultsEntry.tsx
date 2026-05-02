@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, ArrowLeft, ArrowDownAz, ArrowUpZa } from "lucide-react";
 import { LabBanner } from "./LabBanner";
 import { Button } from "./ui/button";
-import { useLabRecordByNumber, useLabRecordTests } from "../../hooks/useLabRecords";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { useLabRecord, useLabRecordTests } from "../../hooks/useLabRecords";
+import { usePatientsList } from "../../hooks/usePatients";
+import { PatientSearchBar, PatientResultsList } from "../../features/patients/ExistingPatientTab";
 import { useBulkEnterResults } from "../../hooks/useResults";
 import type { ResultFlag, LabRecord } from "../../lib/types";
 
@@ -44,17 +47,34 @@ function computeFlag(result: string, refRange: string): ResultFlag {
 }
 
 export function ResultsEntry() {
-  const [lookupQuery, setLookupQuery] = useState("");
-  const [activeLabNumber, setActiveLabNumber] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [expandedPatientId, setExpandedPatientId] = useState<string | null>(null);
+  const [showAllRecordsFor, setShowAllRecordsFor] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'created_at' | 'patient_name' | 'dob' | 'age'>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
+  const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
   
   // Queries
-  const { data: matchedRecord, isLoading: recordLoading, isError: recordError, isFetched: recordFetched } = useLabRecordByNumber(activeLabNumber);
-  const { data: recordTests = [], isLoading: testsLoading } = useLabRecordTests(matchedRecord?.id || "");
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { patients, isLoading: patientsLoading, isError: patientsError, error: pError } = usePatientsList({
+    search: debouncedSearch.length >= 2 ? debouncedSearch : undefined,
+    sortBy,
+    sortDirection,
+    limit: 50
+  });
+
+  const { data: matchedRecord, isLoading: recordLoading } = useLabRecord(activeRecordId || "");
+  const { data: recordTests = [], isLoading: testsLoading } = useLabRecordTests(activeRecordId || "");
   
   // Mutations
   const bulkEnterResults = useBulkEnterResults();
 
-  const [noMatch, setNoMatch] = useState(false);
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
 
   // Update rows when record tests are loaded
@@ -92,23 +112,6 @@ export function ResultsEntry() {
     }
   }, [recordTests]);
 
-  useEffect(() => {
-    if (recordFetched) {
-      setNoMatch(!!recordError || !matchedRecord);
-    }
-  }, [recordFetched, recordError, matchedRecord]);
-
-  const handleFindPatient = () => {
-    const query = lookupQuery.trim();
-    if (!query) {
-      setActiveLabNumber("");
-      setResultRows([]);
-      setNoMatch(false);
-      return;
-    }
-    setActiveLabNumber(query);
-  };
-
   const handleSubmit = async () => {
     if (!matchedRecord) return;
     
@@ -125,10 +128,8 @@ export function ResultsEntry() {
         }))
       );
       toast.success(`Results submitted for ${matchedRecord.patient?.patientName || "Patient"}.`);
-      setLookupQuery("");
-      setActiveLabNumber("");
+      setActiveRecordId(null);
       setResultRows([]);
-      setNoMatch(false);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -161,37 +162,67 @@ export function ResultsEntry() {
         {/* Scrollable content */}
         <div className="flex-1 overflow-auto p-6 bg-background space-y-6">
 
-          {/* Lookup card */}
-          <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-            <label className="block text-sm font-semibold text-foreground mb-2">Patient Lookup</label>
-            <div className="flex gap-3 mt-2">
-              <input
-                data-element-id="patient-lookup-input"
-                className="flex-1 px-4 py-3 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                value={lookupQuery}
-                onChange={e => setLookupQuery(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleFindPatient()}
-                placeholder="Enter Lab Number or Patient Name..."
+          {/* Patient Lookup / Selection */}
+          {!activeRecordId ? (
+            <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm">
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1">
+                  <PatientSearchBar 
+                    searchQuery={searchQuery} 
+                    setSearchQuery={(val) => {
+                      setSearchQuery(val);
+                      if (expandedPatientId) setExpandedPatientId(null);
+                    }} 
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                    <SelectTrigger className="w-[160px] h-12">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="created_at">Date Added</SelectItem>
+                      <SelectItem value="patient_name">Name</SelectItem>
+                      <SelectItem value="age">Age</SelectItem>
+                      <SelectItem value="dob">Date of Birth</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    className="h-12 w-12 px-0 shrink-0"
+                    onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    title={sortDirection === 'asc' ? "Ascending" : "Descending"}
+                  >
+                    {sortDirection === 'asc' ? <ArrowDownAz size={20} /> : <ArrowUpZa size={20} />}
+                  </Button>
+                </div>
+              </div>
+              <PatientResultsList
+                patients={patients}
+                isLoading={patientsLoading}
+                isError={patientsError}
+                error={pError}
+                searchQuery={searchQuery}
+                expandedPatientId={expandedPatientId}
+                setExpandedPatientId={setExpandedPatientId}
+                showAllRecordsFor={showAllRecordsFor}
+                setShowAllRecordsFor={setShowAllRecordsFor}
+                setOpenRecordId={setActiveRecordId}
               />
-              <Button 
-                variant="blue"
-                data-element-id="find-patient-btn"
-                onClick={handleFindPatient}
-                className="px-6"
-                disabled={recordLoading || testsLoading}
-              >
-                {recordLoading || testsLoading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Search size={18} className="mr-2" />}
-                Find Patient
-              </Button>
             </div>
-
-            {/* No-match inline message */}
-            {noMatch && (
-              <p className="mt-3 text-sm font-medium text-destructive">
-                No patient found. Check the lab number or name and try again.
-              </p>
-            )}
-          </div>
+          ) : (
+            <div className="space-y-6">
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setActiveRecordId(null);
+                  setResultRows([]);
+                }} 
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground -ml-2"
+              >
+                <ArrowLeft size={16} />
+                Back to Patient List
+              </Button>
 
           {/* Patient banner — only when matchedRecord !== null */}
           {matchedRecord && (
@@ -283,6 +314,21 @@ export function ResultsEntry() {
                   Submit Results
                 </Button>
               </div>
+            </div>
+          )}
+          
+          {(recordLoading || testsLoading) && (
+            <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+              <Loader2 size={32} className="animate-spin mb-4" />
+              Loading lab record...
+            </div>
+          )}
+          
+          {!recordLoading && !testsLoading && resultRows.length === 0 && (
+            <div className="p-12 text-center text-muted-foreground border border-dashed rounded-xl">
+              No tests found for this lab record.
+            </div>
+          )}
             </div>
           )}
 
