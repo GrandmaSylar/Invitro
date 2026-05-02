@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "../../app/components/ui/ale
 import { PaymentPanel } from "./PaymentPanel";
 import { ReceiptPreview, ReceiptData } from "./ReceiptPreview";
 import { Search } from "lucide-react";
+import { TestCombobox } from "./TestCombobox";
 
 type SaveState = 'idle' | 'saving-patient' | 'saving-record' | 'saving-tests' | 'success' | 'partial-failure';
 
@@ -542,23 +543,19 @@ export function NewPatientTab() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input
-                placeholder="Search catalog by name or department..."
-                value={testSearchQuery}
-                onChange={(e) => setTestSearchQuery(e.target.value)}
-                className="pl-10"
-                disabled={!!committedRecord || isSaving}
-              />
-            </div>
+            <TestCombobox
+              tests={allTests ?? []}
+              onAdd={(test) => toggleTestSelection(test)}
+              alreadyAdded={tests.map(t => t.testId)}
+              disabled={!!committedRecord || isSaving}
+            />
 
             <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 border-b sticky top-0 z-10">
                   <tr>
                     <th className="p-2 text-center w-12">
-                      {/* Checkbox column header */}
+                      {/* Trash icon header */}
                     </th>
                     <th className="p-2 text-left">Test Name</th>
                     <th className="p-2 text-left">Department</th>
@@ -566,31 +563,33 @@ export function NewPatientTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCatalogTests.length === 0 ? (
+                  {tests.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                        No tests found matching your search.
+                        No tests selected. Search and add tests above.
                       </td>
                     </tr>
                   ) : (
-                    filteredCatalogTests.map((test) => {
-                      const isSelected = tests.some(t => t.testId === test.id);
+                    tests.map((testItem) => {
                       return (
                         <tr 
-                          key={test.id} 
-                          className={`border-b last:border-0 transition-colors ${isSelected ? 'bg-green-50/50 dark:bg-green-900/10' : 'hover:bg-muted/30'}`}
-                          onClick={() => toggleTestSelection(test)}
+                          key={testItem.testId} 
+                          className="border-b last:border-0 hover:bg-muted/30 transition-colors"
                         >
                           <td className="p-2 text-center">
-                            <Checkbox 
-                              checked={isSelected}
-                              onCheckedChange={() => toggleTestSelection(test)}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => setTests(prev => prev.filter(t => t.testId !== testItem.testId))}
                               disabled={!!committedRecord || isSaving}
-                            />
+                            >
+                              <Trash2 size={14} />
+                            </Button>
                           </td>
-                          <td className="p-2 font-medium">{test.testName}</td>
-                          <td className="p-2 text-muted-foreground">{test.department}</td>
-                          <td className="p-2 text-right font-semibold text-primary">₵{test.testCost.toFixed(2)}</td>
+                          <td className="p-2 font-medium">{testItem.testName}</td>
+                          <td className="p-2 text-muted-foreground">{testItem.department}</td>
+                          <td className="p-2 text-right font-semibold text-primary">₵{testItem.testCost.toFixed(2)}</td>
                         </tr>
                       );
                     })

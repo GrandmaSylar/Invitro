@@ -13,6 +13,7 @@ import { labRecordService } from "../../services/labRecordService";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Test, TestItem } from "../../lib/types";
 import { PaymentPanel } from "./PaymentPanel";
+import { TestCombobox } from "./TestCombobox";
 import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/ui/card";
 import { Input } from "../../app/components/ui/input";
 import { Button } from "../../app/components/ui/button";
@@ -100,8 +101,7 @@ export function AddOnTestTab() {
       
       if (amountPaid !== record.amountPaid) {
         await labRecordService.updatePayment(record.id, amountPaid);
-        qc.invalidateQueries({ queryKey: labRecordKeys.byLabNumber(record.labNumber) });
-        qc.invalidateQueries({ queryKey: labRecordKeys.detail(record.id) });
+        qc.invalidateQueries({ queryKey: labRecordKeys.all });
       }
       
       setActiveRecordId(null);
@@ -189,23 +189,19 @@ export function AddOnTestTab() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                  <Input
-                    placeholder="Search catalog by name or department..."
-                    value={testSearchQuery}
-                    onChange={(e) => setTestSearchQuery(e.target.value)}
-                    className="pl-10"
-                    disabled={isSaving}
-                  />
-                </div>
+                <TestCombobox
+                  tests={allTests ?? []}
+                  onAdd={(test) => toggleTestSelection(test)}
+                  alreadyAdded={[...existingTests.map(t => t.testId), ...newTests.map(t => t.testId)]}
+                  disabled={isSaving}
+                />
 
                 <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/50 border-b sticky top-0 z-10">
                       <tr>
                         <th className="p-2 text-center w-12">
-                          {/* Checkbox column header */}
+                          {/* Action column header */}
                         </th>
                         <th className="p-2 text-left">Test Name</th>
                         <th className="p-2 text-left">Department</th>
@@ -213,45 +209,36 @@ export function AddOnTestTab() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredCatalogTests.length === 0 ? (
+                      {newTests.length === 0 ? (
                         <tr>
                           <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                            No tests found matching your search.
+                            No new tests selected. Search and add tests above.
                           </td>
                         </tr>
                       ) : (
-                        filteredCatalogTests.map((test) => {
-                          const isExisting = existingTests.some(t => t.testId === test.id);
-                          const isNew = newTests.some(t => t.testId === test.id);
-                          const isSelected = isExisting || isNew;
-                          
+                        newTests.map((testItem) => {
                           return (
                             <tr 
-                              key={test.id} 
-                              className={`border-b last:border-0 transition-colors ${
-                                isExisting ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 
-                                isNew ? 'bg-green-50/50 dark:bg-green-900/10 cursor-pointer' : 
-                                'hover:bg-muted/30 cursor-pointer'
-                              }`}
-                              onClick={() => {
-                                if (!isExisting) toggleTestSelection(test);
-                              }}
+                              key={testItem.testId} 
+                              className="border-b last:border-0 bg-green-50/30 dark:bg-green-900/10 hover:bg-muted/30 transition-colors"
                             >
                               <td className="p-2 text-center">
-                                <Checkbox 
-                                  checked={isSelected}
-                                  onCheckedChange={() => {
-                                    if (!isExisting) toggleTestSelection(test);
-                                  }}
-                                  disabled={isExisting || isSaving}
-                                />
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => setNewTests(prev => prev.filter(t => t.testId !== testItem.testId))}
+                                  disabled={isSaving}
+                                >
+                                  <Trash2 size={14} />
+                                </Button>
                               </td>
                               <td className="p-2 font-medium flex items-center gap-2">
-                                {test.testName}
-                                {isExisting && <Badge variant="outline" className="text-[10px] h-4 px-1">Already Added</Badge>}
+                                {testItem.testName}
+                                <Badge variant="outline" className="text-[10px] h-4 px-1 text-green-600 border-green-200 bg-green-50">New Add-on</Badge>
                               </td>
-                              <td className="p-2 opacity-80">{test.department}</td>
-                              <td className="p-2 text-right font-semibold">₵{test.testCost.toFixed(2)}</td>
+                              <td className="p-2 text-muted-foreground">{testItem.department}</td>
+                              <td className="p-2 text-right font-semibold text-primary">₵{testItem.testCost.toFixed(2)}</td>
                             </tr>
                           );
                         })

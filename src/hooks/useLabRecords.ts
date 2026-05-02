@@ -108,8 +108,7 @@ export function useAddTestsToRecord() {
     // reflects the true state of the record after any writes occurred.
     onSettled: (_, __, variables) => {
       if (variables) {
-        qc.invalidateQueries({ queryKey: labRecordKeys.tests(variables.labRecordId) });
-        qc.invalidateQueries({ queryKey: labRecordKeys.detail(variables.labRecordId) });
+        qc.invalidateQueries({ queryKey: labRecordKeys.all });
       }
     },
   });
