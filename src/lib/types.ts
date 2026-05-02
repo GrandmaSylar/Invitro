@@ -60,6 +60,8 @@ export interface PatientFilters {
   gender?: string;
   limit?: number;
   offset?: number;
+  sortBy?: 'created_at' | 'patient_name' | 'dob' | 'age';
+  sortDirection?: 'asc' | 'desc';
 }
 
 // ── Hospitals & Doctors ────────────────────────────────────────
@@ -164,6 +166,7 @@ export interface LabRecordTest {
   totalCost: number;
   amountPaid: number;
   arrears: number;
+  parameters?: Parameter[];
 }
 
 export interface LabRecordFilters {

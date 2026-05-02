@@ -24,6 +24,14 @@ export function useTests(filters?: TestFilters) {
   });
 }
 
+export function useTestDetail(id: string | null) {
+  return useQuery({
+    queryKey: catalogKeys.testDetail(id!),
+    queryFn: () => catalogService.getTestById(id!),
+    enabled: !!id,
+  });
+}
+
 export function useCreateTest() {
   const qc = useQueryClient();
   return useMutation({
@@ -60,6 +68,30 @@ export function useDeleteTest() {
 
 // ── Departments (derived from tests.department column) ─────────
 
+export function useLinkParameter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ testId, parameterId, sortOrder = 0 }: { testId: string; parameterId: string; sortOrder?: number }) =>
+      catalogService.linkParameter(testId, parameterId, sortOrder),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: catalogKeys.testDetail(variables.testId) });
+    },
+  });
+}
+
+export function useUnlinkParameter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ testId, parameterId }: { testId: string; parameterId: string }) =>
+      catalogService.unlinkParameter(testId, parameterId),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: catalogKeys.testDetail(variables.testId) });
+    },
+  });
+}
+
+// ── Departments (derived from tests.department column) ─────────
+
 export function useDepartments() {
   return useQuery({
     queryKey: catalogKeys.departments,
@@ -85,6 +117,15 @@ export function useCreateParameter() {
   });
 }
 
+export function useUpdateParameter() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Parameter, 'id' | 'createdAt'>> }) =>
+      catalogService.updateParameter(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['parameters'] }),
+  });
+}
+
 export function useDeleteParameter() {
   const qc = useQueryClient();
   return useMutation({
@@ -106,6 +147,14 @@ export function useCreateAntibiotic() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (name: string) => catalogService.createAntibiotic(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['antibiotics'] }),
+  });
+}
+
+export function useUpdateAntibiotic() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => catalogService.updateAntibiotic(id, name),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['antibiotics'] }),
   });
 }

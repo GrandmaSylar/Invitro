@@ -2,6 +2,9 @@ import { useAuthStore } from "../../stores/useAuthStore";
 import { ALL_PERMISSION_KEYS } from "../../lib/permissions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui/dialog";
 import { Badge } from "./ui/badge";
+import { authService } from "../../services/authService";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 interface MyPermissionsModalProps {
   open: boolean;
@@ -9,7 +12,24 @@ interface MyPermissionsModalProps {
 }
 
 export function MyPermissionsModal({ open, onOpenChange }: MyPermissionsModalProps) {
-  const resolvedPermissions = useAuthStore((state) => state.resolvedPermissions);
+  const { user, resolvedPermissions } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      const syncPermissions = async () => {
+        setIsLoading(true);
+        try {
+          await authService.refreshSession();
+        } catch (error) {
+          console.error("Failed to refresh session permissions:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      syncPermissions();
+    }
+  }, [open]);
 
   // Group by prefix
   const grouped = ALL_PERMISSION_KEYS.reduce((acc, key) => {
@@ -30,8 +50,9 @@ export function MyPermissionsModal({ open, onOpenChange }: MyPermissionsModalPro
       <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>My Permissions</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="flex items-center gap-2">
             View your current access levels across the application.
+            {isLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
           </DialogDescription>
         </DialogHeader>
 
@@ -43,7 +64,7 @@ export function MyPermissionsModal({ open, onOpenChange }: MyPermissionsModalPro
               </h3>
               <div className="bg-muted/30 rounded-lg border">
                 {items.map(({ key, action }, i) => {
-                  const isGranted = !!resolvedPermissions[key];
+                  const isGranted = user?.roleId === 'developer' || !!resolvedPermissions[key];
                   return (
                     <div 
                       key={key} 

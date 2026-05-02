@@ -158,7 +158,7 @@ export function mapLabRecordRow(row: any): LabRecord {
 }
 
 export function mapLabRecordTestRow(row: any): LabRecordTest {
-  return {
+  const result: LabRecordTest = {
     id: row.id,
     labRecordId: row.lab_record_id,
     testId: row.test_id,
@@ -169,6 +169,17 @@ export function mapLabRecordTestRow(row: any): LabRecordTest {
     amountPaid: Number(row.amount_paid),
     arrears: Number(row.arrears),
   };
+
+  if (row.tests?.test_parameters) {
+    result.parameters = row.tests.test_parameters
+      .sort((a: any, b: any) => a.sort_order - b.sort_order)
+      .map((tp: any) => mapParameterRow(tp.parameters));
+  } else if (row.tests?.parameters) {
+      // In case we map it differently later
+      result.parameters = row.tests.parameters;
+  }
+
+  return result;
 }
 
 // ── Test Results ───────────────────────────────────────────────

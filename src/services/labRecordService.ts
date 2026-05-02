@@ -86,6 +86,17 @@ export const labRecordService = {
     return mapLabRecordRow(data);
   },
 
+  checkLabNumberExists: async (labNumber: string): Promise<boolean> => {
+    const { data, error } = await supabase
+      .from('lab_records')
+      .select('id')
+      .eq('lab_number', labNumber)
+      .maybeSingle();
+      
+    if (error) return false;
+    return !!data;
+  },
+
   createLabRecord: async (recordData: {
     patientId: string;
     labNumber?: string;
@@ -150,7 +161,7 @@ export const labRecordService = {
   getTestsForRecord: async (labRecordId: string): Promise<LabRecordTest[]> => {
     const { data, error } = await supabase
       .from('lab_record_tests')
-      .select('*')
+      .select('*, tests(*, test_parameters(sort_order, parameters(*)))')
       .eq('lab_record_id', labRecordId)
       .order('test_name', { ascending: true });
 

@@ -307,6 +307,7 @@ export function UserTable() {
         onOpenChange={setEditorOpen} 
         mode={editorMode} 
         user={selectedUser} 
+        onSuccess={refreshUsers}
       />
 
       <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(undefined)}>

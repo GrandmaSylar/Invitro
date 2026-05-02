@@ -15,10 +15,12 @@ import { Label } from "../../app/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../app/components/ui/select";
 import { Button } from "../../app/components/ui/button";
 import { Checkbox } from "../../app/components/ui/checkbox";
+import { Badge } from "../../app/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "../../app/components/ui/alert";
 
 import { PaymentPanel } from "./PaymentPanel";
-import { TestCombobox } from "./TestCombobox";
+import { ReceiptPreview, ReceiptData } from "./ReceiptPreview";
+import { Search } from "lucide-react";
 
 type SaveState = 'idle' | 'saving-patient' | 'saving-record' | 'saving-tests' | 'success' | 'partial-failure';
 
@@ -38,7 +40,7 @@ export function NewPatientTab() {
   const [insuranceName, setInsuranceName] = useState("");
 
   const [tests, setTests] = useState<TestItem[]>([]);
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [testSearchQuery, setTestSearchQuery] = useState("");
   const [amountPaid, setAmountPaid] = useState(0);
 
   const [committedPatient, setCommittedPatient] = useState<{ id: string; name: string } | null>(null);
@@ -46,7 +48,7 @@ export function NewPatientTab() {
   const [committedTestsPrefix, setCommittedTestsPrefix] = useState<number>(0);
 
   const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [savedRecord, setSavedRecord] = useState<{ labNumber: string; patientName: string; testCount: number; totalCost: number } | null>(null);
+  const [savedRecord, setSavedRecord] = useState<ReceiptData | null>(null);
   const [partialFailureInfo, setPartialFailureInfo] = useState<{
     step: 'record' | 'tests';
     completedCount?: number;
@@ -56,8 +58,9 @@ export function NewPatientTab() {
     patientId?: string;
   } | null>(null);
   const [nameError, setNameError] = useState(false);
-  const [labNumber, setLabNumber] = useState<string | null>(null);
-  const [labNumberLoading, setLabNumberLoading] = useState(true);
+  const [labNumber, setLabNumber] = useState<string>("");
+  const [labNumberExists, setLabNumberExists] = useState(false);
+  const [checkingLabNumber, setCheckingLabNumber] = useState(false);
 
   const patientNameRef = useRef<HTMLInputElement>(null);
 
@@ -66,23 +69,20 @@ export function NewPatientTab() {
   const { data: hospitals } = useHospitals();
   const { data: doctors } = useDoctors();
 
-  // Fetch lab number from server on mount
-  const fetchLabNumber = useCallback(async () => {
-    setLabNumberLoading(true);
-    try {
-      const num = await generateLabNumber();
-      setLabNumber(num);
-    } catch {
-      setLabNumber(`LAB-${Date.now()}`);
-    } finally {
-      setLabNumberLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchLabNumber();
-  }, [fetchLabNumber]);
   const addTestsMutation = useAddTestsToRecord();
+
+  const handleLabNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLabNumber(val);
+    if (!val.trim()) {
+      setLabNumberExists(false);
+      return;
+    }
+    setCheckingLabNumber(true);
+    const exists = await labRecordService.checkLabNumberExists(val);
+    setLabNumberExists(exists);
+    setCheckingLabNumber(false);
+  };
 
   // Calculate age when dob changes
   useEffect(() => {
@@ -106,45 +106,38 @@ export function NewPatientTab() {
     }
   }, [nameError]);
 
-  const handleAddTest = (test: Test) => {
-    const newTestItem: TestItem = {
-      testId: test.id,
-      testName: test.testName,
-      department: test.department,
-      testCost: test.testCost,
-    };
-    setTests(prev => [...prev, newTestItem]);
+  const toggleTestSelection = (test: Test) => {
+    if (!!committedRecord || isSaving) return;
+    setTests(prev => {
+      const exists = prev.some(t => t.testId === test.id);
+      if (exists) {
+        return prev.filter(t => t.testId !== test.id);
+      } else {
+        return [...prev, {
+          testId: test.id,
+          testName: test.testName,
+          department: test.department,
+          testCost: test.testCost,
+        }];
+      }
+    });
   };
 
-  const toggleRowSelection = (index: number) => {
-    const newSet = new Set(selectedRows);
-    if (newSet.has(index)) {
-      newSet.delete(index);
-    } else {
-      newSet.add(index);
-    }
-    setSelectedRows(newSet);
-  };
-
-  const toggleAllRows = () => {
-    if (selectedRows.size === tests.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(tests.map((_, i) => i)));
-    }
-  };
-
-  const handleDeleteSelected = () => {
-    setTests(prev => prev.filter((_, i) => !selectedRows.has(i)));
-    setSelectedRows(new Set());
-  };
-
-  const handleDeleteAll = () => {
+  const handleClearSelection = () => {
     setTests([]);
-    setSelectedRows(new Set());
   };
+
+  const filteredCatalogTests = (allTests ?? []).filter(test => 
+    test.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
+    test.department.toLowerCase().includes(testSearchQuery.toLowerCase())
+  );
 
   const handleSave = async () => {
+    if (labNumberExists) {
+      toast.error("Please enter a unique Lab Number or leave it blank to auto-generate.");
+      return;
+    }
+
     if (!patientName.trim()) {
       setNameError(true);
       toast.error("Patient name is required.");
@@ -181,7 +174,7 @@ export function NewPatientTab() {
     // Step 2: Create Lab Record
     setSaveState('saving-record');
     let recordId = committedRecord?.id || "";
-    let recordLabNumber = committedRecord?.labNumber || labNumber || undefined;
+    let recordLabNumber = committedRecord?.labNumber || (labNumber.trim() ? labNumber.trim() : undefined);
 
     if (!recordId) {
       try {
@@ -221,8 +214,11 @@ export function NewPatientTab() {
       setSavedRecord({
         labNumber,
         patientName: committedPatient?.name || patientName,
-        testCount: committedTestsPrefix + remainingTests.length,
+        tests: tests.map(t => ({ testName: t.testName, testCost: t.testCost })),
         totalCost: tests.reduce((sum, t) => sum + t.testCost, 0),
+        amountPaid: amountPaid,
+        arrears: tests.reduce((sum, t) => sum + t.testCost, 0) - amountPaid,
+        recordDate: new Date().toISOString()
       });
       setSaveState('success');
       toast.success("Record saved successfully!");
@@ -273,7 +269,7 @@ export function NewPatientTab() {
     setHospitalNameFreeText("");
     setInsuranceName("");
     setTests([]);
-    setSelectedRows(new Set());
+    setTestSearchQuery("");
     setAmountPaid(0);
     setSaveState('idle');
     setSavedRecord(null);
@@ -282,40 +278,28 @@ export function NewPatientTab() {
     setCommittedRecord(null);
     setCommittedTestsPrefix(0);
     setNameError(false);
-    fetchLabNumber();
+    setLabNumber("");
+    setLabNumberExists(false);
   };
 
   if (saveState === 'success' && savedRecord) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-card border rounded-2xl shadow-sm text-center max-w-2xl mx-auto mt-8">
-        <div className="size-16 bg-green-100 text-green-700 flex items-center justify-center rounded-full mb-6">
-          <FileText size={32} />
+      <div className="flex flex-col items-center justify-center p-8 max-w-2xl mx-auto mt-8">
+        <div className="print:hidden text-center mb-8">
+          <div className="size-16 bg-green-100 text-green-700 flex items-center justify-center rounded-full mb-6 mx-auto">
+            <FileText size={32} />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Record Created Successfully</h2>
+          <p className="text-muted-foreground mb-6">The patient registration and test selection have been saved.</p>
         </div>
-        <h2 className="text-2xl font-bold mb-2">Record Created Successfully</h2>
-        <p className="text-muted-foreground mb-6">The patient registration and test selection have been saved.</p>
         
-        <div className="bg-muted w-full p-6 rounded-xl mb-8 space-y-4 text-left">
-          <div className="flex justify-between items-center pb-4 border-b">
-            <span className="text-muted-foreground font-medium">Lab Number</span>
-            <span className="text-xl font-mono font-bold text-blue-600">{savedRecord.labNumber}</span>
-          </div>
-          <div className="flex justify-between items-center pb-4 border-b">
-            <span className="text-muted-foreground font-medium">Patient Name</span>
-            <span className="font-semibold">{savedRecord.patientName}</span>
-          </div>
-          <div className="flex justify-between items-center pb-4 border-b">
-            <span className="text-muted-foreground font-medium">Tests Attached</span>
-            <span className="font-semibold">{savedRecord.testCount}</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-muted-foreground font-medium">Total Cost</span>
-            <span className="font-semibold">₵{savedRecord.totalCost.toFixed(2)}</span>
-          </div>
-        </div>
+        <ReceiptPreview recordData={savedRecord} />
 
-        <Button variant="default" size="lg" onClick={resetForm}>
-          Register Another Patient
-        </Button>
+        <div className="mt-8 print:hidden">
+          <Button variant="default" size="lg" onClick={resetForm}>
+            Register Another Patient
+          </Button>
+        </div>
       </div>
     );
   }
@@ -332,22 +316,21 @@ export function NewPatientTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <Label className="mb-2">Lab Number</Label>
-                <div className="flex items-center gap-2">
-                  {labNumberLoading ? (
-                    <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-blue-500/5 border border-blue-500/20 rounded-md">
-                      <Loader2 size={16} className="animate-spin text-blue-500" />
-                      <span className="text-sm text-muted-foreground">Generating…</span>
-                    </div>
-                  ) : (
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center gap-2">
                     <Input 
-                      readOnly 
-                      value={labNumber || ''} 
-                      className="flex-1 bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 font-mono text-lg font-bold" 
+                      value={labNumber} 
+                      onChange={handleLabNumberChange}
+                      placeholder="Leave blank to auto-generate"
+                      className={`flex-1 font-mono text-lg font-bold ${labNumberExists ? "border-red-500 focus-visible:ring-red-500 bg-red-50 dark:bg-red-950/20 text-red-700" : "bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400"}`} 
+                      disabled={!!committedRecord || isSaving}
                     />
-                  )}
-                  <div className="px-4 py-2 border rounded-md bg-muted">
-                    <Calendar className="text-muted-foreground" size={20} />
+                    <div className="px-4 py-2 border rounded-md bg-muted">
+                      <Calendar className="text-muted-foreground" size={20} />
+                    </div>
                   </div>
+                  {checkingLabNumber && <span className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Checking...</span>}
+                  {labNumberExists && <span className="text-xs text-red-500 font-medium flex items-center gap-1"><AlertCircle size={12} /> This lab number is already assigned.</span>}
                 </div>
               </div>
               <div className="flex items-end">
@@ -550,61 +533,71 @@ export function NewPatientTab() {
         {/* TestSelectionCard */}
         <Card>
           <CardHeader className="pb-4 border-b mb-4">
-            <div className="flex items-center gap-2">
-              <TestTube size={20} className="text-green-600" />
-              <CardTitle>Test Selection</CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TestTube size={20} className="text-green-600" />
+                <CardTitle>Test Selection</CardTitle>
+              </div>
+              <Badge variant="secondary">{tests.length} Selected</Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <TestCombobox 
-              tests={allTests ?? []} 
-              alreadyAdded={tests.map(t => t.testId)} 
-              onAdd={handleAddTest} 
-              disabled={!!committedRecord || isSaving}
-            />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              <Input
+                placeholder="Search catalog by name or department..."
+                value={testSearchQuery}
+                onChange={(e) => setTestSearchQuery(e.target.value)}
+                className="pl-10"
+                disabled={!!committedRecord || isSaving}
+              />
+            </div>
 
-            {tests.length === 0 ? (
-              <div className="border-2 border-dashed rounded-xl p-8 text-center text-muted-foreground">
-                <TestTube size={32} className="mx-auto mb-2 opacity-50" />
-                <p>No tests added yet</p>
-              </div>
-            ) : (
-              <div className="border rounded-md overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/50 border-b">
+            <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b sticky top-0 z-10">
+                  <tr>
+                    <th className="p-2 text-center w-12">
+                      {/* Checkbox column header */}
+                    </th>
+                    <th className="p-2 text-left">Test Name</th>
+                    <th className="p-2 text-left">Department</th>
+                    <th className="p-2 text-right">Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCatalogTests.length === 0 ? (
                     <tr>
-                      <th className="p-2 text-center w-12">
-                        <Checkbox 
-                          checked={selectedRows.size > 0 && selectedRows.size === tests.length}
-                          onCheckedChange={toggleAllRows}
-                        />
-                      </th>
-                      <th className="p-2 text-left w-12">#</th>
-                      <th className="p-2 text-left">Test Name</th>
-                      <th className="p-2 text-left">Department</th>
-                      <th className="p-2 text-right">Cost</th>
+                      <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                        No tests found matching your search.
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {tests.map((test, index) => (
-                      <tr key={index} className="border-b last:border-0 hover:bg-muted/30">
-                        <td className="p-2 text-center">
-                          <Checkbox 
-                            checked={selectedRows.has(index)}
-                            onCheckedChange={() => toggleRowSelection(index)}
-                            disabled={!!committedRecord || isSaving}
-                          />
-                        </td>
-                        <td className="p-2">{index + 1}</td>
-                        <td className="p-2 font-medium">{test.testName}</td>
-                        <td className="p-2 text-muted-foreground">{test.department}</td>
-                        <td className="p-2 text-right">₵{test.testCost.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  ) : (
+                    filteredCatalogTests.map((test) => {
+                      const isSelected = tests.some(t => t.testId === test.id);
+                      return (
+                        <tr 
+                          key={test.id} 
+                          className={`border-b last:border-0 transition-colors ${isSelected ? 'bg-green-50/50 dark:bg-green-900/10' : 'hover:bg-muted/30'}`}
+                          onClick={() => toggleTestSelection(test)}
+                        >
+                          <td className="p-2 text-center">
+                            <Checkbox 
+                              checked={isSelected}
+                              onCheckedChange={() => toggleTestSelection(test)}
+                              disabled={!!committedRecord || isSaving}
+                            />
+                          </td>
+                          <td className="p-2 font-medium">{test.testName}</td>
+                          <td className="p-2 text-muted-foreground">{test.department}</td>
+                          <td className="p-2 text-right font-semibold text-primary">₵{test.testCost.toFixed(2)}</td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
@@ -629,13 +622,9 @@ export function NewPatientTab() {
         {/* Actions Bar */}
         <div className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl">
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleDeleteSelected} disabled={selectedRows.size === 0 || isSaving || !!committedRecord}>
+            <Button variant="outline" onClick={handleClearSelection} disabled={tests.length === 0 || isSaving || !!committedRecord}>
               <Trash2 size={16} />
-              Delete Selected
-            </Button>
-            <Button variant="outline" onClick={handleDeleteAll} disabled={tests.length === 0 || isSaving || !!committedRecord}>
-              <Trash2 size={16} />
-              Delete All
+              Clear Selection
             </Button>
           </div>
           <Button variant="default" onClick={handleSave} disabled={isSaving}>

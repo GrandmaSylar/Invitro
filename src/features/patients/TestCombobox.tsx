@@ -16,7 +16,7 @@ export function TestCombobox({ tests, onAdd, alreadyAdded, disabled }: TestCombo
   const [pendingTest, setPendingTest] = useState<Test | null>(null);
 
   const filteredTests = useMemo(() => {
-    if (inputValue.length < 1) return [];
+    if (inputValue.length < 1) return tests;
     const lowerInput = inputValue.toLowerCase();
     return tests.filter(
       (test) =>
@@ -72,7 +72,7 @@ export function TestCombobox({ tests, onAdd, alreadyAdded, disabled }: TestCombo
         disabled={disabled}
       />
 
-      {isOpen && inputValue.length >= 1 && filteredTests.length > 0 && (
+      {isOpen && filteredTests.length > 0 && (
         <div className="absolute z-50 w-full mt-1 bg-background border rounded-md shadow-md max-h-60 overflow-y-auto">
           {filteredTests.map((test) => (
             <div

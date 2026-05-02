@@ -208,6 +208,18 @@ export const catalogService = {
     return mapAntibioticRow(data);
   },
 
+  updateAntibiotic: async (id: string, name: string): Promise<Antibiotic> => {
+    const { data, error } = await supabase
+      .from('antibiotics')
+      .update({ antibiotic_name: name })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update antibiotic: ${error.message}`);
+    return mapAntibioticRow(data);
+  },
+
   deleteAntibiotic: async (id: string): Promise<void> => {
     const { error } = await supabase.from('antibiotics').delete().eq('id', id);
     if (error) throw new Error(`Failed to delete antibiotic: ${error.message}`);

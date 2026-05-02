@@ -333,7 +333,17 @@ export function HospitalRecords() {
                   <label className="block text-sm font-medium text-muted-foreground mb-2">Affiliate Hospital</label>
                   <select 
                     value={affiliateHospital}
-                    onChange={(e) => setAffiliateHospital(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAffiliateHospital(val);
+                      if (val) {
+                        const h = hospitalData.find(h => h.id === val);
+                        if (h) {
+                          setDoctorLocation(h.location || "");
+                          setAddress(h.address || "");
+                        }
+                      }
+                    }}
                     className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
                   >
                     <option value="">Select Hospital (Optional)</option>

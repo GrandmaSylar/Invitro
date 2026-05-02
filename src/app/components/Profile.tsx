@@ -1,20 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
+import { useAuthStore } from "../../stores/useAuthStore";
+import { rbacService } from "../../services/rbacService";
 
 export function Profile() {
+  const { user, login, resolvedPermissions, loginMethod } = useAuthStore();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.fullName || "");
+      setEmail(user.email || "");
+      setPhone(""); // Add phone to user model if needed, leaving empty for now
+    }
+  }, [user]);
 
   const [resultAlerts, setResultAlerts] = useState(true);
   const [systemNotifications, setSystemNotifications] = useState(true);
   const [dailySummary, setDailySummary] = useState(false);
   const [criticalAlerts, setCriticalAlerts] = useState(true);
 
-  const handleSaveSettings = (e: React.FormEvent) => {
+  const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Profile updated.");
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      await rbacService.updateUser(user.id, {
+        fullName: displayName,
+        email: email,
+      });
+      // Update local store so changes reflect immediately
+      login({ ...user, fullName: displayName, email: email }, resolvedPermissions, loginMethod);
+      toast.success("Profile updated successfully.");
+    } catch (error) {
+      toast.error("Failed to update profile.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSavePreferences = (e: React.FormEvent) => {
@@ -25,28 +51,28 @@ export function Profile() {
   return (
     <div className="p-8 space-y-6">
       {/* User Info Card */}
-      <div className="bg-card rounded p-6 flex flex-col md:flex-row items-center gap-6" style={{ boxShadow: 'var(--shadow-card)' }}>
+      <div className="bg-card rounded p-6 flex flex-col md:flex-row items-center md:items-start gap-6" style={{ boxShadow: 'var(--shadow-card)' }}>
         <div className="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center shadow-lg">
-          <span className="text-white text-3xl font-bold">U</span>
+          <span className="text-white text-3xl font-bold">{user?.fullName?.charAt(0).toUpperCase() || "U"}</span>
         </div>
-        <div className="flex-1">
-          <h2 className="text-2xl font-bold text-foreground">User Name</h2>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+        <div className="flex-1 text-center md:text-left">
+          <h2 className="text-2xl font-bold text-foreground">{user?.fullName || "User Name"}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 text-left">
             <div>
               <p className="text-xs text-muted-foreground">Role</p>
-              <p className="font-semibold text-foreground">Lab Technician</p>
+              <p className="font-semibold text-foreground capitalize">{user?.roleId || "Unknown"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Department</p>
-              <p className="font-semibold text-foreground">Biochemistry</p>
+              <p className="text-xs text-muted-foreground">Username</p>
+              <p className="font-semibold text-foreground">{user?.username || "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Employee ID</p>
-              <p className="font-semibold text-foreground"></p>
+              <p className="text-xs text-muted-foreground">Status</p>
+              <p className="font-semibold text-foreground capitalize">{user?.status || "—"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Email</p>
-              <p className="font-semibold text-foreground"></p>
+              <p className="font-semibold text-foreground break-all">{user?.email || "—"}</p>
             </div>
           </div>
         </div>
@@ -87,9 +113,10 @@ export function Profile() {
             <Button
               type="submit"
               variant="green"
-              className="mt-6 font-semibold py-2.5 px-6"
+              className="mt-6 font-semibold py-2.5 px-6 w-full sm:w-auto"
+              disabled={isSaving}
             >
-              Save Changes
+              {isSaving ? "Saving..." : "Save Changes"}
             </Button>
           </form>
         </div>
@@ -165,7 +192,7 @@ export function Profile() {
             <Button
               type="submit"
               variant="green"
-              className="mt-6 font-semibold py-2.5 px-6"
+              className="mt-6 font-semibold py-2.5 px-6 w-full sm:w-auto"
             >
               Save Preferences
             </Button>

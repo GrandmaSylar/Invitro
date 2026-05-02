@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Search, ChevronDown, ChevronUp, ArrowLeft, User, Phone, Calendar, FileText } from "lucide-react";
-import { usePatientSearch } from "../../hooks/usePatients";
+import React, { useState, useEffect } from "react";
+import { Search, ChevronDown, ChevronUp, ArrowLeft, User, Phone, Calendar, FileText, ArrowDownAz, ArrowUpZa } from "lucide-react";
+import { usePatientsList } from "../../hooks/usePatients";
 import { useLabRecords, useLabRecord, useLabRecordTests } from "../../hooks/useLabRecords";
 import { usePermission } from "../../hooks/usePermission";
 import type { Patient, LabRecord, LabRecordTest } from "../../lib/types";
@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/u
 import { Input } from "../../app/components/ui/input";
 import { Button } from "../../app/components/ui/button";
 import { Badge } from "../../app/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../app/components/ui/select";
+import { ReceiptPreview, ReceiptData } from "./ReceiptPreview";
+import { Printer } from "lucide-react";
 
 export function ExistingPatientTab() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,10 +18,24 @@ export function ExistingPatientTab() {
   const [showAllRecordsFor, setShowAllRecordsFor] = useState<string | null>(null);
   const [openRecordId, setOpenRecordId] = useState<string | null>(null);
 
+  const [sortBy, setSortBy] = useState<'created_at' | 'patient_name' | 'dob' | 'age'>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const canEdit = usePermission('patients.edit');
   const canDelete = usePermission('patients.delete');
 
-  const { patients, isLoading, isError, error } = usePatientSearch(searchQuery);
+  const { patients, isLoading, isError, error } = usePatientsList({
+    search: debouncedSearch.length >= 2 ? debouncedSearch : undefined,
+    sortBy,
+    sortDirection,
+    limit: 50
+  });
 
   if (openRecordId) {
     return (
@@ -48,13 +65,38 @@ export function ExistingPatientTab() {
           <CardTitle>Find Patient</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <PatientSearchBar 
-            searchQuery={searchQuery} 
-            setSearchQuery={(val) => {
-              setSearchQuery(val);
-              if (expandedPatientId) setExpandedPatientId(null);
-            }} 
-          />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <PatientSearchBar 
+                searchQuery={searchQuery} 
+                setSearchQuery={(val) => {
+                  setSearchQuery(val);
+                  if (expandedPatientId) setExpandedPatientId(null);
+                }} 
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                <SelectTrigger className="w-[160px] h-12">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Date Added</SelectItem>
+                  <SelectItem value="patient_name">Name</SelectItem>
+                  <SelectItem value="age">Age</SelectItem>
+                  <SelectItem value="dob">Date of Birth</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                className="h-12 w-12 px-0"
+                onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                title={sortDirection === 'asc' ? "Ascending" : "Descending"}
+              >
+                {sortDirection === 'asc' ? <ArrowDownAz size={20} /> : <ArrowUpZa size={20} />}
+              </Button>
+            </div>
+          </div>
           <PatientResultsList
             patients={patients}
             isLoading={isLoading}
@@ -73,7 +115,7 @@ export function ExistingPatientTab() {
   );
 }
 
-function PatientSearchBar({ searchQuery, setSearchQuery }: { searchQuery: string, setSearchQuery: (val: string) => void }) {
+export function PatientSearchBar({ searchQuery, setSearchQuery }: { searchQuery: string, setSearchQuery: (val: string) => void }) {
   return (
     <div className="relative">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
@@ -88,7 +130,7 @@ function PatientSearchBar({ searchQuery, setSearchQuery }: { searchQuery: string
   );
 }
 
-function PatientResultsList({ 
+export function PatientResultsList({ 
   patients, isLoading, isError, error, searchQuery, expandedPatientId, setExpandedPatientId, 
   showAllRecordsFor, setShowAllRecordsFor, setOpenRecordId 
 }: { 
@@ -97,14 +139,6 @@ function PatientResultsList({
   showAllRecordsFor: string | null, setShowAllRecordsFor: (id: string | null) => void,
   setOpenRecordId: (id: string | null) => void
 }) {
-  if (searchQuery.length < 2) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        Please enter at least 2 characters to search.
-      </div>
-    );
-  }
-
   if (isError) {
     return (
       <div className="text-center py-8 text-destructive">
@@ -153,7 +187,7 @@ function PatientResultsList({
   );
 }
 
-function PatientRow({ 
+export function PatientRow({ 
   patient, isExpanded, onToggle, showAll, onShowAll, onOpenRecord 
 }: { 
   patient: Patient, isExpanded: boolean, onToggle: () => void, 
@@ -192,7 +226,7 @@ function PatientRow({
   );
 }
 
-function RecordHistory({ 
+export function RecordHistory({ 
   patientId, showAll, onShowAll, onOpen 
 }: { 
   patientId: string, showAll: boolean, onShowAll: () => void, onOpen: (id: string) => void 
@@ -225,7 +259,7 @@ function RecordHistory({
   );
 }
 
-function RecordItem({ record, onOpen }: { record: LabRecord, onOpen: () => void }) {
+export function RecordItem({ record, onOpen }: { record: LabRecord, onOpen: () => void }) {
   return (
     <div className="flex items-center justify-between p-3 bg-background border rounded-lg hover:border-primary/50 transition-colors">
       <div className="flex items-center gap-4">
@@ -262,6 +296,7 @@ function RecordDetailView({
 }) {
   const { data: record, isLoading: recordLoading, isError: recordError } = useLabRecord(recordId);
   const { data: tests, isLoading: testsLoading, isError: testsError } = useLabRecordTests(recordId);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   if (recordLoading || testsLoading) {
     return (
@@ -291,12 +326,31 @@ function RecordDetailView({
 
   const patient = record.patient;
 
+  if (showReceipt) {
+    const receiptData: ReceiptData = {
+      labNumber: record.labNumber,
+      patientName: patient?.patientName || 'Unknown',
+      tests: tests?.map(t => ({ testName: t.testName, testCost: t.testCost })) || [],
+      totalCost: record.totalCost,
+      amountPaid: record.amountPaid,
+      arrears: record.arrears,
+      recordDate: record.recordDate
+    };
+    return <ReceiptPreview recordData={receiptData} onClose={() => setShowReceipt(false)} />;
+  }
+
   return (
     <div className="space-y-6">
-      <Button variant="ghost" onClick={onBack} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
-        <ArrowLeft size={16} />
-        Back to Search
-      </Button>
+      <div className="flex justify-between items-center">
+        <Button variant="ghost" onClick={onBack} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={16} />
+          Back to Search
+        </Button>
+        <Button variant="outline" onClick={() => setShowReceipt(true)} className="flex items-center gap-2">
+          <Printer size={16} />
+          View Receipt
+        </Button>
+      </div>
 
       {/* Patient Banner */}
       <Card className="bg-muted/30">

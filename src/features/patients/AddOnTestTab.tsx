@@ -1,37 +1,61 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { 
-  useLabRecordByNumber, 
+  useLabRecord, 
   useLabRecordTests, 
   useAddTestsToRecord, 
   PartialAddTestsError,
   labRecordKeys
 } from "../../hooks/useLabRecords";
+import { usePatientsList } from "../../hooks/usePatients";
 import { useTests } from "../../hooks/useCatalog";
 import { labRecordService } from "../../services/labRecordService";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Test, TestItem } from "../../lib/types";
-import { TestCombobox } from "./TestCombobox";
 import { PaymentPanel } from "./PaymentPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/ui/card";
 import { Input } from "../../app/components/ui/input";
 import { Button } from "../../app/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../../app/components/ui/alert";
-import { Loader2, Search, FlaskConical, AlertCircle } from "lucide-react";
+import { Badge } from "../../app/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../app/components/ui/select";
+import { Checkbox } from "../../app/components/ui/checkbox";
+import { Search, FlaskConical, AlertCircle, User, ArrowDownAz, ArrowUpZa, ArrowLeft, Trash2 } from "lucide-react";
+import { PatientSearchBar, PatientResultsList } from "./ExistingPatientTab";
 
 export function AddOnTestTab() {
-  const [labNumberQuery, setLabNumberQuery] = useState("");
-  const [activeLabNumber, setActiveLabNumber] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandedPatientId, setExpandedPatientId] = useState<string | null>(null);
+  const [showAllRecordsFor, setShowAllRecordsFor] = useState<string | null>(null);
+  const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
+
+  const [sortBy, setSortBy] = useState<'created_at' | 'patient_name' | 'dob' | 'age'>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const { patients, isLoading: patientsLoading, isError: patientsError, error: patientsErrorObj } = usePatientsList({
+    search: debouncedSearch.length >= 2 ? debouncedSearch : undefined,
+    sortBy,
+    sortDirection,
+    limit: 50
+  });
+
   const [newTests, setNewTests] = useState<TestItem[]>([]);
+  const [testSearchQuery, setTestSearchQuery] = useState("");
   const [amountPaid, setAmountPaid] = useState(0);
   const [inlineError, setInlineError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const { data: record, isLoading, isError, isFetched } = useLabRecordByNumber(activeLabNumber);
-  const { data: existingTests = [] } = useLabRecordTests(record?.id ?? "");
+  const { data: record, isLoading: recordLoading, isError: recordError } = useLabRecord(activeRecordId ?? "");
+  const { data: existingTests = [] } = useLabRecordTests(activeRecordId ?? "");
   const { data: allTests } = useTests();
   const addTestsMutation = useAddTestsToRecord();
   const qc = useQueryClient();
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (record) {
@@ -39,23 +63,29 @@ export function AddOnTestTab() {
     }
   }, [record]);
 
-  const handleFindRecord = () => {
-    const trimmed = labNumberQuery.trim();
-    if (!trimmed) return;
-    setActiveLabNumber(trimmed);
-    setNewTests([]);
+  const toggleTestSelection = (test: Test) => {
+    if (isSaving) return;
+    const isExisting = existingTests.some(t => t.testId === test.id);
+    if (isExisting) return; // Cannot modify existing tests here
+
+    setNewTests(prev => {
+      const exists = prev.some(t => t.testId === test.id);
+      if (exists) {
+        return prev.filter(t => t.testId !== test.id);
+      } else {
+        return [...prev, {
+          testId: test.id,
+          testName: test.testName,
+          department: test.department,
+          testCost: test.testCost,
+        }];
+      }
+    });
     setInlineError(null);
   };
 
-  const handleAddTest = (test: Test) => {
-    const newTestItem: TestItem = {
-      testId: test.id,
-      testName: test.testName,
-      department: test.department,
-      testCost: test.testCost,
-    };
-    setNewTests(prev => [...prev, newTestItem]);
-    setInlineError(null);
+  const handleClearSelection = () => {
+    setNewTests([]);
   };
 
   const handleSaveAddOnTests = async () => {
@@ -74,8 +104,7 @@ export function AddOnTestTab() {
         qc.invalidateQueries({ queryKey: labRecordKeys.detail(record.id) });
       }
       
-      setLabNumberQuery("");
-      setActiveLabNumber("");
+      setActiveRecordId(null);
       setAmountPaid(0);
       toast.success("Add-on tests saved successfully!");
     } catch (error) {
@@ -89,168 +118,250 @@ export function AddOnTestTab() {
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="pb-4 border-b">
-          <div className="flex items-center gap-2">
-            <FlaskConical size={20} className="text-green-600" />
-            <CardTitle>Add-on Test Mode</CardTitle>
+  const filteredCatalogTests = (allTests ?? []).filter(test => 
+    test.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
+    test.department.toLowerCase().includes(testSearchQuery.toLowerCase())
+  );
+
+  if (activeRecordId) {
+    if (recordLoading) {
+      return (
+        <div className="space-y-6">
+          <Button variant="ghost" onClick={() => setActiveRecordId(null)} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft size={16} />
+            Back to Search
+          </Button>
+          <div className="p-8 text-center text-muted-foreground animate-pulse">Loading record details…</div>
+        </div>
+      );
+    }
+
+    if (recordError || !record) {
+      return (
+        <div className="space-y-6">
+          <Button variant="ghost" onClick={() => setActiveRecordId(null)} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+            <ArrowLeft size={16} />
+            Back to Search
+          </Button>
+          <div className="p-8 text-center text-destructive">
+            Failed to load record details. Please try again.
           </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <label className="block text-sm font-semibold text-foreground mb-2">Patient Lookup</label>
-          <div className="flex gap-3 mt-2">
-            <Input
-              value={labNumberQuery}
-              onChange={(e) => setLabNumberQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleFindRecord()}
-              placeholder="Enter Lab Number..."
-              className="flex-1"
-            />
-            <Button onClick={handleFindRecord} disabled={isLoading} variant="blue" className="px-6">
-              {isLoading ? <Loader2 size={18} className="animate-spin mr-2" /> : <Search size={18} className="mr-2" />}
-              Find Record
-            </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={() => setActiveRecordId(null)} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={16} />
+          Back to Search
+        </Button>
+
+        <div className="bg-primary/5 border border-primary/20 p-5 sm:p-6 rounded-2xl flex flex-wrap gap-8 shadow-sm">
+          <div>
+            <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Patient Name</p>
+            <p className="text-base font-bold text-foreground">{record.patient?.patientName || "Unknown"}</p>
           </div>
-
-          {isFetched && (isError || !record) && (
-            <p className="mt-3 text-sm font-medium text-destructive">
-              No record found for this lab number.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {record && (
-        <>
-          <div className="bg-primary/5 border border-primary/20 p-5 sm:p-6 rounded-2xl flex flex-wrap gap-8 shadow-sm">
-            <div>
-              <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Patient Name</p>
-              <p className="text-base font-bold text-foreground">{record.patient?.patientName || "Unknown"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Lab Number</p>
-              <p className="text-base font-bold text-foreground font-mono">{record.labNumber}</p>
-            </div>
-            <div>
-              <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Date</p>
-              <p className="text-base font-bold text-foreground">{new Date(record.recordDate).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Tests Ordered</p>
-              <p className="text-base font-bold text-foreground">{existingTests.length}</p>
-            </div>
+          <div>
+            <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Lab Number</p>
+            <p className="text-base font-bold text-foreground font-mono">{record.labNumber}</p>
           </div>
+          <div>
+            <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Date</p>
+            <p className="text-base font-bold text-foreground">{new Date(record.recordDate).toLocaleDateString()}</p>
+          </div>
+          <div>
+            <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Tests Ordered</p>
+            <p className="text-base font-bold text-foreground">{existingTests.length}</p>
+          </div>
+        </div>
 
-          <div className="grid grid-cols-[1fr_260px] gap-4 items-start w-full">
-            <div className="space-y-4 min-w-0">
-              {existingTests.length > 0 && (
-                <Card>
-                  <CardHeader className="pb-4 border-b mb-4">
-                    <CardTitle>Existing Tests</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="border rounded-md overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b">
-                          <tr>
-                            <th className="p-2 text-left w-12">#</th>
-                            <th className="p-2 text-left">Test Name</th>
-                            <th className="p-2 text-left">Department</th>
-                            <th className="p-2 text-right">Cost</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {existingTests.map((test, index) => (
-                            <tr key={test.id} className="border-b last:border-0 hover:bg-muted/30">
-                              <td className="p-2 text-center">{index + 1}</td>
-                              <td className="p-2 font-medium">{test.testName}</td>
-                              <td className="p-2 text-muted-foreground">{test.department}</td>
-                              <td className="p-2 text-right">₵{test.testCost.toFixed(2)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardHeader className="pb-4 border-b mb-4">
-                  <CardTitle>Add New Tests</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <TestCombobox 
-                    tests={allTests ?? []} 
-                    alreadyAdded={[...existingTests.map(t => t.testId), ...newTests.map(t => t.testId)]} 
-                    onAdd={handleAddTest} 
+        <div className="grid grid-cols-[1fr_260px] gap-4 items-start w-full">
+          <div className="space-y-4 min-w-0">
+            <Card>
+              <CardHeader className="pb-4 border-b mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FlaskConical size={20} className="text-green-600" />
+                    <CardTitle>Add New Tests</CardTitle>
+                  </div>
+                  <Badge variant="secondary">{newTests.length} New Selected</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                  <Input
+                    placeholder="Search catalog by name or department..."
+                    value={testSearchQuery}
+                    onChange={(e) => setTestSearchQuery(e.target.value)}
+                    className="pl-10"
                     disabled={isSaving}
                   />
+                </div>
 
-                  {newTests.length === 0 ? (
-                    <div className="border-2 border-dashed rounded-xl p-8 text-center text-muted-foreground">
-                      <FlaskConical size={32} className="mx-auto mb-2 opacity-50" />
-                      <p>No add-on tests selected yet</p>
-                    </div>
-                  ) : (
-                    <div className="border rounded-md overflow-hidden">
-                      <table className="w-full text-sm">
-                        <thead className="bg-muted/50 border-b">
-                          <tr>
-                            <th className="p-2 text-left w-12">#</th>
-                            <th className="p-2 text-left">Test Name</th>
-                            <th className="p-2 text-left">Department</th>
-                            <th className="p-2 text-right">Cost</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {newTests.map((test, index) => (
-                            <tr key={index} className="border-b last:border-0 hover:bg-muted/30 bg-green-50/50 dark:bg-green-950/20">
-                              <td className="p-2 text-center">{index + 1}</td>
-                              <td className="p-2 font-medium">{test.testName}</td>
-                              <td className="p-2 text-muted-foreground">{test.department}</td>
-                              <td className="p-2 text-right">₵{test.testCost.toFixed(2)}</td>
+                <div className="border rounded-md overflow-hidden max-h-[400px] overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 border-b sticky top-0 z-10">
+                      <tr>
+                        <th className="p-2 text-center w-12">
+                          {/* Checkbox column header */}
+                        </th>
+                        <th className="p-2 text-left">Test Name</th>
+                        <th className="p-2 text-left">Department</th>
+                        <th className="p-2 text-right">Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredCatalogTests.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} className="p-8 text-center text-muted-foreground">
+                            No tests found matching your search.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredCatalogTests.map((test) => {
+                          const isExisting = existingTests.some(t => t.testId === test.id);
+                          const isNew = newTests.some(t => t.testId === test.id);
+                          const isSelected = isExisting || isNew;
+                          
+                          return (
+                            <tr 
+                              key={test.id} 
+                              className={`border-b last:border-0 transition-colors ${
+                                isExisting ? 'bg-muted/50 text-muted-foreground cursor-not-allowed' : 
+                                isNew ? 'bg-green-50/50 dark:bg-green-900/10 cursor-pointer' : 
+                                'hover:bg-muted/30 cursor-pointer'
+                              }`}
+                              onClick={() => {
+                                if (!isExisting) toggleTestSelection(test);
+                              }}
+                            >
+                              <td className="p-2 text-center">
+                                <Checkbox 
+                                  checked={isSelected}
+                                  onCheckedChange={() => {
+                                    if (!isExisting) toggleTestSelection(test);
+                                  }}
+                                  disabled={isExisting || isSaving}
+                                />
+                              </td>
+                              <td className="p-2 font-medium flex items-center gap-2">
+                                {test.testName}
+                                {isExisting && <Badge variant="outline" className="text-[10px] h-4 px-1">Already Added</Badge>}
+                              </td>
+                              <td className="p-2 opacity-80">{test.department}</td>
+                              <td className="p-2 text-right font-semibold">₵{test.testCost.toFixed(2)}</td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
-              {inlineError && (
-                <Alert variant="destructive" className="bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-900">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{inlineError}</AlertDescription>
-                </Alert>
-              )}
+            {inlineError && (
+              <Alert variant="destructive" className="bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 border-red-200 dark:border-red-900">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{inlineError}</AlertDescription>
+              </Alert>
+            )}
 
-              <div className="flex justify-end p-4 bg-muted/30 border rounded-xl">
-                <Button 
-                  onClick={handleSaveAddOnTests} 
-                  disabled={(newTests.length === 0 && amountPaid === record.amountPaid) || isSaving}
-                  size="lg"
-                  className="px-10"
-                >
-                  {isSaving ? "Saving..." : "Save Add-on Tests"}
+            <div className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleClearSelection} disabled={newTests.length === 0 || isSaving}>
+                  <Trash2 size={16} />
+                  Clear Selection
                 </Button>
               </div>
+              <Button 
+                variant="default" 
+                onClick={handleSaveAddOnTests} 
+                disabled={(newTests.length === 0 && amountPaid === record.amountPaid) || isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Add-on Tests"}
+              </Button>
             </div>
-
-            <PaymentPanel
-              tests={newTests}
-              amountPaid={amountPaid}
-              onAmountPaidChange={setAmountPaid}
-              existingSubtotal={existingTests.reduce((s, t) => s + t.testCost, 0)}
-              disabled={isSaving}
-            />
           </div>
-        </>
-      )}
+
+          <PaymentPanel
+            tests={newTests}
+            amountPaid={amountPaid}
+            onAmountPaidChange={setAmountPaid}
+            existingSubtotal={existingTests.reduce((s, t) => s + t.testCost, 0)}
+            disabled={isSaving}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-green-500/10 border-l-4 border-green-600 p-5 shadow-sm rounded">
+        <div className="flex items-center gap-3">
+          <FlaskConical className="text-green-700" size={24} />
+          <div>
+            <h3 className="font-bold text-green-700 dark:text-green-400">Add-on Test Mode</h3>
+            <p className="text-sm text-green-700 dark:text-green-400">Search for a patient to add tests to an existing lab record.</p>
+          </div>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Find Patient Record</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <PatientSearchBar 
+                searchQuery={searchQuery} 
+                setSearchQuery={(val) => {
+                  setSearchQuery(val);
+                  if (expandedPatientId) setExpandedPatientId(null);
+                }} 
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(val: any) => setSortBy(val)}>
+                <SelectTrigger className="w-[160px] h-12">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="created_at">Date Added</SelectItem>
+                  <SelectItem value="patient_name">Name</SelectItem>
+                  <SelectItem value="age">Age</SelectItem>
+                  <SelectItem value="dob">Date of Birth</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                className="h-12 w-12 px-0"
+                onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                title={sortDirection === 'asc' ? "Ascending" : "Descending"}
+              >
+                {sortDirection === 'asc' ? <ArrowDownAz size={20} /> : <ArrowUpZa size={20} />}
+              </Button>
+            </div>
+          </div>
+          <PatientResultsList
+            patients={patients}
+            isLoading={patientsLoading}
+            isError={patientsError}
+            error={patientsErrorObj}
+            searchQuery={searchQuery}
+            expandedPatientId={expandedPatientId}
+            setExpandedPatientId={setExpandedPatientId}
+            showAllRecordsFor={showAllRecordsFor}
+            setShowAllRecordsFor={setShowAllRecordsFor}
+            setOpenRecordId={setActiveRecordId}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }

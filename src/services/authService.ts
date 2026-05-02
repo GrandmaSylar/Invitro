@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { mapUserRow, mapRoleRow } from '../lib/mappers';
 import type { User } from '../lib/types';
+import { useAuthStore } from '../stores/useAuthStore';
 
 // Re-export mappers for backward compatibility
 export { mapUserRow, mapRoleRow };
@@ -55,13 +56,47 @@ export const authService = {
 
     const user = mapUserRow(userRow);
     const rolePermissions = roleRow ? (roleRow.permissions as Record<string, boolean>) : {};
-    const permissions = rolePermissions ?? {};
+    const permissions = {
+      ...rolePermissions,
+      ...(user.permissionOverrides || {})
+    };
 
     return {
       user,
       permissions,
       twoFactorRequired: user.twoFactorEnabled,
     };
+  },
+
+  refreshSession: async () => {
+    const state = useAuthStore.getState();
+    if (!state.user) return;
+    
+    // Fetch the LIMS user profile from our custom users table
+    const { data: userRow, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', state.user.id)
+      .single();
+
+    if (userError || !userRow) return;
+
+    // Fetch role permissions
+    const { data: roleRow } = await supabase
+      .from('roles')
+      .select('*')
+      .eq('id', userRow.role_id)
+      .single();
+
+    const user = mapUserRow(userRow);
+    const rolePermissions = roleRow ? (roleRow.permissions as Record<string, boolean>) : {};
+    const permissions = {
+      ...rolePermissions,
+      ...(user.permissionOverrides || {})
+    };
+
+    state.updateResolvedPermissions(permissions);
+    state.login(user, permissions, state.loginMethod || '');
   },
 
   sendPasswordReset: async (email: string) => {

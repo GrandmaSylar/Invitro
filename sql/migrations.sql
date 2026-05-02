@@ -19,13 +19,29 @@ RETURNS INTEGER AS $$
 $$ LANGUAGE SQL SECURITY DEFINER;
 
 -- ── Migration 003: Auto-generated lab number sequence ──────
--- Creates a sequence and a function that returns a unique lab
--- number in the format "LAB-00001", "LAB-00002", etc.
+-- Creates a daily sequence table and a function that returns a unique lab
+-- number in the format "A020520260001", "A020520260002", etc.
 
-CREATE SEQUENCE IF NOT EXISTS lab_number_seq START 1;
+CREATE TABLE IF NOT EXISTS daily_sequences (
+    seq_date DATE PRIMARY KEY,
+    last_value INTEGER NOT NULL DEFAULT 0
+);
+
+ALTER TABLE daily_sequences ENABLE ROW LEVEL SECURITY;
 
 CREATE OR REPLACE FUNCTION generate_lab_number()
 RETURNS TEXT AS $$
-  SELECT 'LAB-' || LPAD(nextval('lab_number_seq')::TEXT, 5, '0');
-$$ LANGUAGE SQL SECURITY DEFINER;
+DECLARE
+    today_date DATE := CURRENT_DATE;
+    today_str TEXT := TO_CHAR(today_date, 'DDMMYYYY');
+    seq_val INTEGER;
+BEGIN
+    INSERT INTO daily_sequences (seq_date, last_value)
+    VALUES (today_date, 1)
+    ON CONFLICT (seq_date)
+    DO UPDATE SET last_value = daily_sequences.last_value + 1
+    RETURNING last_value INTO seq_val;
 
+    RETURN 'A' || today_str || LPAD(seq_val::TEXT, 4, '0');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

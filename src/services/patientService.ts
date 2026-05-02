@@ -10,7 +10,7 @@ export const patientService = {
     let query = supabase
       .from('patients')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order(filters?.sortBy ?? 'created_at', { ascending: filters?.sortDirection === 'asc' });
 
     if (filters?.search) {
       query = query.or(

@@ -9,12 +9,38 @@ import type { ResultFlag, LabRecord } from "../../lib/types";
 
 interface ResultRow {
   labRecordTestId: string;
+  parentTestName: string;
   testName: string;
   department: string;
   referenceRange: string;
   unit: string;
   result: string;
   flag: ResultFlag;
+}
+
+function computeFlag(result: string, refRange: string): ResultFlag {
+  if (!result || !refRange) return "Normal";
+  const numResult = parseFloat(result);
+  if (isNaN(numResult)) return "Normal";
+
+  const parts = refRange.split("-").map(s => s.trim());
+  if (parts.length === 2) {
+    const min = parseFloat(parts[0]);
+    const max = parseFloat(parts[1]);
+    if (!isNaN(min) && !isNaN(max)) {
+      if (numResult < min || numResult > max) return "Abnormal";
+    }
+  }
+  if (refRange.startsWith("<")) {
+    const max = parseFloat(refRange.substring(1));
+    if (!isNaN(max) && numResult >= max) return "Abnormal";
+  }
+  if (refRange.startsWith(">")) {
+    const min = parseFloat(refRange.substring(1));
+    if (!isNaN(min) && numResult <= min) return "Abnormal";
+  }
+
+  return "Normal";
 }
 
 export function ResultsEntry() {
@@ -34,17 +60,35 @@ export function ResultsEntry() {
   // Update rows when record tests are loaded
   useEffect(() => {
     if (recordTests.length > 0) {
-      setResultRows(
-        recordTests.map(test => ({
-          labRecordTestId: test.id,
-          testName: test.testName,
-          department: test.department,
-          referenceRange: "", // To get actual ref ranges, we would need to join with test catalog. Assuming empty or added later.
-          unit: "",
-          result: "",
-          flag: "Normal",
-        }))
-      );
+      const rows: ResultRow[] = [];
+      recordTests.forEach(test => {
+        if (test.parameters && test.parameters.length > 0) {
+          test.parameters.forEach(param => {
+            rows.push({
+              labRecordTestId: test.id,
+              parentTestName: test.testName,
+              testName: param.parameterName,
+              department: test.department,
+              referenceRange: param.referenceRange || "",
+              unit: param.units || "",
+              result: "",
+              flag: "Normal",
+            });
+          });
+        } else {
+          rows.push({
+            labRecordTestId: test.id,
+            parentTestName: test.testName,
+            testName: test.testName,
+            department: test.department,
+            referenceRange: "",
+            unit: "",
+            result: "",
+            flag: "Normal",
+          });
+        }
+      });
+      setResultRows(rows);
     }
   }, [recordTests]);
 
@@ -94,6 +138,12 @@ export function ResultsEntry() {
     setResultRows(prev => {
       const newRows = [...prev];
       newRows[index] = { ...newRows[index], [field]: value };
+      
+      // Auto-flagging logic
+      if (field === "result") {
+        newRows[index].flag = computeFlag(value, newRows[index].referenceRange);
+      }
+      
       return newRows;
     });
   };
@@ -173,8 +223,8 @@ export function ResultsEntry() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-muted border-b border-border/60">
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-12">#</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">Test Name</th>
+                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">Test Group</th>
+                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">Parameter / Test</th>
                       <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-32">Department</th>
                       <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-32">Ref Range</th>
                       <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-40">Result</th>
@@ -185,12 +235,8 @@ export function ResultsEntry() {
                   <tbody>
                     {resultRows.map((row, i) => (
                       <tr key={i} className="border-b border-border odd:bg-background even:bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4">
-                          <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-1 min-w-[28px] text-center inline-block">
-                            {i + 1}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm font-semibold text-foreground">{row.testName}</td>
+                        <td className="py-3 px-4 text-sm font-bold text-foreground bg-muted/10">{row.parentTestName}</td>
+                        <td className="py-3 px-4 text-sm font-semibold text-foreground pl-6 border-l-2 border-primary/20">{row.testName}</td>
                         <td className="py-3 px-4 text-sm text-muted-foreground">{row.department}</td>
                         <td className="py-3 px-4 text-sm text-muted-foreground font-mono">{row.referenceRange}</td>
                         <td className="py-3 px-4">

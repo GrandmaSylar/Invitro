@@ -28,18 +28,20 @@ import { Label } from '../../app/components/ui/label';
 import { Switch } from '../../app/components/ui/switch';
 import { toast } from 'sonner';
 import { ScrollArea } from '../../app/components/ui/scroll-area';
-import { X, UserX } from 'lucide-react';
+import { X, UserX, Eye, EyeOff } from 'lucide-react';
 
 interface UserEditorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: 'create' | 'edit';
   user?: User;
+  onSuccess?: () => void;
 }
 
-export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) {
+export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEditorProps) {
   const { roles } = useRbacStore();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -77,6 +79,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
         setLocalOverrides({});
       }
       setSelectedPermission('');
+      setShowPassword(false);
     }
   }, [open, mode, user, roles]);
 
@@ -94,6 +97,7 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
       setLoading(true);
       await rbacService.deactivateUser(user.id);
       toast.success('User deactivated successfully');
+      onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       toast.error('Failed to deactivate user');
@@ -131,10 +135,12 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
           fullName: formData.fullName,
           email: formData.email,
           roleId: formData.roleId,
+          ...(formData.password ? { password: formData.password } : {})
         });
         await rbacService.updateUserOverrides(user.id, localOverrides);
         toast.success('User updated successfully');
       }
+      onSuccess?.();
       onOpenChange(false);
     } catch (error) {
       toast.error(mode === 'create' ? 'Failed to create user' : 'Failed to update user');
@@ -194,18 +200,27 @@ export function UserEditor({ open, onOpenChange, mode, user }: UserEditorProps) 
               )}
             </div>
 
-            {mode === 'create' && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Initial Password</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password">{mode === 'create' ? 'Initial Password' : 'Reset Password'}</Label>
+              <div className="relative">
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => handleChange('password', e.target.value)}
-                  placeholder="Leave empty to use default (tempPassword123!)"
+                  placeholder={mode === 'create' ? "Leave empty to use default (tempPassword123!)" : "Leave empty to keep current password"}
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                </Button>
               </div>
-            )}
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="roleId">Role Assignment</Label>
