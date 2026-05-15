@@ -179,6 +179,15 @@ export interface LabRecordFilters {
   offset?: number;
 }
 
+export interface Payment {
+  id: string;
+  labRecordId: string;
+  amount: number;
+  paymentDate: string;
+  receivedById?: string;
+  receiptNumber: string;
+}
+
 // ── Test Results ───────────────────────────────────────────────
 
 export type ResultFlag = 'Normal' | 'Abnormal' | 'Critical';
@@ -227,11 +236,16 @@ export interface AppSettings {
     appName: string;
     shortName?: string;
     logoUrl?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
     theme: 'system' | 'light' | 'dark';
     language: string;
     timezone: string;
     dateFormat: string;
     timeFormat: string;
+    paymentThresholdType?: 'amount' | 'percentage' | 'none';
+    paymentThresholdValue?: number;
   };
   notifications: {
     emailEnabled: boolean;

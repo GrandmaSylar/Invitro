@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { FileText, User, Calendar, Phone, Stethoscope, TestTube, Trash2, Circle, AlertCircle, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useTests } from "../../hooks/useCatalog";
 import { useHospitals, useDoctors } from "../../hooks/useRegistry";
-import { useAddTestsToRecord, PartialAddTestsError } from "../../hooks/useLabRecords";
+import { useAddTestsToRecord, PartialAddTestsError, labRecordKeys } from "../../hooks/useLabRecords";
 import { patientService } from "../../services/patientService";
-import { labRecordService, generateLabNumber } from "../../services/labRecordService";
+import { labRecordService, generateLabNumber, previewLabNumber } from "../../services/labRecordService";
 
 import type { Test, TestItem } from "../../lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/ui/card";
@@ -22,6 +23,7 @@ import { PaymentPanel } from "./PaymentPanel";
 import { ReceiptPreview, ReceiptData } from "./ReceiptPreview";
 import { Search } from "lucide-react";
 import { TestCombobox } from "./TestCombobox";
+import { cn } from "../../app/components/ui/utils";
 
 type SaveState = 'idle' | 'saving-patient' | 'saving-record' | 'saving-tests' | 'success' | 'partial-failure';
 
@@ -41,8 +43,10 @@ export function NewPatientTab() {
   const [insuranceName, setInsuranceName] = useState("");
 
   const [tests, setTests] = useState<TestItem[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [testSearchQuery, setTestSearchQuery] = useState("");
   const [amountPaid, setAmountPaid] = useState(0);
+  const [isPaymentValid, setIsPaymentValid] = useState(true);
 
   const [committedPatient, setCommittedPatient] = useState<{ id: string; name: string } | null>(null);
   const [committedRecord, setCommittedRecord] = useState<{ id: string; labNumber: string } | null>(null);
@@ -60,22 +64,39 @@ export function NewPatientTab() {
   } | null>(null);
   const [nameError, setNameError] = useState(false);
   const [labNumber, setLabNumber] = useState<string>("");
+  const [defaultLabNumber, setDefaultLabNumber] = useState<string>("");
   const [labNumberExists, setLabNumberExists] = useState(false);
   const [checkingLabNumber, setCheckingLabNumber] = useState(false);
 
   const patientNameRef = useRef<HTMLInputElement>(null);
 
+  // Auto-generate lab number
+  const fetchLabNumber = useCallback(async () => {
+    try {
+      const num = await previewLabNumber();
+      setLabNumber(num);
+      setDefaultLabNumber(num);
+    } catch (error) {
+      console.error("Failed to auto-generate lab number:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLabNumber();
+  }, [fetchLabNumber]);
+
   // Hooks
   const { data: allTests } = useTests();
   const { data: hospitals } = useHospitals();
   const { data: doctors } = useDoctors();
+  const qc = useQueryClient();
 
   const addTestsMutation = useAddTestsToRecord();
 
   const handleLabNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setLabNumber(val);
-    if (!val.trim()) {
+    if (!val.trim() || val === defaultLabNumber) {
       setLabNumberExists(false);
       return;
     }
@@ -96,8 +117,6 @@ export function NewPatientTab() {
         calculatedAge--;
       }
       setAge(Math.max(0, calculatedAge));
-    } else {
-      setAge("");
     }
   }, [dob]);
 
@@ -126,6 +145,25 @@ export function NewPatientTab() {
 
   const handleClearSelection = () => {
     setTests([]);
+    setSelectedRowIds(new Set());
+  };
+
+  const handleDeleteSelected = () => {
+    setTests(prev => prev.filter(t => !selectedRowIds.has(t.testId)));
+    setSelectedRowIds(new Set());
+  };
+
+  const toggleRowSelection = (testId: string) => {
+    if (!!committedRecord || isSaving) return;
+    setSelectedRowIds(prev => {
+      const next = new Set(prev);
+      if (next.has(testId)) {
+        next.delete(testId);
+      } else {
+        next.add(testId);
+      }
+      return next;
+    });
   };
 
   const filteredCatalogTests = (allTests ?? []).filter(test => 
@@ -175,7 +213,15 @@ export function NewPatientTab() {
     // Step 2: Create Lab Record
     setSaveState('saving-record');
     let recordId = committedRecord?.id || "";
-    let recordLabNumber = committedRecord?.labNumber || (labNumber.trim() ? labNumber.trim() : undefined);
+    
+    let recordLabNumber = committedRecord?.labNumber;
+    if (!recordLabNumber) {
+      if (labNumber.trim() && labNumber.trim() !== defaultLabNumber) {
+        recordLabNumber = labNumber.trim();
+      } else {
+        recordLabNumber = undefined;
+      }
+    }
 
     if (!recordId) {
       try {
@@ -207,22 +253,6 @@ export function NewPatientTab() {
     setSaveState('saving-tests');
     try {
       await addTestsMutation.mutateAsync({ labRecordId: recordId, tests: remainingTests });
-      
-      if (amountPaid > 0) {
-        await labRecordService.updatePayment(recordId, amountPaid);
-      }
-
-      setSavedRecord({
-        labNumber,
-        patientName: committedPatient?.name || patientName,
-        tests: tests.map(t => ({ testName: t.testName, testCost: t.testCost })),
-        totalCost: tests.reduce((sum, t) => sum + t.testCost, 0),
-        amountPaid: amountPaid,
-        arrears: tests.reduce((sum, t) => sum + t.testCost, 0) - amountPaid,
-        recordDate: new Date().toISOString()
-      });
-      setSaveState('success');
-      toast.success("Record saved successfully!");
     } catch (error) {
       if (error instanceof PartialAddTestsError) {
         const newlyCompletedCount = error.result.completedCount;
@@ -244,7 +274,36 @@ export function NewPatientTab() {
         });
       }
       setSaveState('partial-failure');
+      return;
     }
+
+    // Step 4: Record Payment (if any)
+    let paymentData: any = null;
+    try {
+      if (amountPaid > 0) {
+        paymentData = await labRecordService.recordPayment(recordId, amountPaid);
+      }
+    } catch (error: any) {
+      toast.error(`Tests were saved, but payment failed: ${error.message}`);
+      // Proceed to success anyway so they don't duplicate tests
+    }
+
+    // Invalidate lab records so the new record and its payment are visible everywhere
+    qc.invalidateQueries({ queryKey: labRecordKeys.all });
+
+    setSavedRecord({
+      labNumber,
+      patientName: committedPatient?.name || patientName,
+      tests: tests.map(t => ({ testName: t.testName, testCost: t.testCost })),
+      totalCost: tests.reduce((sum, t) => sum + t.testCost, 0),
+      amountPaid: amountPaid,
+      arrears: tests.reduce((sum, t) => sum + t.testCost, 0) - amountPaid,
+      recordDate: new Date().toISOString(),
+      receiptNumber: paymentData?.receiptNumber,
+      paymentDate: paymentData?.paymentDate,
+    });
+    setSaveState('success');
+    toast.success("Record saved successfully!");
   };
 
   const handleRetry = () => {
@@ -281,6 +340,7 @@ export function NewPatientTab() {
     setNameError(false);
     setLabNumber("");
     setLabNumberExists(false);
+    fetchLabNumber(); // Generate a new lab number
   };
 
   if (saveState === 'success' && savedRecord) {
@@ -384,7 +444,7 @@ export function NewPatientTab() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="dob">Date of Birth</Label>
+              <Label htmlFor="dob">Date of Birth (Optional)</Label>
               <Input 
                 id="dob"
                 type="date" 
@@ -395,12 +455,16 @@ export function NewPatientTab() {
             </div>
 
             <div className="space-y-2">
-              <Label>Age</Label>
+              <Label htmlFor="age">Age (Optional)</Label>
               <Input 
+                id="age"
+                type="number"
+                min="0"
                 value={age} 
-                readOnly 
-                className="bg-muted text-muted-foreground w-24" 
+                onChange={(e) => setAge(e.target.value ? parseInt(e.target.value, 10) : "")}
+                className="w-24" 
                 placeholder="Years"
+                disabled={!!committedPatient || isSaving}
               />
             </div>
 
@@ -555,7 +619,17 @@ export function NewPatientTab() {
                 <thead className="bg-muted/50 border-b sticky top-0 z-10">
                   <tr>
                     <th className="p-2 text-center w-12">
-                      {/* Trash icon header */}
+                      <Checkbox 
+                        checked={tests.length > 0 && selectedRowIds.size === tests.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedRowIds(new Set(tests.map(t => t.testId)));
+                          } else {
+                            setSelectedRowIds(new Set());
+                          }
+                        }}
+                        disabled={isSaving || tests.length === 0 || !!committedRecord}
+                      />
                     </th>
                     <th className="p-2 text-left">Test Name</th>
                     <th className="p-2 text-left">Department</th>
@@ -571,21 +645,24 @@ export function NewPatientTab() {
                     </tr>
                   ) : (
                     tests.map((testItem) => {
+                      const isSelected = selectedRowIds.has(testItem.testId);
                       return (
                         <tr 
                           key={testItem.testId} 
-                          className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+                          className={cn(
+                            "border-b last:border-0 transition-colors cursor-pointer active:scale-[0.99]",
+                            isSelected 
+                              ? "bg-primary/10 dark:bg-primary/20 border-primary/20" 
+                              : "hover:bg-muted/50"
+                          )}
+                          onClick={() => toggleRowSelection(testItem.testId)}
                         >
-                          <td className="p-2 text-center">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                              onClick={() => setTests(prev => prev.filter(t => t.testId !== testItem.testId))}
-                              disabled={!!committedRecord || isSaving}
-                            >
-                              <Trash2 size={14} />
-                            </Button>
+                          <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox 
+                              checked={isSelected}
+                              onCheckedChange={() => toggleRowSelection(testItem.testId)}
+                              disabled={isSaving || !!committedRecord}
+                            />
                           </td>
                           <td className="p-2 font-medium">{testItem.testName}</td>
                           <td className="p-2 text-muted-foreground">{testItem.department}</td>
@@ -622,11 +699,17 @@ export function NewPatientTab() {
         <div className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl">
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleClearSelection} disabled={tests.length === 0 || isSaving || !!committedRecord}>
-              <Trash2 size={16} />
-              Clear Selection
+              <Trash2 size={16} className="text-red-500" />
+              <span className="text-red-500 font-medium">Delete all tests</span>
             </Button>
+            {selectedRowIds.size > 0 && (
+              <Button variant="outline" onClick={handleDeleteSelected} disabled={isSaving || !!committedRecord}>
+                <Trash2 size={16} />
+                Delete selected test{selectedRowIds.size > 1 ? 's' : ''}
+              </Button>
+            )}
           </div>
-          <Button variant="default" onClick={handleSave} disabled={isSaving}>
+          <Button variant="default" onClick={handleSave} disabled={isSaving || !isPaymentValid}>
             {isSaving ? "Saving..." : "Save Record"}
           </Button>
         </div>
@@ -634,10 +717,12 @@ export function NewPatientTab() {
       </div>
 
       <PaymentPanel
+        className="sticky top-4"
         tests={tests}
         amountPaid={amountPaid}
         onAmountPaidChange={setAmountPaid}
         disabled={isSaving}
+        onValidationChange={setIsPaymentValid}
       />
     </div>
   );

@@ -4,6 +4,23 @@
 import { supabase } from '../lib/supabase';
 import { mapTestResultRow } from '../lib/mappers';
 import type { TestResult, ResultFlag } from '../lib/types';
+import { labRecordService } from './labRecordService';
+
+async function triggerRecalculate(labRecordTestId: string) {
+  try {
+    const { data } = await supabase
+      .from('lab_record_tests')
+      .select('lab_record_id')
+      .eq('id', labRecordTestId)
+      .single();
+      
+    if (data?.lab_record_id) {
+      await labRecordService.recalculateStatusAndTotals(data.lab_record_id);
+    }
+  } catch (e) {
+    console.error('Failed to trigger record recalculation', e);
+  }
+}
 
 export const resultService = {
   getResultsByLabRecordTest: async (labRecordTestId: string): Promise<TestResult[]> => {
@@ -64,6 +81,8 @@ export const resultService = {
       .single();
 
     if (error) throw new Error(`Failed to enter result: ${error.message}`);
+    
+    await triggerRecalculate(resultData.labRecordTestId);
     return mapTestResultRow(data);
   },
 
@@ -76,6 +95,13 @@ export const resultService = {
       unit: string;
     }>
   ): Promise<TestResult> => {
+    // Need to get lab_record_test_id before update to trigger recalculate
+    const { data: existing } = await supabase
+      .from('test_results')
+      .select('lab_record_test_id')
+      .eq('id', id)
+      .single();
+
     const dbUpdates: Record<string, any> = {};
     if (updates.result !== undefined) dbUpdates.result = updates.result;
     if (updates.flag !== undefined) dbUpdates.flag = updates.flag;
@@ -90,6 +116,10 @@ export const resultService = {
       .single();
 
     if (error) throw new Error(`Failed to update result: ${error.message}`);
+    
+    if (existing?.lab_record_test_id) {
+      await triggerRecalculate(existing.lab_record_test_id);
+    }
     return mapTestResultRow(data);
   },
 
@@ -122,11 +152,26 @@ export const resultService = {
       .select();
 
     if (error) throw new Error(`Failed to bulk enter results: ${error.message}`);
+    
+    if (results.length > 0) {
+      await triggerRecalculate(results[0].labRecordTestId);
+    }
+    
     return (data ?? []).map(mapTestResultRow);
   },
 
   deleteResult: async (id: string): Promise<void> => {
+    const { data: existing } = await supabase
+      .from('test_results')
+      .select('lab_record_test_id')
+      .eq('id', id)
+      .single();
+
     const { error } = await supabase.from('test_results').delete().eq('id', id);
     if (error) throw new Error(`Failed to delete result: ${error.message}`);
+    
+    if (existing?.lab_record_test_id) {
+      await triggerRecalculate(existing.lab_record_test_id);
+    }
   },
 };

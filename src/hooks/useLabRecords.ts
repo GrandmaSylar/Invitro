@@ -113,3 +113,34 @@ export function useAddTestsToRecord() {
     },
   });
 }
+
+export function useUpdateLabRecord() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string, updates: Parameters<typeof labRecordService.updateLabRecord>[1] }) =>
+      labRecordService.updateLabRecord(id, updates),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: labRecordKeys.all });
+    },
+  });
+}
+
+export function usePayments(labRecordId: string) {
+  return useQuery({
+    queryKey: ['payments', labRecordId],
+    queryFn: () => labRecordService.getPayments(labRecordId),
+    enabled: !!labRecordId,
+  });
+}
+
+export function useRecordPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ labRecordId, amount, receivedById }: { labRecordId: string, amount: number, receivedById?: string }) =>
+      labRecordService.recordPayment(labRecordId, amount, receivedById),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['payments', variables.labRecordId] });
+      qc.invalidateQueries({ queryKey: labRecordKeys.all });
+    },
+  });
+}

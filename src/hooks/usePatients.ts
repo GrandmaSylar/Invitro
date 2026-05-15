@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { patientService } from '../services/patientService';
 import type { Patient, PatientFilters } from '../lib/types';
 
@@ -35,4 +35,17 @@ export function usePatientsList(filters: PatientFilters) {
   });
 
   return { patients: data ?? [], isLoading, isError, error };
+}
+
+export function useUpdatePatient() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string, updates: Parameters<typeof patientService.updatePatient>[1] }) =>
+      patientService.updatePatient(id, updates),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: patientKeys.search('') });
+      // Depending on structure, you might invalidate more
+      qc.invalidateQueries({ queryKey: ['patients'] });
+    },
+  });
 }

@@ -76,8 +76,8 @@ export function TestRegister() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 h-full space-y-6">
-      <div className="bg-card flex flex-col rounded-2xl shadow-sm border border-border/50 overflow-hidden">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col">
 
         {/* Tabs Header */}
         <div className="border-b border-border/50 px-6 pt-2 bg-muted/20">
@@ -113,7 +113,7 @@ export function TestRegister() {
         </div>
 
         {/* Tab Content */}
-        <div className="flex-1 overflow-auto p-6 flex flex-col">
+        <div className="pt-6 flex flex-col">
           {activeTab === "test-list" && (
             <div className="space-y-6 bg-background p-6">
               {/* Parameter Name Section */}
@@ -229,7 +229,7 @@ export function TestRegister() {
                   </div>
                 ) : (
                 <div 
-                  className="border border-border max-h-48 overflow-auto outline-none rounded"
+                  className="border border-border outline-none rounded"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'ArrowDown') {
@@ -467,7 +467,7 @@ export function TestRegister() {
                   </div>
                 ) : (
                 <div 
-                  className="border border-border/60 bg-card rounded-xl overflow-hidden shadow-sm hover:shadow max-h-48"
+                  className="border border-border/60 bg-card rounded-xl overflow-hidden shadow-sm hover:shadow"
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === 'ArrowDown') {
@@ -512,7 +512,7 @@ export function TestRegister() {
                         >
                           <td className="border-r border-border px-2 py-1 text-xs text-foreground">{test.testName}</td>
                           <td className="border-r border-border px-2 py-1 text-xs text-muted-foreground">{test.department}</td>
-                          <td className="px-2 py-1 text-xs text-muted-foreground">{test.testCost}</td>
+                          <td className="px-2 py-1 text-xs text-muted-foreground">₵{test.testCost?.toFixed(2) ?? '0.00'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -604,7 +604,7 @@ export function TestRegister() {
                       <Loader2 className="animate-spin text-muted-foreground" size={24} />
                     ) : (
                       <div className="space-y-4">
-                        <div className="border border-border/60 rounded-xl overflow-hidden max-h-48 overflow-auto">
+                        <div className="border border-border/60 rounded-xl overflow-hidden">
                           <table className="w-full">
                             <thead className="bg-muted sticky top-0">
                               <tr>
@@ -699,7 +699,7 @@ export function TestRegister() {
                     <p className="text-xs text-muted-foreground mt-1">Create a test with a department name to see it here</p>
                   </div>
                 ) : (
-                  <div className="border border-border max-h-64 overflow-auto rounded">
+                  <div className="border border-border rounded">
                     <table className="w-full">
                       <thead className="bg-muted sticky top-0 border-b-2 border-border">
                         <tr>
@@ -796,7 +796,7 @@ export function TestRegister() {
                     <p className="text-sm font-medium text-muted-foreground">No antibiotics registered yet</p>
                   </div>
                 ) : (
-                  <div className="border border-border max-h-64 overflow-auto rounded">
+                  <div className="border border-border rounded">
                     <table className="w-full">
                       <thead className="bg-muted sticky top-0 border-b-2 border-border">
                         <tr>

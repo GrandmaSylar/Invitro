@@ -23,5 +23,21 @@ CREATE SEQUENCE IF NOT EXISTS lab_number_seq START 1;
 
 CREATE OR REPLACE FUNCTION generate_lab_number()
 RETURNS TEXT AS $$
-  SELECT 'LAB-' || LPAD(nextval('lab_number_seq')::TEXT, 5, '0');
-$$ LANGUAGE SQL SECURITY DEFINER;
+DECLARE
+  next_seq INTEGER;
+BEGIN
+  SELECT COALESCE(MAX(RIGHT(lab_number, 4)::INTEGER), 0) + 1
+  INTO next_seq
+  FROM lab_records
+  WHERE lab_number ~ '^A\d{8}\d{4}$';
+
+  RETURN 'A' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || LPAD(next_seq::TEXT, 4, '0');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION preview_lab_number()
+RETURNS TEXT AS $$
+BEGIN
+  RETURN generate_lab_number();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

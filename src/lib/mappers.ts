@@ -184,6 +184,17 @@ export function mapLabRecordTestRow(row: any): LabRecordTest {
 
 // ── Test Results ───────────────────────────────────────────────
 
+export function mapPaymentRow(row: any) {
+  return {
+    id: row.id,
+    labRecordId: row.lab_record_id,
+    amount: Number(row.amount),
+    paymentDate: row.payment_date,
+    receivedById: row.received_by_id ?? undefined,
+    receiptNumber: row.receipt_number,
+  };
+}
+
 export function mapTestResultRow(row: any): TestResult {
   return {
     id: row.id,

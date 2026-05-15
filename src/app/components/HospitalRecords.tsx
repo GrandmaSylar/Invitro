@@ -38,7 +38,7 @@ export function HospitalRecords() {
   const deleteDoctor = useDeleteDoctor();
 
   return (
-    <div className="p-4 sm:p-6 h-full space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
@@ -50,7 +50,7 @@ export function HospitalRecords() {
         </div>
       </div>
 
-      <div className="bg-card flex flex-col rounded-2xl shadow-sm border border-border/50 overflow-hidden">
+      <div className="flex flex-col">
 
         {/* Tabs */}
         <div className="border-b border-border/50 px-6 bg-muted/20">
@@ -80,7 +80,7 @@ export function HospitalRecords() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto p-6 bg-background">
+        <div className="pt-6">
           {activeTab === "hospital" ? (
             <form 
               onSubmit={async (e) => { 

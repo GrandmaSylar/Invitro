@@ -23,6 +23,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Checkbox } from "../../app/components/ui/checkbox";
 import { Search, FlaskConical, AlertCircle, User, ArrowDownAz, ArrowUpZa, ArrowLeft, Trash2 } from "lucide-react";
 import { PatientSearchBar, PatientResultsList } from "./ExistingPatientTab";
+import { ReceiptPreview, ReceiptData } from "./ReceiptPreview";
+import { cn } from "../../app/components/ui/utils";
 
 export function AddOnTestTab() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -47,20 +49,23 @@ export function AddOnTestTab() {
   });
 
   const [newTests, setNewTests] = useState<TestItem[]>([]);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
   const [testSearchQuery, setTestSearchQuery] = useState("");
-  const [amountPaid, setAmountPaid] = useState(0);
+  const [newPaymentAmount, setNewPaymentAmount] = useState(0);
+  const [isPaymentValid, setIsPaymentValid] = useState(true);
   const [inlineError, setInlineError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const { data: record, isLoading: recordLoading, isError: recordError } = useLabRecord(activeRecordId ?? "");
   const { data: existingTests = [] } = useLabRecordTests(activeRecordId ?? "");
   const { data: allTests } = useTests();
+  const [savedReceiptData, setSavedReceiptData] = useState<ReceiptData | null>(null);
   const addTestsMutation = useAddTestsToRecord();
   const qc = useQueryClient();
 
   useEffect(() => {
     if (record) {
-      setAmountPaid(record.amountPaid || 0);
+      setNewPaymentAmount(0);
     }
   }, [record]);
 
@@ -87,6 +92,25 @@ export function AddOnTestTab() {
 
   const handleClearSelection = () => {
     setNewTests([]);
+    setSelectedRowIds(new Set());
+  };
+
+  const handleDeleteSelected = () => {
+    setNewTests(prev => prev.filter(t => !selectedRowIds.has(t.testId)));
+    setSelectedRowIds(new Set());
+  };
+
+  const toggleRowSelection = (testId: string) => {
+    if (isSaving) return;
+    setSelectedRowIds(prev => {
+      const next = new Set(prev);
+      if (next.has(testId)) {
+        next.delete(testId);
+      } else {
+        next.add(testId);
+      }
+      return next;
+    });
   };
 
   const handleSaveAddOnTests = async () => {
@@ -94,18 +118,38 @@ export function AddOnTestTab() {
     setInlineError(null);
     setIsSaving(true);
     try {
+      let paymentData: any = null;
       if (newTests.length > 0) {
         await addTestsMutation.mutateAsync({ labRecordId: record.id, tests: newTests });
         setNewTests([]);
+        setSelectedRowIds(new Set());
       }
       
-      if (amountPaid !== record.amountPaid) {
-        await labRecordService.updatePayment(record.id, amountPaid);
+      if (newPaymentAmount > 0) {
+        paymentData = await labRecordService.recordPayment(record.id, newPaymentAmount);
         qc.invalidateQueries({ queryKey: labRecordKeys.all });
       }
       
-      setActiveRecordId(null);
-      setAmountPaid(0);
+      const existingTestsSubtotal = existingTests.reduce((s, t) => s + t.testCost, 0);
+      const newTestsSubtotal = newTests.reduce((s, t) => s + t.testCost, 0);
+      const totalCost = existingTestsSubtotal + newTestsSubtotal;
+      const totalAmountPaid = (record.amountPaid || 0) + newPaymentAmount;
+
+      setSavedReceiptData({
+        labNumber: record.labNumber,
+        patientName: record.patient?.patientName || "Unknown Patient",
+        tests: [...existingTests, ...newTests].map(t => ({ testName: t.testName, testCost: t.testCost })),
+        totalCost,
+        amountPaid: totalAmountPaid,
+        arrears: totalCost - totalAmountPaid,
+        recordDate: new Date().toISOString(),
+        ...(paymentData ? {
+          receiptNumber: paymentData.receiptNumber,
+          paymentAmount: paymentData.amount,
+          paymentDate: paymentData.paymentDate
+        } : {})
+      });
+      
       toast.success("Add-on tests saved successfully!");
     } catch (error) {
       if (error instanceof PartialAddTestsError) {
@@ -122,6 +166,29 @@ export function AddOnTestTab() {
     test.testName.toLowerCase().includes(testSearchQuery.toLowerCase()) || 
     test.department.toLowerCase().includes(testSearchQuery.toLowerCase())
   );
+
+  if (savedReceiptData) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" onClick={() => {
+          setSavedReceiptData(null);
+          setActiveRecordId(null);
+          setNewPaymentAmount(0);
+        }} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={16} />
+          Back to Search
+        </Button>
+        <ReceiptPreview 
+          recordData={savedReceiptData} 
+          onClose={() => {
+            setSavedReceiptData(null);
+            setActiveRecordId(null);
+            setNewPaymentAmount(0);
+          }} 
+        />
+      </div>
+    );
+  }
 
   if (activeRecordId) {
     if (recordLoading) {
@@ -149,6 +216,9 @@ export function AddOnTestTab() {
         </div>
       );
     }
+
+    const existingTestsSubtotal = existingTests.reduce((s, t) => s + t.testCost, 0);
+    const existingArrears = Math.max(0, existingTestsSubtotal - (record.amountPaid || 0));
 
     return (
       <div className="space-y-6">
@@ -201,7 +271,17 @@ export function AddOnTestTab() {
                     <thead className="bg-muted/50 border-b sticky top-0 z-10">
                       <tr>
                         <th className="p-2 text-center w-12">
-                          {/* Action column header */}
+                          <Checkbox 
+                            checked={newTests.length > 0 && selectedRowIds.size === newTests.length}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedRowIds(new Set(newTests.map(t => t.testId)));
+                              } else {
+                                setSelectedRowIds(new Set());
+                              }
+                            }}
+                            disabled={isSaving || newTests.length === 0}
+                          />
                         </th>
                         <th className="p-2 text-left">Test Name</th>
                         <th className="p-2 text-left">Department</th>
@@ -217,21 +297,24 @@ export function AddOnTestTab() {
                         </tr>
                       ) : (
                         newTests.map((testItem) => {
+                          const isSelected = selectedRowIds.has(testItem.testId);
                           return (
                             <tr 
                               key={testItem.testId} 
-                              className="border-b last:border-0 bg-green-50/30 dark:bg-green-900/10 hover:bg-muted/30 transition-colors"
+                              className={cn(
+                                "border-b last:border-0 transition-colors cursor-pointer active:scale-[0.99]",
+                                isSelected 
+                                  ? "bg-primary/10 dark:bg-primary/20 border-primary/20" 
+                                  : "hover:bg-muted/50"
+                              )}
+                              onClick={() => toggleRowSelection(testItem.testId)}
                             >
-                              <td className="p-2 text-center">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                  onClick={() => setNewTests(prev => prev.filter(t => t.testId !== testItem.testId))}
+                              <td className="p-2 text-center" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox 
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleRowSelection(testItem.testId)}
                                   disabled={isSaving}
-                                >
-                                  <Trash2 size={14} />
-                                </Button>
+                                />
                               </td>
                               <td className="p-2 font-medium flex items-center gap-2">
                                 {testItem.testName}
@@ -260,27 +343,64 @@ export function AddOnTestTab() {
             <div className="flex items-center justify-between p-4 bg-muted/30 border rounded-xl">
               <div className="flex gap-2">
                 <Button variant="outline" onClick={handleClearSelection} disabled={newTests.length === 0 || isSaving}>
-                  <Trash2 size={16} />
-                  Clear Selection
+                  <Trash2 size={16} className="text-red-500" />
+                  <span className="text-red-500 font-medium">Delete all tests</span>
                 </Button>
+                {selectedRowIds.size > 0 && (
+                  <Button variant="outline" onClick={handleDeleteSelected} disabled={isSaving}>
+                    <Trash2 size={16} />
+                    Delete selected test{selectedRowIds.size > 1 ? 's' : ''}
+                  </Button>
+                )}
               </div>
               <Button 
                 variant="default" 
                 onClick={handleSaveAddOnTests} 
-                disabled={(newTests.length === 0 && amountPaid === record.amountPaid) || isSaving}
+                disabled={(newTests.length === 0 && newPaymentAmount === 0) || isSaving || !isPaymentValid}
               >
                 {isSaving ? "Saving..." : "Save Add-on Tests"}
               </Button>
             </div>
           </div>
 
-          <PaymentPanel
-            tests={newTests}
-            amountPaid={amountPaid}
-            onAmountPaidChange={setAmountPaid}
-            existingSubtotal={existingTests.reduce((s, t) => s + t.testCost, 0)}
-            disabled={isSaving}
-          />
+          <div className="flex flex-col gap-4 sticky top-4">
+            <Card className="bg-muted/20 border-primary/10 shadow-sm">
+              <div className="px-4 py-2 border-b border-border/50 flex justify-between items-center bg-muted/30">
+                <span className="font-semibold text-sm">Previous Summary</span>
+                <span className="text-xs text-muted-foreground">{existingTests.length} tests</span>
+              </div>
+              <div className="p-3 space-y-1 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Cost</span>
+                  <span className="font-medium text-foreground">₵{existingTestsSubtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Paid</span>
+                  <span className="font-medium text-foreground">₵{(record.amountPaid || 0).toFixed(2)}</span>
+                </div>
+                {existingArrears > 0 ? (
+                  <div className="flex justify-between text-amber-600 dark:text-amber-500 font-semibold pt-1 mt-1 border-t border-border/50">
+                    <span>Arrears</span>
+                    <span>₵{existingArrears.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <div className="flex justify-between text-green-600 dark:text-green-500 font-semibold pt-1 mt-1 border-t border-border/50">
+                    <span>Status</span>
+                    <span>Fully Paid</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+            <PaymentPanel
+              title="New Payment"
+              tests={newTests}
+              amountPaid={newPaymentAmount}
+              onAmountPaidChange={setNewPaymentAmount}
+              existingSubtotal={existingArrears}
+              disabled={isSaving}
+              onValidationChange={setIsPaymentValid}
+            />
+          </div>
         </div>
       </div>
     );

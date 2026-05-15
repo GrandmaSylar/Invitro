@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-05-15
+
+### Added
+- **Global Receipt Details**: Receipts and Laboratory Test Reports now dynamically fetch Clinic Name, Address, Phone, Email, and Logo from the Application Identity settings.
+- **Automated Receipt Popups**: Saving an Add-on Test or recording a payment for an existing patient now automatically pops open the printable receipt preview immediately upon success.
+- **Logo Storage Integration**: Built a direct-to-Supabase file uploader for the clinic logo within system settings, including file type verification and a 5MB size limit.
+
+### Changed
+- **Flattened Navigation UI**: System-wide redesign to remove nested cards and embedded scrollable areas across Dashboard, Test Register, Hospital Records, and Results Entry, consolidating pages to use a single global vertical scrollbar.
+- **Sticky Payment Panel**: Restructured the Add-on Test workflow to utilize a sticky layout, ensuring payment fields remain visible while scrolling through lengthy test lists.
+- **Compact Payment Summaries**: Redesigned the "Previous Summary" in the Add-on Test workflow into a slim, compact card that summarizes historical cost, paid amounts, and arrears without consuming excessive screen real estate.
+
+### Fixed
+- **Multiple Scrollbars**: Eliminated hardcoded max-height properties (`max-h-48`, `max-h-64`) and `overflow-auto` wrappers in the Test Register, allowing tables to properly flow with the unified page structure.
+
 ## [0.1.1] - 2026-05-02
 
 ### Added

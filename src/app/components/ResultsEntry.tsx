@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useLabRecord, useLabRecordTests } from "../../hooks/useLabRecords";
 import { usePatientsList } from "../../hooks/usePatients";
 import { PatientSearchBar, PatientResultsList } from "../../features/patients/ExistingPatientTab";
-import { useBulkEnterResults } from "../../hooks/useResults";
+import { useBulkEnterResults, useResultsByRecord } from "../../hooks/useResults";
+import { ResultPreview } from "../../features/patients/ResultPreview";
 import type { ResultFlag, LabRecord } from "../../lib/types";
 
 interface ResultRow {
@@ -55,6 +56,7 @@ export function ResultsEntry() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null);
+  const [previewRecordId, setPreviewRecordId] = useState<string | null>(null);
   
   // Queries
   useEffect(() => {
@@ -128,6 +130,8 @@ export function ResultsEntry() {
         }))
       );
       toast.success(`Results submitted for ${matchedRecord.patient?.patientName || "Patient"}.`);
+      // Transition to preview instead of clearing
+      setPreviewRecordId(activeRecordId);
       setActiveRecordId(null);
       setResultRows([]);
     } catch (err: any) {
@@ -149,9 +153,52 @@ export function ResultsEntry() {
     });
   };
 
+  // ── Preview Mode (after submission or viewing old results) ───
+  const previewRecord = useLabRecord(previewRecordId || "");
+  const { data: previewResults = [], isLoading: previewResultsLoading } = useResultsByRecord(previewRecordId || "");
+
+  if (previewRecordId) {
+    if (previewRecord.isLoading || previewResultsLoading) {
+      return (
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="flex flex-col">
+            <div className="px-6 py-4 border-b border-border/50 bg-muted/20">
+              <h2 className="text-xl font-bold text-foreground">Test Results Preview</h2>
+            </div>
+            <div className="pt-6 flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <Loader2 size={32} className="animate-spin mx-auto mb-4" />
+                Loading results…
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-4 sm:p-6 space-y-6">
+        <div className="flex flex-col">
+          <div className="px-6 py-4 border-b border-border/50 bg-muted/20">
+            <h2 className="text-xl font-bold text-foreground">Test Results Preview</h2>
+            <p className="text-sm text-muted-foreground">Review, select, and print test results</p>
+          </div>
+          <div className="pt-6">
+            <ResultPreview
+              record={previewRecord.data!}
+              results={previewResults}
+              onClose={() => setPreviewRecordId(null)}
+              backLabel="Back to Patient List"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 sm:p-6 h-full space-y-6">
-      <div className="bg-card flex flex-col rounded-2xl shadow-sm border border-border/50 overflow-hidden">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col">
 
         {/* Page title strip */}
         <div className="px-6 py-4 border-b border-border/50 bg-muted/20">
@@ -160,7 +207,7 @@ export function ResultsEntry() {
         </div>
 
         {/* Scrollable content */}
-        <div className="flex-1 overflow-auto p-6 bg-background space-y-6">
+        <div className="pt-6 space-y-6">
 
           {/* Patient Lookup / Selection */}
           {!activeRecordId ? (
@@ -301,7 +348,18 @@ export function ResultsEntry() {
                 </table>
               </div>
 
-              <div className="flex justify-end mt-6 pt-4 border-t border-border">
+              <div className="flex justify-end mt-6 pt-4 border-t border-border gap-3">
+                <Button 
+                  variant="outline"
+                  size="lg"
+                  data-element-id="preview-results-btn"
+                  onClick={() => {
+                    if (activeRecordId) setPreviewRecordId(activeRecordId);
+                  }}
+                  className="px-6"
+                >
+                  View Existing Results
+                </Button>
                 <Button 
                   variant="green"
                   size="lg"

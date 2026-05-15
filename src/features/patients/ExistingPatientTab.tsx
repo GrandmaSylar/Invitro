@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Search, ChevronDown, ChevronUp, ArrowLeft, User, Phone, Calendar, FileText, ArrowDownAz, ArrowUpZa } from "lucide-react";
-import { usePatientsList } from "../../hooks/usePatients";
-import { useLabRecords, useLabRecord, useLabRecordTests } from "../../hooks/useLabRecords";
+import { Search, ChevronDown, ChevronUp, ArrowLeft, User, Phone, Calendar, FileText, ArrowDownAz, ArrowUpZa, ClipboardCheck, Loader2, Edit } from "lucide-react";
+import { usePatientsList, useUpdatePatient } from "../../hooks/usePatients";
+import { useLabRecords, useLabRecord, useLabRecordTests, useUpdateLabRecord, usePayments, useRecordPayment } from "../../hooks/useLabRecords";
+import { useResultsByRecord } from "../../hooks/useResults";
 import { usePermission } from "../../hooks/usePermission";
+import { labRecordService } from "../../services/labRecordService";
 import type { Patient, LabRecord, LabRecordTest } from "../../lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/ui/card";
 import { Input } from "../../app/components/ui/input";
 import { Button } from "../../app/components/ui/button";
 import { Badge } from "../../app/components/ui/badge";
+import { Label } from "../../app/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../app/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../app/components/ui/dialog";
 import { ReceiptPreview, ReceiptData } from "./ReceiptPreview";
+import { ResultPreview } from "./ResultPreview";
 import { Printer } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function ExistingPatientTab() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -278,7 +285,11 @@ export function RecordItem({ record, onOpen }: { record: LabRecord, onOpen: () =
         </div>
       </div>
       <div className="flex items-center gap-4">
-        <Badge variant={record.status === 'Completed' ? 'default' : 'secondary'}>
+        <Badge variant={
+          record.status === 'Closed' ? 'default' :
+          record.status === 'Active' ? 'secondary' :
+          'destructive'
+        }>
           {record.status}
         </Badge>
         <Button variant="ghost" size="sm" onClick={onOpen} className="text-primary hover:text-primary hover:bg-primary/10">
@@ -296,7 +307,27 @@ function RecordDetailView({
 }) {
   const { data: record, isLoading: recordLoading, isError: recordError } = useLabRecord(recordId);
   const { data: tests, isLoading: testsLoading, isError: testsError } = useLabRecordTests(recordId);
-  const [showReceipt, setShowReceipt] = useState(false);
+  const { data: savedResults = [], isLoading: resultsLoading } = useResultsByRecord(recordId);
+  const { data: payments = [], isLoading: paymentsLoading } = usePayments(recordId);
+  const updateRecord = useUpdateLabRecord();
+  const updatePatient = useUpdatePatient();
+  const recordPayment = useRecordPayment();
+  const qc = useQueryClient();
+  const [showReceipt, setShowReceipt] = useState<ReceiptData | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [showReceiptsView, setShowReceiptsView] = useState(false);
+
+  // ── Edit Patient Info Dialog State ──
+  const [editPatientOpen, setEditPatientOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editGender, setEditGender] = useState('');
+  const [editDob, setEditDob] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+
+  // ── Edit Payment Dialog State ──
+  const [editPaymentOpen, setEditPaymentOpen] = useState(false);
+  const [editAmountPaid, setEditAmountPaid] = useState('');
+  const [paymentSaving, setPaymentSaving] = useState(false);
 
   if (recordLoading || testsLoading) {
     return (
@@ -327,16 +358,30 @@ function RecordDetailView({
   const patient = record.patient;
 
   if (showReceipt) {
-    const receiptData: ReceiptData = {
-      labNumber: record.labNumber,
-      patientName: patient?.patientName || 'Unknown',
-      tests: tests?.map(t => ({ testName: t.testName, testCost: t.testCost })) || [],
-      totalCost: record.totalCost,
-      amountPaid: record.amountPaid,
-      arrears: record.arrears,
-      recordDate: record.recordDate
-    };
-    return <ReceiptPreview recordData={receiptData} onClose={() => setShowReceipt(false)} />;
+    return <ReceiptPreview recordData={showReceipt} onClose={() => setShowReceipt(null)} />;
+  }
+
+  if (showReceiptsView) {
+    return (
+      <ReceiptsListView
+        record={record}
+        tests={tests || []}
+        payments={payments}
+        onBack={() => setShowReceiptsView(false)}
+        onViewReceipt={(receipt) => setShowReceipt(receipt)}
+      />
+    );
+  }
+
+  if (showResults) {
+    return (
+      <ResultPreview
+        record={record}
+        results={savedResults}
+        onClose={() => setShowResults(false)}
+        backLabel="Back to Record Details"
+      />
+    );
   }
 
   return (
@@ -346,10 +391,16 @@ function RecordDetailView({
           <ArrowLeft size={16} />
           Back to Search
         </Button>
-        <Button variant="outline" onClick={() => setShowReceipt(true)} className="flex items-center gap-2">
-          <Printer size={16} />
-          View Receipt
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowResults(true)} className="flex items-center gap-2" disabled={resultsLoading}>
+            <ClipboardCheck size={16} />
+            View Results{savedResults.length > 0 ? ` (${savedResults.length})` : ''}
+          </Button>
+          <Button variant="outline" onClick={() => setShowReceiptsView(true)} className="flex items-center gap-2">
+            <Printer size={16} />
+            View Receipts
+          </Button>
+        </div>
       </div>
 
       {/* Patient Banner */}
@@ -372,6 +423,23 @@ function RecordDetailView({
             <div>
               <p className="text-sm font-semibold text-muted-foreground">Lab Number</p>
               <p className="font-mono text-lg">{record.labNumber}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-muted-foreground mb-1">Status</p>
+              <Select 
+                value={record.status} 
+                onValueChange={(val) => updateRecord.mutate({ id: record.id, updates: { status: val } })}
+                disabled={updateRecord.isPending}
+              >
+                <SelectTrigger className="w-[130px] h-8 text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Closed">Closed</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-muted-foreground">Date</p>
@@ -415,10 +483,12 @@ function RecordDetailView({
       {/* Payment Summary */}
       <Card>
         <CardHeader className="pb-3 border-b">
-          <CardTitle className="text-base">Payment Summary</CardTitle>
+          <CardTitle className="text-base flex justify-between items-center">
+            Payment Summary
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <CardContent className="p-0">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-4 gap-6 bg-muted/20 border-b">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground font-medium">Subtotal</p>
               <p className="text-lg font-semibold">₵{record.subtotal.toFixed(2)}</p>
@@ -438,6 +508,45 @@ function RecordDetailView({
               </p>
             </div>
           </div>
+          
+          <div className="p-6">
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-4">Payment Transactions</h3>
+            {paymentsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading payments...</p>
+            ) : payments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {payments.map(payment => (
+                  <div key={payment.id} className="flex justify-between items-center border rounded-lg p-3 hover:bg-muted/10 transition-colors">
+                    <div>
+                      <div className="font-mono text-sm font-semibold">{payment.receiptNumber}</div>
+                      <div className="text-xs text-muted-foreground">{new Date(payment.paymentDate).toLocaleString()}</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="font-bold text-green-600">₵{payment.amount.toFixed(2)}</div>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setShowReceipt({
+                          labNumber: record.labNumber,
+                          patientName: patient?.patientName || 'Unknown',
+                          tests: tests?.map(t => ({ testName: t.testName, testCost: t.testCost })) || [],
+                          totalCost: record.totalCost,
+                          amountPaid: record.amountPaid, // Need to handle cumulative correctly if printing historical
+                          arrears: record.arrears,
+                          recordDate: record.recordDate,
+                          receiptNumber: payment.receiptNumber,
+                          paymentAmount: payment.amount,
+                          paymentDate: payment.paymentDate
+                        });
+                      }}>
+                        <Printer size={14} className="mr-1" /> Print
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -446,8 +555,31 @@ function RecordDetailView({
         <div className="flex gap-4 pt-2">
           {canEdit && (
             <>
-              <Button variant="outline">Edit Patient Info</Button>
-              <Button variant="outline">Edit Payment</Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  setEditName(patient?.patientName || '');
+                  setEditGender(patient?.gender || '');
+                  setEditDob(patient?.dob || '');
+                  setEditPhone(patient?.telephone || '');
+                  setEditPatientOpen(true);
+                }}
+              >
+                <Edit size={14} />
+                Edit Patient Info
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  setEditAmountPaid(String(record.arrears));
+                  setEditPaymentOpen(true);
+                }}
+              >
+                <Edit size={14} />
+                Record Payment
+              </Button>
             </>
           )}
           {canDelete && (
@@ -455,6 +587,261 @@ function RecordDetailView({
           )}
         </div>
       )}
+
+      {/* ── Edit Patient Info Dialog ── */}
+      <Dialog open={editPatientOpen} onOpenChange={setEditPatientOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Patient Information</DialogTitle>
+            <DialogDescription>Update the patient's personal details below.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Patient name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-gender">Gender</Label>
+              <Select value={editGender} onValueChange={setEditGender}>
+                <SelectTrigger id="edit-gender">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-dob">Date of Birth</Label>
+              <Input
+                id="edit-dob"
+                type="date"
+                value={editDob}
+                onChange={(e) => setEditDob(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-phone">Phone Number</Label>
+              <Input
+                id="edit-phone"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="0XX XXX XXXX"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPatientOpen(false)}>Cancel</Button>
+            <Button
+              disabled={updatePatient.isPending || !editName.trim()}
+              onClick={() => {
+                if (!patient) return;
+                updatePatient.mutate(
+                  {
+                    id: patient.id,
+                    updates: {
+                      patientName: editName.trim(),
+                      gender: editGender || undefined,
+                      dob: editDob || undefined,
+                      telephone: editPhone || undefined,
+                    },
+                  },
+                  {
+                    onSuccess: () => {
+                      toast.success('Patient info updated successfully.');
+                      qc.invalidateQueries({ queryKey: ['labRecords'] });
+                      setEditPatientOpen(false);
+                    },
+                    onError: (err: any) => {
+                      toast.error(err.message || 'Failed to update patient info.');
+                    },
+                  }
+                );
+              }}
+            >
+              {updatePatient.isPending && <Loader2 className="animate-spin mr-2" size={14} />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Record Payment Dialog ── */}
+      <Dialog open={editPaymentOpen} onOpenChange={setEditPaymentOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Enter the payment amount. Total cost: ₵{record.totalCost.toFixed(2)}, Current Arrears: ₵{record.arrears.toFixed(2)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-amount">Payment Amount (₵)</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={editAmountPaid}
+                onChange={(e) => setEditAmountPaid(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="text-sm text-muted-foreground">
+              New Arrears will be: <span className="font-semibold">₵{Math.max(0, record.arrears - (parseFloat(editAmountPaid) || 0)).toFixed(2)}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPaymentOpen(false)}>Cancel</Button>
+            <Button
+              disabled={recordPayment.isPending}
+              onClick={() => {
+                const amount = parseFloat(editAmountPaid);
+                if (isNaN(amount) || amount <= 0) {
+                  toast.error('Please enter a valid positive amount.');
+                  return;
+                }
+                if (amount > record.arrears) {
+                  toast.error('Amount exceeds current arrears.');
+                  return;
+                }
+
+                recordPayment.mutate(
+                  { labRecordId: record.id, amount },
+                  {
+                    onSuccess: (paymentData) => {
+                      toast.success('Payment recorded successfully.');
+                      setEditPaymentOpen(false);
+                      setEditAmountPaid('');
+                      setShowReceipt({
+                        labNumber: record.labNumber,
+                        patientName: patient?.patientName || 'Unknown',
+                        tests: tests?.map(t => ({ testName: t.testName, testCost: t.testCost })) || [],
+                        totalCost: record.totalCost,
+                        amountPaid: record.amountPaid + amount,
+                        arrears: Math.max(0, record.arrears - amount),
+                        recordDate: record.recordDate,
+                        receiptNumber: paymentData.receiptNumber,
+                        paymentAmount: paymentData.amount,
+                        paymentDate: paymentData.paymentDate
+                      });
+                    },
+                    onError: (err: any) => {
+                      toast.error(err.message || 'Failed to record payment.');
+                    }
+                  }
+                );
+              }}
+            >
+              {recordPayment.isPending && <Loader2 className="animate-spin mr-2" size={14} />}
+              Record Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+// ── Receipts List View ──
+function ReceiptsListView({
+  record,
+  tests,
+  payments,
+  onBack,
+  onViewReceipt
+}: {
+  record: LabRecord,
+  tests: LabRecordTest[],
+  payments: any[],
+  onBack: () => void,
+  onViewReceipt: (receiptData: ReceiptData) => void
+}) {
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const filteredPayments = payments.filter(p => {
+    const pDate = new Date(p.paymentDate).getTime();
+    if (fromDate && pDate < new Date(fromDate).getTime()) return false;
+    // For "toDate", include the entire day
+    if (toDate && pDate > new Date(toDate).getTime() + 86400000) return false;
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <Button variant="ghost" onClick={onBack} className="flex items-center gap-2 -ml-2 text-muted-foreground hover:text-foreground">
+          <ArrowLeft size={16} />
+          Back to Record
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-4 border-b">
+          <CardTitle>All Receipts / Payments</CardTitle>
+          <div className="flex gap-4 mt-4 text-sm items-center">
+            <div className="flex items-center gap-2">
+              <Label>From:</Label>
+              <Input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className="w-auto h-8" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label>To:</Label>
+              <Input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className="w-auto h-8" />
+            </div>
+            {(fromDate || toDate) && (
+              <Button variant="ghost" size="sm" onClick={() => { setFromDate(''); setToDate(''); }}>Clear</Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {filteredPayments.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">No receipts found for the selected date range.</div>
+          ) : (
+            <div className="divide-y">
+              {filteredPayments.map(payment => (
+                <div key={payment.id} className="p-4 flex items-center justify-between hover:bg-muted/30">
+                  <div>
+                    <div className="font-semibold">{payment.receiptNumber}</div>
+                    <div className="text-sm text-muted-foreground">{new Date(payment.paymentDate).toLocaleString()}</div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <div className="font-bold text-green-600">₵{payment.amount.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">Payment</div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      onViewReceipt({
+                        labNumber: record.labNumber,
+                        patientName: record.patient?.patientName || 'Unknown',
+                        tests: tests.map(t => ({ testName: t.testName, testCost: t.testCost })),
+                        totalCost: record.totalCost,
+                        amountPaid: record.amountPaid, // Use current aggregate
+                        arrears: record.arrears,
+                        recordDate: record.recordDate,
+                        receiptNumber: payment.receiptNumber,
+                        paymentAmount: payment.amount,
+                        paymentDate: payment.paymentDate
+                      });
+                    }}>
+                      <Printer size={14} className="mr-2" />
+                      Preview Receipt
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

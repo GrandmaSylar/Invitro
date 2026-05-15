@@ -33,8 +33,8 @@ export function DashboardAlpha() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 h-full space-y-6">
-      <div className="bg-card flex flex-col rounded-2xl shadow-sm border border-border/50 overflow-hidden h-full">
+    <div className="p-4 sm:p-6 space-y-6">
+      <div className="flex flex-col">
         <div className="border-b border-border/50 px-6 pt-4 bg-muted/20">
           <div className="flex gap-2 overflow-x-auto">
             {tabs.map((tab) => {
@@ -59,7 +59,7 @@ export function DashboardAlpha() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-6 bg-background">
+        <div className="pt-6">
           {activeTab === "new-patient" && (
             <div className="max-w-7xl mx-auto">
               <NewPatientTab />

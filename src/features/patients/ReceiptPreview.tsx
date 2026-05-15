@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer } from 'lucide-react';
 import { Button } from '../../app/components/ui/button';
+import { useSettingsStore } from '../../stores/useSettingsStore';
 
 export interface ReceiptData {
   labNumber: string;
@@ -10,6 +11,9 @@ export interface ReceiptData {
   amountPaid: number;
   arrears: number;
   recordDate: string;
+  receiptNumber?: string;
+  paymentAmount?: number;
+  paymentDate?: string;
 }
 
 interface ReceiptPreviewProps {
@@ -18,6 +22,10 @@ interface ReceiptPreviewProps {
 }
 
 export function ReceiptPreview({ recordData, onClose }: ReceiptPreviewProps) {
+  const isPaymentReceipt = !!recordData.receiptNumber;
+  const { settings } = useSettingsStore();
+  const { appName, address, phone, email, logoUrl } = settings.general;
+
   return (
     <div className="flex flex-col items-center">
       <div className="flex justify-end w-full max-w-md mb-4 print:hidden gap-2">
@@ -34,15 +42,23 @@ export function ReceiptPreview({ recordData, onClose }: ReceiptPreviewProps) {
 
       <div id="printable-receipt" className="w-full max-w-md p-6 bg-white border rounded-lg shadow-sm text-black">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold">Bloo LIMS Clinic</h2>
-          <p className="text-sm text-gray-500">123 Health Ave, Medical City</p>
-          <p className="text-sm text-gray-500">Phone: +1 234 567 890</p>
+          {logoUrl && <img src={logoUrl} alt="Logo" className="h-12 mx-auto mb-2 object-contain" />}
+          <h2 className="text-2xl font-bold">{appName || 'Bloo LIMS Clinic'}</h2>
+          {(address || !appName) && <p className="text-sm text-gray-500">{address || '123 Health Ave, Medical City'}</p>}
+          {(phone || !appName) && <p className="text-sm text-gray-500">Phone: {phone || '+1 234 567 890'}</p>}
+          {email && <p className="text-sm text-gray-500">Email: {email}</p>}
         </div>
 
         <div className="border-b pb-4 mb-4">
+          {isPaymentReceipt && (
+            <div className="flex justify-between mb-1 text-sm font-bold text-gray-800">
+              <span>Receipt No:</span>
+              <span>{recordData.receiptNumber}</span>
+            </div>
+          )}
           <div className="flex justify-between mb-1 text-sm">
-            <span className="font-medium text-gray-600">Date:</span>
-            <span>{new Date(recordData.recordDate).toLocaleString()}</span>
+            <span className="font-medium text-gray-600">{isPaymentReceipt ? 'Payment Date:' : 'Record Date:'}</span>
+            <span>{new Date(isPaymentReceipt ? recordData.paymentDate! : recordData.recordDate).toLocaleString()}</span>
           </div>
           <div className="flex justify-between mb-1 text-sm">
             <span className="font-medium text-gray-600">Lab Number:</span>
@@ -78,10 +94,25 @@ export function ReceiptPreview({ recordData, onClose }: ReceiptPreviewProps) {
             <span className="text-gray-600">Total Cost:</span>
             <span className="font-semibold">₵{recordData.totalCost.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-600">Amount Paid:</span>
-            <span className="font-semibold text-green-600">₵{recordData.amountPaid.toFixed(2)}</span>
-          </div>
+          
+          {isPaymentReceipt ? (
+            <>
+              <div className="flex justify-between text-sm bg-green-50 p-1 rounded">
+                <span className="text-gray-800 font-medium">Payment Received:</span>
+                <span className="font-bold text-green-700">₵{recordData.paymentAmount?.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm mt-1">
+                <span className="text-gray-600">Cumulative Amount Paid:</span>
+                <span className="font-medium text-gray-700">₵{recordData.amountPaid.toFixed(2)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Amount Paid:</span>
+              <span className="font-semibold text-green-600">₵{recordData.amountPaid.toFixed(2)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between text-sm font-bold mt-2 pt-2 border-t border-dashed">
             <span>Balance Due:</span>
             <span className={recordData.arrears > 0 ? "text-red-600" : ""}>
@@ -91,7 +122,7 @@ export function ReceiptPreview({ recordData, onClose }: ReceiptPreviewProps) {
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-400">
-          <p>Thank you for choosing Bloo LIMS.</p>
+          <p>Thank you for choosing {appName || 'Bloo LIMS'}.</p>
           <p>Wishing you good health!</p>
         </div>
       </div>

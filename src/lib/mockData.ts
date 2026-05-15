@@ -27,6 +27,8 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     timezone: 'UTC',
     dateFormat: 'yyyy-MM-dd',
     timeFormat: 'HH:mm',
+    paymentThresholdType: 'none',
+    paymentThresholdValue: 0,
   },
   notifications: {
     emailEnabled: true,
