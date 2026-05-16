@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { Button } from "./ui/button";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { rbacService } from "../../services/rbacService";
@@ -27,6 +28,12 @@ export function Profile() {
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const confirmed = await showConfirm({
+      title: "Save Profile",
+      description: "Are you sure you want to save these profile changes?",
+      confirmText: "Save"
+    });
+    if (!confirmed) return;
     setIsSaving(true);
     try {
       await rbacService.updateUser(user.id, {
@@ -35,7 +42,7 @@ export function Profile() {
       });
       // Update local store so changes reflect immediately
       login({ ...user, fullName: displayName, email: email }, resolvedPermissions, loginMethod);
-      toast.success("Profile updated successfully.");
+      showSuccess({ title: "Profile Updated", description: "Profile updated successfully." });
     } catch (error) {
       toast.error("Failed to update profile.");
     } finally {
@@ -43,9 +50,15 @@ export function Profile() {
     }
   };
 
-  const handleSavePreferences = (e: React.FormEvent) => {
+  const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Preferences saved.");
+    const confirmed = await showConfirm({
+      title: "Update Preferences",
+      description: "Are you sure you want to update your notification preferences?",
+      confirmText: "Update"
+    });
+    if (!confirmed) return;
+    showSuccess({ title: "Preferences Saved", description: "Preferences saved successfully." });
   };
 
   return (

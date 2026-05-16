@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Building2, Save, Edit, Trash2, UserRound, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { LabBanner } from "./LabBanner";
 import { motion } from "motion/react";
 import { Button } from "./ui/button";
@@ -86,6 +87,12 @@ export function HospitalRecords() {
               onSubmit={async (e) => { 
                 e.preventDefault(); 
                 if (!hospitalName) return toast.error("Hospital name is required");
+                const confirmed = await showConfirm({
+                  title: "Save Hospital",
+                  description: `Are you sure you want to save hospital "${hospitalName}"?`,
+                  confirmText: "Save"
+                });
+                if (!confirmed) return;
                 try {
                   await createHospital.mutateAsync({
                     hospitalName,
@@ -230,10 +237,17 @@ export function HospitalRecords() {
                   onClick={async () => {
                     if (selectedHospital !== null) {
                       const hospital = hospitalData[selectedHospital];
+                      const confirmed = await showConfirm({
+                        title: "Delete Hospital",
+                        description: `Are you sure you want to delete hospital "${hospital.hospitalName}"?`,
+                        confirmText: "Delete",
+                        variant: "destructive"
+                      });
+                      if (!confirmed) return;
                       try {
                         await deleteHospital.mutateAsync(hospital.id);
                         setSelectedHospital(null);
-                        toast("Record deleted.");
+                        showSuccess({ title: "Record Deleted", description: "Hospital record deleted." });
                       } catch (err: any) {
                         toast.error("Failed to delete record.");
                       }
@@ -263,6 +277,12 @@ export function HospitalRecords() {
               onSubmit={async (e) => { 
                 e.preventDefault(); 
                 if (!doctorName) return toast.error("Doctor's name is required");
+                const confirmed = await showConfirm({
+                  title: "Save Doctor",
+                  description: `Are you sure you want to save doctor "${doctorName}"?`,
+                  confirmText: "Save"
+                });
+                if (!confirmed) return;
                 try {
                   await createDoctor.mutateAsync({
                     doctorName,
@@ -273,7 +293,7 @@ export function HospitalRecords() {
                     location: doctorLocation || undefined,
                     address: address || undefined,
                   });
-                  toast.success("Doctor saved.");
+                  showSuccess({ title: "Doctor Saved", description: "Doctor saved." });
                   setDoctorName("");
                   setSpeciality("");
                   setDoctorPhone("");
@@ -455,10 +475,17 @@ export function HospitalRecords() {
                   onClick={async () => {
                     if (selectedDoctor !== null) {
                       const doctor = doctorData[selectedDoctor];
+                      const confirmed = await showConfirm({
+                        title: "Delete Doctor",
+                        description: `Are you sure you want to delete doctor "${doctor.doctorName}"?`,
+                        confirmText: "Delete",
+                        variant: "destructive"
+                      });
+                      if (!confirmed) return;
                       try {
                         await deleteDoctor.mutateAsync(doctor.id);
                         setSelectedDoctor(null);
-                        toast("Record deleted.");
+                        showSuccess({ title: "Record Deleted", description: "Doctor record deleted." });
                       } catch (err: any) {
                         toast.error("Failed to delete record.");
                       }

@@ -1,0 +1,96 @@
+-- 1. Disable triggers to avoid foreign key and constraint issues during truncation
+SET session_replication_role = 'replica';
+
+-- 2. Clear transactional and test catalog data
+TRUNCATE TABLE public.test_results CASCADE;
+TRUNCATE TABLE public.lab_record_tests CASCADE;
+TRUNCATE TABLE public.payments CASCADE;
+TRUNCATE TABLE public.lab_records CASCADE;
+TRUNCATE TABLE public.patients CASCADE;
+TRUNCATE TABLE public.test_parameters CASCADE;
+TRUNCATE TABLE public.tests CASCADE;
+TRUNCATE TABLE public.parameters CASCADE;
+TRUNCATE TABLE public.antibiotics CASCADE;
+TRUNCATE TABLE public.departments CASCADE;
+
+-- 3. Reset the parameter code sequence if it's being used by a sequence (not my new MAX logic)
+-- But for safety, we'll just let the trigger handle it after truncation.
+
+-- 4. Re-enable triggers
+SET session_replication_role = 'origin';
+
+-- 5. Import Parameters from CSV
+-- Note: triggers will auto-populate parameter_code
+INSERT INTO public.parameters (parameter_name, units, reference_range) VALUES
+('Alanine aminotransferase (ALT)', 'U/L', '10 - 40'),
+('Albumin - Adult', 'g/dL', '3.5 - 5.0'),
+('Albumin - Young Children', 'g/dL', '3.4 - 4.2'),
+('Alkaline phosphatase (ALP) - Adult', 'IU/L', '30 - 120'),
+('Alkaline phosphatase (ALP) - Children', 'IU/L', '150 - 420'),
+('Ammonia', 'mcg/dL', '15 - 45'),
+('Amylase', 'U/L', '27 - 131'),
+('Aspartate aminotransferase (AST)', 'U/L', '10 - 30'),
+('Bilirubin (Direct)', 'mg/dL', '0.1 - 0.3'),
+('Bilirubin (Total)', 'mg/dL', '0.3 - 1.2'),
+('Blood urea nitrogen (BUN) - Adult', 'mg/dL', '8 - 23'),
+('Calcium (Ionized)', 'mg/dL', '4.6 - 5.1'),
+('Calcium (Total Serum)', 'mg/dL', '8.2 - 10.2'),
+('Carbon dioxide - CO2 (Venous)', 'mEq/L', '22 - 28'),
+('Chloride (Cl)', 'mEq/L', '96 - 106'),
+('C-reactive protein (CRP)', 'mg/L', '0.08 - 3.1'),
+('Creatinine kinase (CK)', 'U/L', '40 - 150'),
+('Creatinine Serum (SCr) - Adult', 'mg/dL', '0.6 - 1.2'),
+('Creatinine Serum (SCr) - Children', 'mg/dL', '0.2 - 0.7'),
+('Creatinine Clearance (CrCl)', 'mL/min/1.73m²', '75 - 125'),
+('Ferritin', 'ng/mL', '15 - 200'),
+('γ-Glutamyl transpeptidase', 'U/L', '2 - 30'),
+('Glucose (Serum)', 'mg/dL', '70 - 110'),
+('Hemoglobin A1C', '% of total hemoglobin', '4 - 7'),
+('Lactate dehydrogenase (LDH)', 'U/L', '100 - 200'),
+('Lipase', 'U/L', '31 - 186'),
+('Magnesium', 'mEq/L', '1.3 - 2.1'),
+('Osmolality (Serum)', 'mOsm/kg', '275 - 295'),
+('Phosphorus - Adult', 'mg/dL', '2.3 - 4.7'),
+('Phosphorus - Children', 'mg/dL', '3.7 - 5.6'),
+('Potassium', 'mEq/L', '3.5 - 5.0'),
+('Prealbumin', 'mg/dL', '19.5 - 35.8'),
+('Sodium', 'mEq/L', '136 - 142'),
+('Uric acid (Serum)', 'mg/dL', '4 - 8'),
+('Hematocrit - Male (Hct)', '%', '42 - 50'),
+('Hematocrit - Female (Hct)', '%', '36 - 45'),
+('Hemoglobin - Male (Hgb)', 'g/dL', '14 - 18'),
+('Hemoglobin - Female (Hgb)', 'g/dL', '12 - 16'),
+('International normalized ratio (INR)', NULL, '0.9 - 1.1'),
+('Mean corpuscular hemoglobin (MCH)', 'pg/cell', '26 - 34'),
+('Mean corpuscular hemoglobin concentration (MCHC)', 'g/dL', '33 - 37'),
+('Mean corpuscular volume (MCV)', 'fL/cell', '80 - 100'),
+('Partial thromboplastin time (PTT)', 'seconds', '25 - 40'),
+('Platelet count (Plt)', 'cells/mm³', '150000 - 350000'),
+('Prothrombin time (PT)', 'seconds', '10 - 13'),
+('Red blood cell count - Male (RBC)', 'cells/mm³', '4.5 - 5.9'),
+('Red blood cell count - Female (RBC)', 'cells/mm³', '4.1 - 5.1'),
+('Reticulocyte', '% of RBCs', '0.5 - 1.5'),
+('White blood cell count (WBC)', 'cells/mm³', '4500 - 11000'),
+('Cholesterol Total (TC)', 'mg/dL', '< 200'),
+('HDL Cholesterol', 'mg/dL', '≥ 60'),
+('LDL Cholesterol', 'mg/dL', '< 100'),
+('Triglycerides (TG)', 'mg/dL', '< 150'),
+('pH (Arterial)', NULL, '7.35 - 7.45'),
+('pH (Venous)', NULL, '7.31 - 7.41'),
+('PCO2 (Arterial)', 'mm Hg', '35 - 45'),
+('PCO2 (Venous)', 'mm Hg', '40 - 52'),
+('PO2 (Arterial)', 'mm Hg', '80 - 100'),
+('PO2 (Venous)', 'mm Hg', '30 - 50'),
+('Oxygen saturation - SaO2 (Arterial)', '%', '> 90'),
+('Oxygen saturation - SaO2 (Venous)', '%', '60 - 75'),
+('Serum bicarbonate - HCO3 (Arterial)', 'mEq/L', '22 - 26'),
+('Serum bicarbonate - HCO3 (Venous)', 'mEq/L', '21 - 28'),
+('Urine pH', NULL, '4.5 - 8.0'),
+('Urine Specific Gravity', NULL, '1.010 - 1.025'),
+('Urine Leukocyte Esterase', NULL, 'Negative'),
+('Urine Nitrite', NULL, 'Negative'),
+('Urine Protein', NULL, 'Negative'),
+('Urine Blood', NULL, 'Negative'),
+('Urine Ketones', NULL, 'Negative'),
+('Urine Bilirubin', NULL, 'Negative'),
+('Urine Glucose', NULL, 'Negative');

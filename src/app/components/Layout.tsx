@@ -20,6 +20,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { usePermission } from "../../hooks/usePermission";
 import { PERMISSIONS } from "../../lib/permissions";
 import { MyPermissionsModal } from "./MyPermissionsModal";
+import { GlobalDialogs } from "./GlobalDialogs";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -244,6 +245,8 @@ export function Layout() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <GlobalDialogs />
     </div>
   );
 }

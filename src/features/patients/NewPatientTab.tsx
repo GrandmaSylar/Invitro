@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { FileText, User, Calendar, Phone, Stethoscope, TestTube, Trash2, Circle, AlertCircle, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { showConfirm } from "../../stores/useDialogStore";
 
 import { useTests } from "../../hooks/useCatalog";
 import { useHospitals, useDoctors } from "../../hooks/useRegistry";
@@ -93,18 +94,7 @@ export function NewPatientTab() {
 
   const addTestsMutation = useAddTestsToRecord();
 
-  const handleLabNumberChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setLabNumber(val);
-    if (!val.trim() || val === defaultLabNumber) {
-      setLabNumberExists(false);
-      return;
-    }
-    setCheckingLabNumber(true);
-    const exists = await labRecordService.checkLabNumberExists(val);
-    setLabNumberExists(exists);
-    setCheckingLabNumber(false);
-  };
+
 
   // Calculate age when dob changes
   useEffect(() => {
@@ -183,6 +173,13 @@ export function NewPatientTab() {
       return;
     }
     setNameError(false);
+
+    const confirmed = await showConfirm({
+      title: "Confirm Registration",
+      description: `Register patient "${patientName}" with ${selectedTests.size} test(s)?`,
+      confirmText: "Register"
+    });
+    if (!confirmed) return;
     
     // Step 1: Create Patient
     setSaveState('saving-patient');
@@ -288,8 +285,11 @@ export function NewPatientTab() {
       // Proceed to success anyway so they don't duplicate tests
     }
 
-    // Invalidate lab records so the new record and its payment are visible everywhere
+    // Invalidate all related caches so every view updates instantly
     qc.invalidateQueries({ queryKey: labRecordKeys.all });
+    qc.invalidateQueries({ queryKey: ['patients'] });
+    qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
 
     setSavedRecord({
       labNumber,
@@ -381,17 +381,17 @@ export function NewPatientTab() {
                   <div className="flex items-center gap-2">
                     <Input 
                       value={labNumber} 
-                      onChange={handleLabNumberChange}
-                      placeholder="Leave blank to auto-generate"
-                      className={`flex-1 font-mono text-lg font-bold ${labNumberExists ? "border-red-500 focus-visible:ring-red-500 bg-red-50 dark:bg-red-950/20 text-red-700" : "bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400"}`} 
-                      disabled={!!committedRecord || isSaving}
+                      readOnly
+                      placeholder="Auto-generating..."
+                      className="flex-1 font-mono text-lg font-bold bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 cursor-default" 
+                      disabled={isSaving}
                     />
                     <div className="px-4 py-2 border rounded-md bg-muted">
                       <Calendar className="text-muted-foreground" size={20} />
                     </div>
                   </div>
-                  {checkingLabNumber && <span className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Checking...</span>}
-                  {labNumberExists && <span className="text-xs text-red-500 font-medium flex items-center gap-1"><AlertCircle size={12} /> This lab number is already assigned.</span>}
+                  {checkingLabNumber && <span className="text-xs text-muted-foreground flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Verifying...</span>}
+                  {labNumberExists && <span className="text-xs text-red-500 font-medium flex items-center gap-1"><AlertCircle size={12} /> Conflict detected with auto-generated ID.</span>}
                 </div>
               </div>
               <div className="flex items-end">

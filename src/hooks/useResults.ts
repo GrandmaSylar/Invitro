@@ -21,8 +21,11 @@ export function useEnterResult() {
   return useMutation({
     mutationFn: (data: Parameters<typeof resultService.enterResult>[0]) => 
       resultService.enterResult(data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: resultKeys.all });
+      qc.invalidateQueries({ queryKey: ['labRecords'] }); // status may change
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }
@@ -34,6 +37,9 @@ export function useUpdateResult() {
       resultService.updateResult(id, updates),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: resultKeys.all });
+      qc.invalidateQueries({ queryKey: ['labRecords'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }
@@ -45,6 +51,9 @@ export function useBulkEnterResults() {
       resultService.bulkEnterResults(results),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: resultKeys.all });
+      qc.invalidateQueries({ queryKey: ['labRecords'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }

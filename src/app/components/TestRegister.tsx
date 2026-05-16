@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { ClipboardList, Pill, Trash2, Edit, Save, Loader2, FlaskConical, Plus, Library, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { catalogService } from "../../services/catalogService";
 import { Checkbox } from "./ui/checkbox";
@@ -9,7 +10,7 @@ import { cn } from "./ui/utils";
 import { 
   useTests, useCreateTest, useUpdateTest, useDeleteTest, 
   useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
-  useParameters, useCreateParameter, useUpdateParameter, useDeleteParameter,
+  useParameters, useCreateParameter, useUpdateParameter, useDeleteParameter, usePreviewParameterCode,
   useAntibiotics, useCreateAntibiotic, useUpdateAntibiotic, useDeleteAntibiotic,
   useTestDetail, useLinkParameter, useUnlinkParameter
 } from "../../hooks/useCatalog";
@@ -33,6 +34,9 @@ export function TestRegister() {
   const createParameter = useCreateParameter();
   const updateParameter = useUpdateParameter();
   const deleteParameter = useDeleteParameter();
+  const { data: nextParamCode } = usePreviewParameterCode();
+  
+
   
   const { data: antibiotics = [], isLoading: antibioticsLoading } = useAntibiotics();
   const createAntibiotic = useCreateAntibiotic();
@@ -75,7 +79,7 @@ export function TestRegister() {
   const [libParamName, setLibParamName] = useState("");
   const [libUnits, setLibUnits] = useState("");
   const [libRange, setLibRange] = useState("");
-  const [libOrderId, setLibOrderId] = useState("10");
+  const [libParamCode, setLibParamCode] = useState("");
   const [libTrimester, setLibTrimester] = useState("");
   const [editingParameterId, setEditingParameterId] = useState<string | null>(null);
 
@@ -87,6 +91,13 @@ export function TestRegister() {
   const [deptName, setDeptName] = useState("");
   const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+
+  // Auto-populate parameter code when adding new
+  React.useEffect(() => {
+    if (!editingParameterId && nextParamCode) {
+      setLibParamCode(nextParamCode);
+    }
+  }, [editingParameterId, nextParamCode, setLibParamCode]);
 
   // Selection states for other tables
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
@@ -102,6 +113,8 @@ export function TestRegister() {
   const [searchTests, setSearchTests] = useState("");
   const [searchParams, setSearchParams] = useState("");
   const [searchDepts, setSearchDepts] = useState("");
+  const [libSortField, setLibSortField] = useState<keyof Parameter>("parameterCode");
+  const [libSortOrder, setLibSortOrder] = useState<"asc" | "desc">("asc");
 
   // Filtered lists
   const filteredTests = tests.filter(t =>
@@ -109,8 +122,21 @@ export function TestRegister() {
     (searchTests === "" || t.testName.toLowerCase().includes(searchTests.toLowerCase()) || (t.department || "").toLowerCase().includes(searchTests.toLowerCase()))
   );
   const filteredParameters = parameters.filter(p =>
-    searchParams === "" || p.parameterName.toLowerCase().includes(searchParams.toLowerCase()) || (p.units || "").toLowerCase().includes(searchParams.toLowerCase())
+    searchParams === "" || 
+    p.parameterName.toLowerCase().includes(searchParams.toLowerCase()) || 
+    (p.units || "").toLowerCase().includes(searchParams.toLowerCase()) ||
+    (p.parameterCode || "").toLowerCase().includes(searchParams.toLowerCase())
   );
+
+  const sortedParameters = [...filteredParameters].sort((a, b) => {
+    const field = libSortField;
+    const valA = a[field]?.toString() || "";
+    const valB = b[field]?.toString() || "";
+    const multiplier = libSortOrder === "asc" ? 1 : -1;
+    
+    // Natural sort for strings that might contain numbers (like P001)
+    return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' }) * multiplier;
+  });
   const filteredDepartments = departments.filter(d =>
     searchDepts === "" || d.departmentName.toLowerCase().includes(searchDepts.toLowerCase())
   );
@@ -153,6 +179,14 @@ export function TestRegister() {
     const dept = newDepartment.trim() || department;
     if (!dept) return toast.error("Department is required");
 
+    const action = editingTestId ? "update this test" : "create this new test";
+    const confirmed = await showConfirm({
+      title: editingTestId ? "Update Test" : "Create Test",
+      description: `Are you sure you want to ${action}?`,
+      confirmText: editingTestId ? "Update" : "Create"
+    });
+    if (!confirmed) return;
+
     try {
       setIsSaving(true);
       const testData = {
@@ -167,13 +201,19 @@ export function TestRegister() {
       let savedTestId: string;
 
       if (editingTestId) {
+        // Fetch old parameters BEFORE updating, to avoid race with cache invalidation
+        let oldParams: any[] = [];
+        try {
+          const oldDetail = await catalogService.getTestById(editingTestId);
+          oldParams = oldDetail.parameters ?? [];
+        } catch { /* no existing params to unlink */ }
+
         // Update existing test
         const updated = await updateTest.mutateAsync({ id: editingTestId, data: testData });
         savedTestId = updated.id;
 
-        // Remove old parameter links then re-link
-        const oldDetail = await catalogService.getTestById(editingTestId);
-        for (const p of oldDetail.parameters ?? []) {
+        // Remove old parameter links
+        for (const p of oldParams) {
           await unlinkParameter.mutateAsync({ testId: editingTestId, parameterId: p.id });
         }
       } else {
@@ -197,7 +237,7 @@ export function TestRegister() {
         await linkParameter.mutateAsync({ testId: savedTestId, parameterId: paramId, sortOrder: i });
       }
 
-      toast.success(editingTestId ? "Test updated" : "Test created");
+      showSuccess({ title: editingTestId ? "Test Updated" : "Test Created", description: `Test successfully ${editingTestId ? "updated" : "created"}.` });
       resetTestForm();
     } catch (err: any) {
       toast.error(err.message);
@@ -587,9 +627,9 @@ export function TestRegister() {
                       className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Order ID</label>
-                    <input type="text" value={libOrderId} onChange={(e) => setLibOrderId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Parameter ID</label>
+                    <input type="text" value={libParamCode} readOnly placeholder="Auto-generated"
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-muted/30 text-muted-foreground text-sm focus:outline-none transition-all font-medium cursor-not-allowed" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-2">Trimester Type</label>
@@ -601,8 +641,17 @@ export function TestRegister() {
                       disabled={createParameter.isPending || updateParameter.isPending}
                       onClick={async () => {
                         if (!libParamName.trim()) return toast.error("Parameter name is required");
+                        
+                        const action = editingParameterId ? "update this parameter" : "add this new parameter to the library";
+                        const confirmed = await showConfirm({
+                          title: editingParameterId ? "Update Parameter" : "Add Parameter",
+                          description: `Are you sure you want to ${action}?`,
+                          confirmText: editingParameterId ? "Update" : "Add"
+                        });
+                        if (!confirmed) return;
+
                         try {
-                          const data = { parameterName: libParamName.trim(), units: libUnits.trim() || undefined, referenceRange: libRange.trim() || undefined, parameterOrderId: parseInt(libOrderId) || undefined, trimesterType: libTrimester.trim() || undefined };
+                          const data = { parameterName: libParamName.trim(), units: libUnits.trim() || undefined, referenceRange: libRange.trim() || undefined, trimesterType: libTrimester.trim() || undefined };
                           if (editingParameterId) {
                             await updateParameter.mutateAsync({ id: editingParameterId, data });
                             toast.success("Parameter updated");
@@ -611,14 +660,14 @@ export function TestRegister() {
                             await createParameter.mutateAsync(data);
                             toast.success("Parameter added to library");
                           }
-                          setLibParamName(""); setLibUnits(""); setLibRange(""); setLibTrimester("");
+                          setLibParamName(""); setLibUnits(""); setLibRange(""); setLibTrimester(""); setLibParamCode("");
                         } catch (err: any) { toast.error(err.message); }
                       }}>
                       {createParameter.isPending || updateParameter.isPending ? <Loader2 className="animate-spin mr-2" size={16}/> : null}
                       {editingParameterId ? "Update" : "Add"}
                     </Button>
                     {editingParameterId && (
-                      <Button type="button" variant="outline" onClick={() => { setEditingParameterId(null); setLibParamName(""); setLibUnits(""); setLibRange(""); setLibTrimester(""); }}>Cancel</Button>
+                      <Button type="button" variant="outline" onClick={() => { setEditingParameterId(null); setLibParamName(""); setLibUnits(""); setLibRange(""); setLibTrimester(""); setLibParamCode(""); }}>Cancel</Button>
                     )}
                   </div>
                 </div>
@@ -680,13 +729,26 @@ export function TestRegister() {
                             onCheckedChange={(c) => setSelectedParameters(c ? parameters.map(p => p.id) : [])}
                           />
                         </th>
-                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Name</th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => {
+                            if (libSortField === 'parameterCode') setLibSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            else { setLibSortField('parameterCode'); setLibSortOrder('asc'); }
+                          }}>
+                          ID {libSortField === 'parameterCode' && (libSortOrder === 'asc' ? '↑' : '↓')}
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground cursor-pointer hover:text-primary transition-colors"
+                          onClick={() => {
+                            if (libSortField === 'parameterName') setLibSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                            else { setLibSortField('parameterName'); setLibSortOrder('asc'); }
+                          }}>
+                          Name {libSortField === 'parameterName' && (libSortOrder === 'asc' ? '↑' : '↓')}
+                        </th>
                         <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Units</th>
                         <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Ref. Range</th>
                         <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
                       </tr></thead>
                       <tbody>
-                        {filteredParameters.map((param, index) => (
+                        {sortedParameters.map((param, index) => (
                           <tr 
                             key={param.id} 
                             onClick={() => toggleParamSelection(param.id)}
@@ -699,12 +761,13 @@ export function TestRegister() {
                                 onCheckedChange={() => toggleParamSelection(param.id)}
                               />
                             </td>
+                            <td className="px-3 py-2 text-sm font-mono text-primary font-medium">{param.parameterCode}</td>
                             <td className="px-3 py-2 text-sm font-medium text-foreground">{param.parameterName}</td>
                             <td className="px-3 py-2 text-sm text-muted-foreground">{param.units || '—'}</td>
                             <td className="px-3 py-2 text-sm text-muted-foreground">{param.referenceRange || '—'}</td>
                             <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                               <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0"
-                                onClick={() => { setEditingParameterId(param.id); setLibParamName(param.parameterName); setLibUnits(param.units || ""); setLibRange(param.referenceRange || ""); setLibOrderId(param.parameterOrderId?.toString() || "10"); setLibTrimester(param.trimesterType || ""); }}>
+                                onClick={() => { setEditingParameterId(param.id); setLibParamName(param.parameterName); setLibUnits(param.units || ""); setLibRange(param.referenceRange || ""); setLibParamCode(param.parameterCode || ""); setLibTrimester(param.trimesterType || ""); }}>
                                 <Edit size={13} />
                               </Button>
                             </td>
@@ -737,14 +800,23 @@ export function TestRegister() {
                     onSubmit={async (e) => {
                       e.preventDefault();
                       if (!deptName) return toast.error("Name is required");
+
+                      const action = editingDeptId ? "update this department" : "create this new department";
+                      const confirmed = await showConfirm({
+                        title: editingDeptId ? "Update Department" : "Add Department",
+                        description: `Are you sure you want to ${action}?`,
+                        confirmText: editingDeptId ? "Update" : "Add"
+                      });
+                      if (!confirmed) return;
+
                       try {
                         if (editingDeptId) {
                           await updateDepartment.mutateAsync({ id: editingDeptId, name: deptName });
-                          toast.success("Department updated");
+                          showSuccess({ title: "Department Updated", description: "Department updated successfully" });
                           setEditingDeptId(null);
                         } else {
                           await createDepartment.mutateAsync(deptName);
-                          toast.success("Department saved");
+                          showSuccess({ title: "Department Created", description: "Department saved successfully" });
                         }
                         setDeptName("");
                       } catch (err: any) {
@@ -920,14 +992,23 @@ export function TestRegister() {
                     onSubmit={async (e) => {
                       e.preventDefault();
                       if (!antibioticName) return toast.error("Name is required");
+
+                      const action = editingAntibioticId ? "update this antibiotic" : "add this new antibiotic";
+                      const confirmed = await showConfirm({
+                        title: editingAntibioticId ? "Update Antibiotic" : "Add Antibiotic",
+                        description: `Are you sure you want to ${action}?`,
+                        confirmText: editingAntibioticId ? "Update" : "Add"
+                      });
+                      if (!confirmed) return;
+
                       try {
                         if (editingAntibioticId) {
                           await updateAntibiotic.mutateAsync({ id: editingAntibioticId, name: antibioticName });
-                          toast.success("Antibiotic updated");
+                          showSuccess({ title: "Antibiotic Updated", description: "Antibiotic updated successfully" });
                           setEditingAntibioticId(null);
                         } else {
                           await createAntibiotic.mutateAsync(antibioticName);
-                          toast.success("Antibiotic saved");
+                          showSuccess({ title: "Antibiotic Created", description: "Antibiotic saved successfully" });
                         }
                         setAntibioticName("");
                       } catch (err: any) {

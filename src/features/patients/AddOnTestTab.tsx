@@ -128,6 +128,8 @@ export function AddOnTestTab() {
       if (newPaymentAmount > 0) {
         paymentData = await labRecordService.recordPayment(record.id, newPaymentAmount);
         qc.invalidateQueries({ queryKey: labRecordKeys.all });
+        qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
       }
       
       const existingTestsSubtotal = existingTests.reduce((s, t) => s + t.testCost, 0);

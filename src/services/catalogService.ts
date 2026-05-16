@@ -12,6 +12,7 @@ export const catalogService = {
     let query = supabase
       .from('tests')
       .select('*')
+      .eq('is_active', true)
       .order('test_name', { ascending: true });
 
     if (filters?.department) {
@@ -90,7 +91,7 @@ export const catalogService = {
   },
 
   deleteTest: async (id: string): Promise<void> => {
-    const { error } = await supabase.from('tests').delete().eq('id', id);
+    const { error } = await supabase.from('tests').update({ is_active: false }).eq('id', id);
     if (error) throw new Error(`Failed to delete test: ${error.message}`);
   },
 
@@ -101,6 +102,7 @@ export const catalogService = {
     const { data, error } = await supabase
       .from('departments')
       .select('*')
+      .eq('is_active', true)
       .order('department_name', { ascending: true });
 
     if (error) throw new Error(`Failed to fetch departments: ${error.message}`);
@@ -131,7 +133,7 @@ export const catalogService = {
   },
 
   deleteDepartment: async (id: string): Promise<void> => {
-    const { error } = await supabase.from('departments').delete().eq('id', id);
+    const { error } = await supabase.from('departments').update({ is_active: false }).eq('id', id);
     if (error) throw new Error(`Failed to delete department: ${error.message}`);
   },
 
@@ -156,12 +158,18 @@ export const catalogService = {
   },
 
   // ── PARAMETERS ───────────────────────────────────────────────
+  previewParameterCode: async (): Promise<string> => {
+    const { data, error } = await supabase.rpc('preview_parameter_code');
+    if (error) throw new Error(`Failed to preview parameter code: ${error.message}`);
+    return data;
+  },
 
   getParameters: async (): Promise<Parameter[]> => {
     const { data, error } = await supabase
       .from('parameters')
       .select('*')
-      .order('parameter_name', { ascending: true });
+      .eq('is_active', true)
+      .order('parameter_code', { ascending: true });
 
     if (error) throw new Error(`Failed to fetch parameters: ${error.message}`);
     return (data ?? []).map(mapParameterRow);
@@ -174,7 +182,6 @@ export const catalogService = {
         parameter_name: paramData.parameterName,
         units: paramData.units ?? null,
         reference_range: paramData.referenceRange ?? null,
-        parameter_order_id: paramData.parameterOrderId ?? null,
         trimester_type: paramData.trimesterType ?? null,
       })
       .select()
@@ -192,7 +199,7 @@ export const catalogService = {
     if (paramData.parameterName !== undefined) updates.parameter_name = paramData.parameterName;
     if (paramData.units !== undefined) updates.units = paramData.units;
     if (paramData.referenceRange !== undefined) updates.reference_range = paramData.referenceRange;
-    if (paramData.parameterOrderId !== undefined) updates.parameter_order_id = paramData.parameterOrderId;
+
     if (paramData.trimesterType !== undefined) updates.trimester_type = paramData.trimesterType;
 
     const { data, error } = await supabase
@@ -207,7 +214,7 @@ export const catalogService = {
   },
 
   deleteParameter: async (id: string): Promise<void> => {
-    const { error } = await supabase.from('parameters').delete().eq('id', id);
+    const { error } = await supabase.from('parameters').update({ is_active: false }).eq('id', id);
     if (error) throw new Error(`Failed to delete parameter: ${error.message}`);
   },
 
@@ -217,6 +224,7 @@ export const catalogService = {
     const { data, error } = await supabase
       .from('antibiotics')
       .select('*')
+      .eq('is_active', true)
       .order('antibiotic_name', { ascending: true });
 
     if (error) throw new Error(`Failed to fetch antibiotics: ${error.message}`);
@@ -247,7 +255,7 @@ export const catalogService = {
   },
 
   deleteAntibiotic: async (id: string): Promise<void> => {
-    const { error } = await supabase.from('antibiotics').delete().eq('id', id);
+    const { error } = await supabase.from('antibiotics').update({ is_active: false }).eq('id', id);
     if (error) throw new Error(`Failed to delete antibiotic: ${error.message}`);
   },
 };

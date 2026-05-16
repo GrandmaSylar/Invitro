@@ -43,9 +43,9 @@ export function useUpdatePatient() {
     mutationFn: ({ id, updates }: { id: string, updates: Parameters<typeof patientService.updatePatient>[1] }) =>
       patientService.updatePatient(id, updates),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: patientKeys.search('') });
-      // Depending on structure, you might invalidate more
       qc.invalidateQueries({ queryKey: ['patients'] });
+      qc.invalidateQueries({ queryKey: ['labRecords'] }); // patient name shown in records
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
 }

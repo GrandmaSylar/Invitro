@@ -9,7 +9,7 @@ import type { Test, Parameter, Antibiotic, TestFilters } from '../lib/types';
 
 export const catalogKeys = {
   tests: (filters?: TestFilters) => ['tests', filters] as const,
-  testDetail: (id: string) => ['tests', id] as const,
+  testDetail: (id: string) => ['testDetail', id] as const,
   parameters: ['parameters'] as const,
   antibiotics: ['antibiotics'] as const,
   departments: ['departments'] as const,
@@ -38,7 +38,9 @@ export function useCreateTest() {
     mutationFn: (data: Omit<Test, 'id' | 'createdAt'>) => catalogService.createTest(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tests'] });
-      qc.invalidateQueries({ queryKey: ['departments'] }); // new test may introduce a new department
+      qc.invalidateQueries({ queryKey: ['departments'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }
@@ -48,9 +50,12 @@ export function useUpdateTest() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Test, 'id' | 'createdAt'>> }) =>
       catalogService.updateTest(id, data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['tests'] });
+      qc.invalidateQueries({ queryKey: ['testDetail', variables.id] });
       qc.invalidateQueries({ queryKey: ['departments'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }
@@ -59,9 +64,12 @@ export function useDeleteTest() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => catalogService.deleteTest(id),
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       qc.invalidateQueries({ queryKey: ['tests'] });
+      qc.removeQueries({ queryKey: ['testDetail', deletedId] });
       qc.invalidateQueries({ queryKey: ['departments'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }
@@ -75,6 +83,7 @@ export function useLinkParameter() {
       catalogService.linkParameter(testId, parameterId, sortOrder),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: catalogKeys.testDetail(variables.testId) });
+      qc.invalidateQueries({ queryKey: ['tests'] }); // parameter count may be shown in tests list
     },
   });
 }
@@ -86,6 +95,7 @@ export function useUnlinkParameter() {
       catalogService.unlinkParameter(testId, parameterId),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: catalogKeys.testDetail(variables.testId) });
+      qc.invalidateQueries({ queryKey: ['tests'] });
     },
   });
 }
@@ -96,7 +106,6 @@ export function useDepartments() {
   return useQuery({
     queryKey: catalogKeys.departments,
     queryFn: () => catalogService.getDepartments(),
-    staleTime: 1000 * 60 * 10, // departments change rarely
   });
 }
 
@@ -133,11 +142,22 @@ export function useParameters() {
   });
 }
 
+export function usePreviewParameterCode() {
+  return useQuery({
+    queryKey: ['parameter-code-preview'],
+    queryFn: () => catalogService.previewParameterCode(),
+    staleTime: 0, // Always want fresh
+  });
+}
+
 export function useCreateParameter() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (data: Omit<Parameter, 'id' | 'createdAt'>) => catalogService.createParameter(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['parameters'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['parameters'] });
+      qc.invalidateQueries({ queryKey: ['parameter-code-preview'] });
+    },
   });
 }
 

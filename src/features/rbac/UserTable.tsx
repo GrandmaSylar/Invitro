@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRbacStore } from '../../stores/useRbacStore';
 import { rbacService } from '../../services/rbacService';
+import { showConfirm, showSuccess } from '../../stores/useDialogStore';
 import { User, Role } from '../../lib/types';
 import { PermissionGate } from './PermissionGate';
 import { AccessDenied } from '../../app/components/AccessDenied';
@@ -109,9 +110,15 @@ export function UserTable() {
   };
 
   const handleReactivate = async (userId: string) => {
+    const confirmed = await showConfirm({
+      title: "Reactivate User",
+      description: "Are you sure you want to reactivate this user?",
+      confirmText: "Reactivate"
+    });
+    if (!confirmed) return;
     try {
       await rbacService.updateUser(userId, { status: 'active' });
-      toast.success('User reactivated successfully');
+      showSuccess({ title: "User Reactivated", description: "The user has been reactivated successfully." });
       await refreshUsers();
     } catch (error) {
       toast.error('Failed to reactivate user');

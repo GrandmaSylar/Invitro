@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRbacStore } from '../../stores/useRbacStore';
 import { rbacService } from '../../services/rbacService';
+import { showConfirm, showSuccess } from '../../stores/useDialogStore';
 import { PERMISSION_MODULES } from '../../lib/permissions';
 import { PermissionMap } from '../../lib/types';
 import { Button } from '../../app/components/ui/button';
@@ -99,10 +100,16 @@ export function PermissionMatrix() {
 
   const handleSave = async () => {
     if (!selectedRoleId) return;
+    const confirmed = await showConfirm({
+      title: "Save Permissions",
+      description: "Are you sure you want to save these permission changes?",
+      confirmText: "Save"
+    });
+    if (!confirmed) return;
     setIsSaving(true);
     try {
       await rbacService.updateRolePermissions(selectedRoleId, localPermissions);
-      toast.success('Permissions updated successfully');
+      showSuccess({ title: "Permissions Saved", description: 'Permissions updated successfully' });
       setIsDirty(false);
     } catch (error: any) {
       toast.error(error.message || 'Failed to save permissions');
@@ -126,7 +133,7 @@ export function PermissionMatrix() {
       await rbacService.updateRolePermissions(selectedRole.id, resetPermissions);
       setLocalPermissions(resetPermissions);
       setIsDirty(false);
-      toast.success('Permissions reset to defaults');
+      showSuccess({ title: "Permissions Reset", description: 'Permissions reset to defaults' });
       setResetDialogOpen(false);
     } catch (error: any) {
       toast.error(error.message || 'Failed to reset permissions');
@@ -154,9 +161,15 @@ export function PermissionMatrix() {
               return (
                 <div 
                   key={role.id}
-                  onClick={() => {
+                  onClick={async () => {
                     if (isDirty) {
-                      if (window.confirm("You have unsaved changes. Change role anyway?")) {
+                      const confirmed = await showConfirm({
+                        title: "Unsaved Changes",
+                        description: "You have unsaved changes. Change role anyway?",
+                        confirmText: "Change Role",
+                        variant: "destructive"
+                      });
+                      if (confirmed) {
                         setSelectedRoleId(role.id);
                       }
                     } else {

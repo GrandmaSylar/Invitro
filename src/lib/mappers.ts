@@ -109,6 +109,7 @@ export function mapTestRow(row: any): Test {
     resultHeader: row.result_header ?? undefined,
     referenceRange: row.reference_range ?? undefined,
     includeComprehensive: row.include_comprehensive ?? false,
+    isActive: row.is_active ?? true,
     createdAt: row.created_at,
   };
 }
@@ -119,8 +120,9 @@ export function mapParameterRow(row: any): Parameter {
     parameterName: row.parameter_name,
     units: row.units ?? undefined,
     referenceRange: row.reference_range ?? undefined,
-    parameterOrderId: row.parameter_order_id ?? undefined,
+    parameterCode: row.parameter_code,
     trimesterType: row.trimester_type ?? undefined,
+    isActive: row.is_active ?? true,
     createdAt: row.created_at,
   };
 }
@@ -129,6 +131,7 @@ export function mapAntibioticRow(row: any): Antibiotic {
   return {
     id: row.id,
     antibioticName: row.antibiotic_name,
+    isActive: row.is_active ?? true,
     createdAt: row.created_at,
   };
 }
@@ -137,6 +140,7 @@ export function mapDepartmentRow(row: any) {
   return {
     id: row.id,
     departmentName: row.department_name,
+    isActive: row.is_active ?? true,
     createdAt: row.created_at,
   };
 }

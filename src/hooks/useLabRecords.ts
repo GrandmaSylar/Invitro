@@ -109,6 +109,8 @@ export function useAddTestsToRecord() {
     onSettled: (_, __, variables) => {
       if (variables) {
         qc.invalidateQueries({ queryKey: labRecordKeys.all });
+        qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
       }
     },
   });
@@ -119,8 +121,10 @@ export function useUpdateLabRecord() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string, updates: Parameters<typeof labRecordService.updateLabRecord>[1] }) =>
       labRecordService.updateLabRecord(id, updates),
-    onSuccess: (data) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: labRecordKeys.all });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }
@@ -141,6 +145,8 @@ export function useRecordPayment() {
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ['payments', variables.labRecordId] });
       qc.invalidateQueries({ queryKey: labRecordKeys.all });
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
     },
   });
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { Search, ChevronDown, ChevronUp, ArrowLeft, User, Phone, Calendar, FileText, ArrowDownAz, ArrowUpZa, ClipboardCheck, Loader2, Edit } from "lucide-react";
 import { usePatientsList, useUpdatePatient } from "../../hooks/usePatients";
 import { useLabRecords, useLabRecord, useLabRecordTests, useUpdateLabRecord, usePayments, useRecordPayment } from "../../hooks/useLabRecords";
@@ -428,7 +429,16 @@ function RecordDetailView({
               <p className="text-sm font-semibold text-muted-foreground mb-1">Status</p>
               <Select 
                 value={record.status} 
-                onValueChange={(val) => updateRecord.mutate({ id: record.id, updates: { status: val } })}
+                onValueChange={async (val) => {
+                  const confirmed = await showConfirm({
+                    title: "Change Status",
+                    description: `Change record status to "${val}"?`,
+                    confirmText: "Change"
+                  });
+                  if (confirmed) {
+                    updateRecord.mutate({ id: record.id, updates: { status: val } });
+                  }
+                }}
                 disabled={updateRecord.isPending}
               >
                 <SelectTrigger className="w-[130px] h-8 text-xs font-semibold">
@@ -583,7 +593,18 @@ function RecordDetailView({
             </>
           )}
           {canDelete && (
-            <Button variant="destructive" className="ml-auto">Delete Record</Button>
+            <Button variant="destructive" className="ml-auto" onClick={async () => {
+              const confirmed = await showConfirm({
+                title: "Delete Record",
+                description: "Are you sure you want to delete this entire lab record? This action is permanent and will delete all associated tests and results.",
+                confirmText: "Delete",
+                variant: "destructive"
+              });
+              if (confirmed) {
+                // Placeholder for delete logic if not implemented, or just toast for now
+                toast.error("Delete record logic is pending implementation.");
+              }
+            }}>Delete Record</Button>
           )}
         </div>
       )}
@@ -641,8 +662,14 @@ function RecordDetailView({
             <Button variant="outline" onClick={() => setEditPatientOpen(false)}>Cancel</Button>
             <Button
               disabled={updatePatient.isPending || !editName.trim()}
-              onClick={() => {
+              onClick={async () => {
                 if (!patient) return;
+                const confirmed = await showConfirm({
+                  title: "Update Patient",
+                  description: `Update details for patient "${patient.patientName}"?`,
+                  confirmText: "Update"
+                });
+                if (!confirmed) return;
                 updatePatient.mutate(
                   {
                     id: patient.id,
@@ -655,8 +682,9 @@ function RecordDetailView({
                   },
                   {
                     onSuccess: () => {
-                      toast.success('Patient info updated successfully.');
+                      showSuccess({ title: "Patient Updated", description: 'Patient info updated successfully.' });
                       qc.invalidateQueries({ queryKey: ['labRecords'] });
+                      qc.invalidateQueries({ queryKey: ['patients'] });
                       setEditPatientOpen(false);
                     },
                     onError: (err: any) => {
@@ -703,7 +731,7 @@ function RecordDetailView({
             <Button variant="outline" onClick={() => setEditPaymentOpen(false)}>Cancel</Button>
             <Button
               disabled={recordPayment.isPending}
-              onClick={() => {
+              onClick={async () => {
                 const amount = parseFloat(editAmountPaid);
                 if (isNaN(amount) || amount <= 0) {
                   toast.error('Please enter a valid positive amount.');
@@ -714,11 +742,18 @@ function RecordDetailView({
                   return;
                 }
 
+                const confirmed = await showConfirm({
+                  title: "Record Payment",
+                  description: `Record payment of ₵${amount.toFixed(2)} for ${patient?.patientName}?`,
+                  confirmText: "Record Payment"
+                });
+                if (!confirmed) return;
+
                 recordPayment.mutate(
                   { labRecordId: record.id, amount },
                   {
                     onSuccess: (paymentData) => {
-                      toast.success('Payment recorded successfully.');
+                      showSuccess({ title: "Payment Recorded", description: 'Payment recorded successfully.' });
                       setEditPaymentOpen(false);
                       setEditAmountPaid('');
                       setShowReceipt({

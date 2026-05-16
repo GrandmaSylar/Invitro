@@ -32,7 +32,10 @@ export function useUpdateHospital() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Hospital, 'id' | 'createdAt'>> }) =>
       registryService.updateHospital(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospitals'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospitals'] });
+      qc.invalidateQueries({ queryKey: ['labRecords'] }); // referral names shown in records
+    },
   });
 }
 
@@ -40,7 +43,11 @@ export function useDeleteHospital() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => registryService.deleteHospital(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['hospitals'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['hospitals'] });
+      qc.invalidateQueries({ queryKey: ['doctors'] }); // doctors linked to hospital
+      qc.invalidateQueries({ queryKey: ['labRecords'] });
+    },
   });
 }
 
@@ -66,7 +73,10 @@ export function useUpdateDoctor() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Omit<Doctor, 'id' | 'createdAt'>> }) =>
       registryService.updateDoctor(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['doctors'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['doctors'] });
+      qc.invalidateQueries({ queryKey: ['labRecords'] });
+    },
   });
 }
 
@@ -74,6 +84,9 @@ export function useDeleteDoctor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => registryService.deleteDoctor(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['doctors'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['doctors'] });
+      qc.invalidateQueries({ queryKey: ['labRecords'] });
+    },
   });
 }

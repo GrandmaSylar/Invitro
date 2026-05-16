@@ -105,6 +105,7 @@ export interface Test {
   resultHeader?: string;
   referenceRange?: string;
   includeComprehensive: boolean;
+  isActive?: boolean;
   createdAt: string;
   /** Joined relation — only present when queried with parameters */
   parameters?: Parameter[];
@@ -115,20 +116,23 @@ export interface Parameter {
   parameterName: string;
   units?: string;
   referenceRange?: string;
-  parameterOrderId?: number;
+  parameterCode?: string;
   trimesterType?: string;
+  isActive?: boolean;
   createdAt: string;
 }
 
 export interface Antibiotic {
   id: string;
   antibioticName: string;
+  isActive?: boolean;
   createdAt: string;
 }
 
 export interface Department {
   id: string;
   departmentName: string;
+  isActive?: boolean;
   createdAt: string;
 }
 

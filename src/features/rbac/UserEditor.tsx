@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRbacStore } from '../../stores/useRbacStore';
 import { rbacService } from '../../services/rbacService';
+import { showConfirm, showSuccess } from '../../stores/useDialogStore';
 import { User, Role, PermissionMap } from '../../lib/types';
 import { PERMISSION_MODULES } from '../../lib/permissions';
 import {
@@ -96,7 +97,7 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
     try {
       setLoading(true);
       await rbacService.deactivateUser(user.id);
-      toast.success('User deactivated successfully');
+      showSuccess({ title: "User Deactivated", description: "The user has been deactivated." });
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
@@ -111,6 +112,14 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
   };
 
   const handleSave = async () => {
+    const actionStr = mode === 'create' ? 'create this new user' : 'save changes to this user';
+    const confirmed = await showConfirm({
+      title: mode === 'create' ? "Create User" : "Save Changes",
+      description: `Are you sure you want to ${actionStr}?`,
+      confirmText: mode === 'create' ? "Create" : "Save"
+    });
+    if (!confirmed) return;
+    
     try {
       setLoading(true);
       if (mode === 'create') {
@@ -126,9 +135,9 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
         await rbacService.createUser(payload);
         
         if (formData.sendInvite) {
-          toast.success(`Invitation sent to ${formData.email}`);
+          showSuccess({ title: "User Created", description: `User created and invitation sent to ${formData.email}` });
         } else {
-          toast.success('User created successfully');
+          showSuccess({ title: "User Created", description: 'User created successfully' });
         }
       } else if (user) {
         await rbacService.updateUser(user.id, {
@@ -138,7 +147,7 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
           ...(formData.password ? { password: formData.password } : {})
         });
         await rbacService.updateUserOverrides(user.id, localOverrides);
-        toast.success('User updated successfully');
+        showSuccess({ title: "User Updated", description: 'User updated successfully' });
       }
       onSuccess?.();
       onOpenChange(false);

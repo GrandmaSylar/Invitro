@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2026-05-16
+
+### Added
+- **Global Confirmation System**: Implemented a unified, system-themed modal system to replace all generic browser `window.confirm` prompts across the application.
+- **Action Success Feedback**: Added custom, visually engaging success overlays immediately following critical CRUD operations to improve user feedback.
+
+### Changed
+- **LIMS Safety Controls**: Hardened data integrity by enforcing mandatory confirmation checkpoints prior to patient updates, test modifications, permission adjustments, and results submissions.
+- **Database Cleanup Scripts**: Executed system data purging algorithms and properly initialized the clean lab parameters sequence (P001+).
+
+### Fixed
+- **React Rendering Hooks**: Resolved "Cannot access 'editingParameterId' before initialization" errors in `TestRegister.tsx`.
+- **Typing Integrity**: Fixed the strict TypeScript checking for `Omit<Parameter>` type definitions.
+
 ## [0.1.3] - 2026-05-16
 
 ### Added

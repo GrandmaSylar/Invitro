@@ -24,6 +24,7 @@ import { Label } from "../../app/components/ui/label";
 import { Role } from "../../lib/types";
 import { rbacService } from "../../services/rbacService";
 import { useRbacStore } from "../../stores/useRbacStore";
+import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { ALL_PERMISSION_KEYS } from "../../lib/permissions";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -65,6 +66,14 @@ export function RoleEditor({ open, onOpenChange, mode, role }: RoleEditorProps) 
       return;
     }
 
+    const actionStr = mode === 'create' ? 'create this new role' : 'save changes to this role';
+    const confirmed = await showConfirm({
+      title: mode === 'create' ? "Create Role" : "Edit Role",
+      description: `Are you sure you want to ${actionStr}?`,
+      confirmText: mode === 'create' ? "Create" : "Save"
+    });
+    if (!confirmed) return;
+
     setIsSaving(true);
     try {
       if (mode === 'create') {
@@ -76,13 +85,13 @@ export function RoleEditor({ open, onOpenChange, mode, role }: RoleEditorProps) 
           isSystem: false,
           permissions: initialPermissions
         });
-        toast.success('Role created successfully');
+        showSuccess({ title: "Role Created", description: 'Role created successfully' });
       } else if (mode === 'edit' && role) {
         useRbacStore.getState().updateRoleMetadata(role.id, {
           label: label.trim(),
           description: description.trim()
         });
-        toast.success('Role updated successfully');
+        showSuccess({ title: "Role Updated", description: 'Role updated successfully' });
       }
       onOpenChange(false);
     } catch (error: any) {
@@ -97,7 +106,7 @@ export function RoleEditor({ open, onOpenChange, mode, role }: RoleEditorProps) 
     setIsSaving(true);
     try {
       await rbacService.deleteRole(role.id);
-      toast.success('Role deleted successfully');
+      showSuccess({ title: "Role Deleted", description: 'Role deleted successfully' });
       setIsDeleting(false);
       onOpenChange(false);
     } catch (error: any) {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { toast } from "sonner";
 import { Search, Loader2, ArrowLeft, ArrowDownAz, ArrowUpZa } from "lucide-react";
 import { LabBanner } from "./LabBanner";
@@ -116,6 +117,12 @@ export function ResultsEntry() {
 
   const handleSubmit = async () => {
     if (!matchedRecord) return;
+    const confirmed = await showConfirm({
+      title: "Submit Results",
+      description: `Submit ${resultRows.length} result(s) for ${matchedRecord.patient?.patientName || "this patient"}?`,
+      confirmText: "Submit"
+    });
+    if (!confirmed) return;
     
     try {
       await bulkEnterResults.mutateAsync(
@@ -129,7 +136,7 @@ export function ResultsEntry() {
           flag: row.flag,
         }))
       );
-      toast.success(`Results submitted for ${matchedRecord.patient?.patientName || "Patient"}.`);
+      showSuccess({ title: "Results Submitted", description: `Results submitted for ${matchedRecord.patient?.patientName || "Patient"}.` });
       // Transition to preview instead of clearing
       setPreviewRecordId(activeRecordId);
       setActiveRecordId(null);
