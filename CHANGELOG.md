@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-05-16
+
+### Added
+- **Integrated Search**: Added live search bars to the Registered Tests, Parameter Library, and Department lists within the Test Register module.
+- **Bulk Actions**: Implemented "Delete Selected" functionality for Tests, Parameters, Departments, and Antibiotics, enabling streamlined catalog management.
+
+### Changed
+- **Standardized Selection UI**: Unified the list selection pattern across all catalog registers to match the 'Add-on Test' and 'New Patient' workflows (checkbox-driven, row-highlighting on click).
+- **Test Register UX Polish**: Standardized the layout and interaction patterns for all catalog entities (Tests, Parameters, Antibiotics, Departments) for full UI/UX parity.
+- **Robust Data Fetching**: Transitioned to `maybeSingle()` for test detail fetching to prevent PostgREST coercion errors during rapid state invalidations.
+
+### Fixed
+- **Duplicate RLS Policies**: Resolved a critical database issue where overlapping `FOR SELECT` and `FOR ALL` policies caused duplicated query results and application crashes.
+- **List Rendering Warnings**: Fixed React "unique key" warnings in the Test Register by implementing keyed Fragments for list mapping.
+
 ## [0.1.2] - 2026-05-15
 
 ### Added

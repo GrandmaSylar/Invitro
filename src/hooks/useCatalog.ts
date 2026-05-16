@@ -90,13 +90,37 @@ export function useUnlinkParameter() {
   });
 }
 
-// ── Departments (derived from tests.department column) ─────────
+// ── Departments ────────────────────────────────────────────────
 
 export function useDepartments() {
   return useQuery({
     queryKey: catalogKeys.departments,
     queryFn: () => catalogService.getDepartments(),
     staleTime: 1000 * 60 * 10, // departments change rarely
+  });
+}
+
+export function useCreateDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => catalogService.createDepartment(name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['departments'] }),
+  });
+}
+
+export function useUpdateDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => catalogService.updateDepartment(id, name),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['departments'] }),
+  });
+}
+
+export function useDeleteDepartment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => catalogService.deleteDepartment(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['departments'] }),
   });
 }
 

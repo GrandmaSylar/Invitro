@@ -1,0 +1,1 @@
+-- Reverted to authenticated only, this migration is intentionally blanked out.

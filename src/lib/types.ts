@@ -126,6 +126,12 @@ export interface Antibiotic {
   createdAt: string;
 }
 
+export interface Department {
+  id: string;
+  departmentName: string;
+  createdAt: string;
+}
+
 export interface TestFilters {
   department?: string;
   search?: string;

@@ -133,6 +133,14 @@ export function mapAntibioticRow(row: any): Antibiotic {
   };
 }
 
+export function mapDepartmentRow(row: any) {
+  return {
+    id: row.id,
+    departmentName: row.department_name,
+    createdAt: row.created_at,
+  };
+}
+
 // ── Lab Records ────────────────────────────────────────────────
 
 export function mapLabRecordRow(row: any): LabRecord {

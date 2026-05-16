@@ -2,8 +2,8 @@
  * Catalog Service — CRUD for test catalog, parameters, and antibiotics.
  */
 import { supabase } from '../lib/supabase';
-import { mapTestRow, mapParameterRow, mapAntibioticRow } from '../lib/mappers';
-import type { Test, Parameter, Antibiotic, TestFilters } from '../lib/types';
+import { mapTestRow, mapParameterRow, mapAntibioticRow, mapDepartmentRow } from '../lib/mappers';
+import type { Test, Parameter, Antibiotic, Department, TestFilters } from '../lib/types';
 
 export const catalogService = {
   // ── TESTS ────────────────────────────────────────────────────
@@ -34,9 +34,10 @@ export const catalogService = {
       .from('tests')
       .select('*, test_parameters(sort_order, parameter_id, parameters(*))')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
     if (error) throw new Error(`Failed to fetch test: ${error.message}`);
+    if (!data) throw new Error(`Test not found`);
 
     const test = mapTestRow(data);
     // Flatten joined parameters
@@ -94,19 +95,44 @@ export const catalogService = {
   },
 
   // ── DEPARTMENTS ──────────────────────────────────────────────
-  // Departments are stored as plain TEXT on the tests.department column.
-  // These helpers derive the distinct department list from existing tests.
+  // Departments are now stored in their own dedicated table.
 
-  getDepartments: async (): Promise<string[]> => {
+  getDepartments: async (): Promise<Department[]> => {
     const { data, error } = await supabase
-      .from('tests')
-      .select('department')
-      .order('department', { ascending: true });
+      .from('departments')
+      .select('*')
+      .order('department_name', { ascending: true });
 
     if (error) throw new Error(`Failed to fetch departments: ${error.message}`);
-    // Return unique department names
-    const unique = [...new Set((data ?? []).map((r: any) => r.department as string).filter(Boolean))];
-    return unique;
+    return (data ?? []).map(mapDepartmentRow);
+  },
+
+  createDepartment: async (name: string): Promise<Department> => {
+    const { data, error } = await supabase
+      .from('departments')
+      .insert({ department_name: name })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to create department: ${error.message}`);
+    return mapDepartmentRow(data);
+  },
+
+  updateDepartment: async (id: string, name: string): Promise<Department> => {
+    const { data, error } = await supabase
+      .from('departments')
+      .update({ department_name: name })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update department: ${error.message}`);
+    return mapDepartmentRow(data);
+  },
+
+  deleteDepartment: async (id: string): Promise<void> => {
+    const { error } = await supabase.from('departments').delete().eq('id', id);
+    if (error) throw new Error(`Failed to delete department: ${error.message}`);
   },
 
   // ── TEST ↔ PARAMETER LINKS ──────────────────────────────────

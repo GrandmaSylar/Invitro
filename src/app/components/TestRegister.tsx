@@ -1,30 +1,35 @@
-import { useState } from "react";
-import { ClipboardList, Pill, Trash2, Edit, Save, Loader2, FlaskConical } from "lucide-react";
+import React, { useState } from "react";
+import { ClipboardList, Pill, Trash2, Edit, Save, Loader2, FlaskConical, Plus, Library, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { catalogService } from "../../services/catalogService";
 import { Checkbox } from "./ui/checkbox";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { motion } from "motion/react";
 import { cn } from "./ui/utils";
 import { 
-  useTests, useCreateTest, useUpdateTest, useDeleteTest, useDepartments,
+  useTests, useCreateTest, useUpdateTest, useDeleteTest, 
+  useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
   useParameters, useCreateParameter, useUpdateParameter, useDeleteParameter,
   useAntibiotics, useCreateAntibiotic, useUpdateAntibiotic, useDeleteAntibiotic,
   useTestDetail, useLinkParameter, useUnlinkParameter
 } from "../../hooks/useCatalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog";
 
-type Tab = "test-list" | "antibiotics" | "departments";
+type Tab = "tests" | "parameter-library" | "departments" | "antibiotics";
+
+// Inline parameter type for the test builder form (not yet persisted)
+type InlineParam = { tempId: string; parameterName: string; units: string; referenceRange: string; libraryId?: string };
 
 export function TestRegister() {
-  const [activeTab, setActiveTab] = useState<Tab>("test-list");
+  const [activeTab, setActiveTab] = useState<Tab>("tests");
 
   // React Query Hooks
-  const { data: tests = [], isLoading: testsLoading } = useTests();
+  const { data: tests = [], isLoading: testsLoading, error: testsError } = useTests();
   const createTest = useCreateTest();
   const updateTest = useUpdateTest();
   const deleteTest = useDeleteTest();
   
-  const { data: parameters = [], isLoading: parametersLoading } = useParameters();
+  const { data: parameters = [], isLoading: parametersLoading, error: parametersError } = useParameters();
   const createParameter = useCreateParameter();
   const updateParameter = useUpdateParameter();
   const deleteParameter = useDeleteParameter();
@@ -35,42 +40,197 @@ export function TestRegister() {
   const deleteAntibiotic = useDeleteAntibiotic();
   
   const { data: departments = [], isLoading: departmentsLoading } = useDepartments();
+  const createDepartment = useCreateDepartment();
+  const updateDepartment = useUpdateDepartment();
+  const deleteDepartment = useDeleteDepartment();
 
   const linkParameter = useLinkParameter();
   const unlinkParameter = useUnlinkParameter();
 
-  // Parameter State
-  const [parameterName, setParameterName] = useState("");
-  const [units, setUnits] = useState("");
-  const [parameterReferenceRange, setParameterReferenceRange] = useState("");
-  const [parameterOrderId, setParameterOrderId] = useState("10");
-  const [trimesterType, setTrimesterType] = useState("");
-  
-  // Test State
+  // ── Unified Test Builder State ───────────────────────────────
   const [testName, setTestName] = useState("");
   const [department, setDepartment] = useState("");
+  const [newDepartment, setNewDepartment] = useState("");
   const [resultHeader, setResultHeader] = useState("");
   const [testReferenceRange, setTestReferenceRange] = useState("");
   const [testCost, setTestCost] = useState("");
   const [includeComprehensive, setIncludeComprehensive] = useState(false);
+  const [editingTestId, setEditingTestId] = useState<string | null>(null);
+
+  // Inline parameter entry within test builder
+  const [inlineParams, setInlineParams] = useState<InlineParam[]>([]);
+  const [inlineParamName, setInlineParamName] = useState("");
+  const [inlineParamUnits, setInlineParamUnits] = useState("");
+  const [inlineParamRange, setInlineParamRange] = useState("");
+  const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+
+  // Expandable test list
+  const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
+  const { data: expandedTestDetail } = useTestDetail(expandedTestId);
+
+  // Saving state
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Parameter Library tab state
+  const [libParamName, setLibParamName] = useState("");
+  const [libUnits, setLibUnits] = useState("");
+  const [libRange, setLibRange] = useState("");
+  const [libOrderId, setLibOrderId] = useState("10");
+  const [libTrimester, setLibTrimester] = useState("");
+  const [editingParameterId, setEditingParameterId] = useState<string | null>(null);
 
   // Antibiotic State
   const [antibioticName, setAntibioticName] = useState("");
-
-  const [editingParameterId, setEditingParameterId] = useState<string | null>(null);
-  const [editingTestId, setEditingTestId] = useState<string | null>(null);
   const [editingAntibioticId, setEditingAntibioticId] = useState<string | null>(null);
 
-  const [selectedParameter, setSelectedParameter] = useState<number | null>(null);
-  const [selectedTest, setSelectedTest] = useState<number | null>(null);
-  const [focusedParameterIndex, setFocusedParameterIndex] = useState<number | null>(null);
-  const [focusedTestIndex, setFocusedTestIndex] = useState<number | null>(null);
+  // Departments State
+  const [deptName, setDeptName] = useState("");
+  const [editingDeptId, setEditingDeptId] = useState<string | null>(null);
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
 
-  const activeTest = selectedTest !== null && tests.length > selectedTest ? tests[selectedTest] : null;
-  const { data: testDetail, isLoading: testDetailLoading } = useTestDetail(activeTest?.id ?? null);
+  // Selection states for other tables
+  const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [selectedParameters, setSelectedParameters] = useState<string[]>([]);
+  const [selectedAntibiotics, setSelectedAntibiotics] = useState<string[]>([]);
+
+  const toggleTestSelection = (id: string) => setSelectedTests(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleParamSelection = (id: string) => setSelectedParameters(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleDeptSelection = (id: string) => setSelectedDepartments(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleAntibioticSelection = (id: string) => setSelectedAntibiotics(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  // Search states
+  const [searchTests, setSearchTests] = useState("");
+  const [searchParams, setSearchParams] = useState("");
+  const [searchDepts, setSearchDepts] = useState("");
+
+  // Filtered lists
+  const filteredTests = tests.filter(t =>
+    t.id !== editingTestId &&
+    (searchTests === "" || t.testName.toLowerCase().includes(searchTests.toLowerCase()) || (t.department || "").toLowerCase().includes(searchTests.toLowerCase()))
+  );
+  const filteredParameters = parameters.filter(p =>
+    searchParams === "" || p.parameterName.toLowerCase().includes(searchParams.toLowerCase()) || (p.units || "").toLowerCase().includes(searchParams.toLowerCase())
+  );
+  const filteredDepartments = departments.filter(d =>
+    searchDepts === "" || d.departmentName.toLowerCase().includes(searchDepts.toLowerCase())
+  );
+
+  // ── Test Builder Helpers ─────────────────────────────────────
+  const addInlineParam = () => {
+    if (!inlineParamName.trim()) return toast.error("Parameter name is required");
+    setInlineParams(prev => [...prev, {
+      tempId: crypto.randomUUID(),
+      parameterName: inlineParamName.trim(),
+      units: inlineParamUnits.trim(),
+      referenceRange: inlineParamRange.trim(),
+    }]);
+    setInlineParamName(""); setInlineParamUnits(""); setInlineParamRange("");
+  };
+
+  const addFromLibrary = (param: typeof parameters[0]) => {
+    if (inlineParams.some(p => p.libraryId === param.id)) return toast.info("Already added");
+    setInlineParams(prev => [...prev, {
+      tempId: crypto.randomUUID(),
+      parameterName: param.parameterName,
+      units: param.units || "",
+      referenceRange: param.referenceRange || "",
+      libraryId: param.id,
+    }]);
+  };
+
+  const removeInlineParam = (tempId: string) => {
+    setInlineParams(prev => prev.filter(p => p.tempId !== tempId));
+  };
+
+  const resetTestForm = () => {
+    setTestName(""); setDepartment(""); setNewDepartment(""); setResultHeader("");
+    setTestReferenceRange(""); setTestCost(""); setIncludeComprehensive(false);
+    setInlineParams([]); setEditingTestId(null);
+  };
+
+  const handleSaveTest = async () => {
+    if (!testName.trim()) return toast.error("Test name is required");
+    const dept = newDepartment.trim() || department;
+    if (!dept) return toast.error("Department is required");
+
+    try {
+      setIsSaving(true);
+      const testData = {
+        testName: testName.trim(),
+        department: dept,
+        resultHeader: resultHeader.trim() || undefined,
+        referenceRange: testReferenceRange.trim() || undefined,
+        testCost: testCost ? parseFloat(testCost) : undefined,
+        includeComprehensive,
+      };
+
+      let savedTestId: string;
+
+      if (editingTestId) {
+        // Update existing test
+        const updated = await updateTest.mutateAsync({ id: editingTestId, data: testData });
+        savedTestId = updated.id;
+
+        // Remove old parameter links then re-link
+        const oldDetail = await catalogService.getTestById(editingTestId);
+        for (const p of oldDetail.parameters ?? []) {
+          await unlinkParameter.mutateAsync({ testId: editingTestId, parameterId: p.id });
+        }
+      } else {
+        const created = await createTest.mutateAsync(testData);
+        savedTestId = created.id;
+      }
+
+      // Create new parameters or link library ones
+      for (let i = 0; i < inlineParams.length; i++) {
+        const ip = inlineParams[i];
+        let paramId = ip.libraryId;
+        if (!paramId) {
+          // Create new parameter in the library
+          const created = await createParameter.mutateAsync({
+            parameterName: ip.parameterName,
+            units: ip.units || undefined,
+            referenceRange: ip.referenceRange || undefined,
+          });
+          paramId = created.id;
+        }
+        await linkParameter.mutateAsync({ testId: savedTestId, parameterId: paramId, sortOrder: i });
+      }
+
+      toast.success(editingTestId ? "Test updated" : "Test created");
+      resetTestForm();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditTest = async (test: typeof tests[0]) => {
+    setEditingTestId(test.id);
+    setTestName(test.testName);
+    setDepartment(test.department);
+    setResultHeader(test.resultHeader || "");
+    setTestReferenceRange(test.referenceRange || "");
+    setTestCost(test.testCost?.toString() || "");
+    setIncludeComprehensive(test.includeComprehensive || false);
+    // Load existing parameters into inline params
+    try {
+      const detail = await catalogService.getTestById(test.id);
+      setInlineParams((detail.parameters ?? []).map(p => ({
+        tempId: crypto.randomUUID(),
+        parameterName: p.parameterName,
+        units: p.units || "",
+        referenceRange: p.referenceRange || "",
+        libraryId: p.id,
+      })));
+    } catch { /* ignore */ }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const tabs = [
-    { id: "test-list" as Tab, label: "Test List", icon: ClipboardList, color: "blue" },
+    { id: "tests" as Tab, label: "Tests", icon: ClipboardList, color: "blue" },
+    { id: "parameter-library" as Tab, label: "Parameter Library", icon: FlaskConical, color: "amber" },
     { id: "departments" as Tab, label: "Departments", icon: FlaskConical, color: "emerald" },
     { id: "antibiotics" as Tab, label: "Antibiotics", icon: Pill, color: "purple" },
   ];
@@ -114,566 +274,451 @@ export function TestRegister() {
 
         {/* Tab Content */}
         <div className="pt-6 flex flex-col">
-          {activeTab === "test-list" && (
-            <div className="space-y-6 bg-background p-6">
-              {/* Parameter Name Section */}
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  toast.success("Saved.");
-                }}
-                className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="border-b border-border pb-2 mb-4">
-                  <h3 className="text-base font-semibold text-foreground">Parameter Name</h3>
+          {activeTab === "tests" && (
+            <div className="space-y-6 p-6">
+              {/* ── UNIFIED TEST BUILDER ── */}
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm">
+                <div className="border-b border-border pb-2 mb-6 flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-foreground">
+                    {editingTestId ? "Edit Test" : "Add New Test"}
+                  </h3>
+                  {editingTestId && (
+                    <Button type="button" variant="outline" size="sm" onClick={resetTestForm}>Cancel Edit</Button>
+                  )}
                 </div>
-                
-                {/* Parameter Input Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+
+                {/* Test Fields */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Parameter Name</label>
-                    <input 
-                      type="text" 
-                      value={parameterName}
-                      onChange={(e) => setParameterName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Test Name *</label>
+                    <input type="text" value={testName} onChange={(e) => setTestName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="e.g. Full Blood Count" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Units</label>
-                    <input 
-                      type="text" 
-                      value={units}
-                      onChange={(e) => setUnits(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Department *</label>
+                    <div className="flex gap-2">
+                      <select value={department} onChange={(e) => { setDepartment(e.target.value); setNewDepartment(""); }}
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium">
+                        <option value="">Select or type new →</option>
+                        {departments.map(d => <option key={d.id} value={d.departmentName}>{d.departmentName}</option>)}
+                      </select>
+                      <input type="text" value={newDepartment} onChange={(e) => { setNewDepartment(e.target.value); setDepartment(""); }}
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="New department" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Test Cost (₵)</label>
+                    <input type="number" value={testCost} onChange={(e) => setTestCost(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Result Header</label>
+                    <input type="text" value={resultHeader} onChange={(e) => setResultHeader(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-2">Reference Range</label>
-                    <input 
-                      type="text" 
-                      value={parameterReferenceRange}
-                      onChange={(e) => setParameterReferenceRange(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
+                    <input type="text" value={testReferenceRange} onChange={(e) => setTestReferenceRange(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                  </div>
+                  <div className="flex items-end pb-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={includeComprehensive} onCheckedChange={(c) => setIncludeComprehensive(c === true)} />
+                      <span className="text-xs text-muted-foreground">Include in Comprehensive Screening</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* ── INLINE PARAMETER BUILDER ── */}
+                <div className="border-t border-border pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-semibold text-foreground">Parameters ({inlineParams.length})</h4>
+                    <Button type="button" variant="outline" size="sm" onClick={() => setShowLibraryPicker(true)}>
+                      <Library size={14} className="mr-1.5" /> From Library
+                    </Button>
+                  </div>
+
+                  {/* Inline add row */}
+                  <div className="flex gap-2 mb-4 items-end">
+                    <div className="flex-[2]">
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
+                      <input type="text" value={inlineParamName} onChange={(e) => setInlineParamName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInlineParam(); }}}
+                        className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="Parameter name" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Units</label>
+                      <input type="text" value={inlineParamUnits} onChange={(e) => setInlineParamUnits(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. g/dL" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-muted-foreground mb-1">Ref. Range</label>
+                      <input type="text" value={inlineParamRange} onChange={(e) => setInlineParamRange(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. 12-16" />
+                    </div>
+                    <Button type="button" variant="blue" size="sm" onClick={addInlineParam} className="shrink-0">
+                      <Plus size={14} className="mr-1" /> Add
+                    </Button>
+                  </div>
+
+                  {/* Inline params mini-table */}
+                  {inlineParams.length > 0 && (
+                    <div className="border border-border/60 rounded-xl overflow-hidden mb-4">
+                      <table className="w-full">
+                        <thead className="bg-muted"><tr>
+                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Parameter</th>
+                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Units</th>
+                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Ref. Range</th>
+                          <th className="px-3 py-2 text-right text-xs uppercase font-bold text-muted-foreground w-16"></th>
+                        </tr></thead>
+                        <tbody>
+                          {inlineParams.map((p, i) => (
+                            <tr key={p.tempId} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                              <td className="px-3 py-2 text-sm font-medium">{p.parameterName} {p.libraryId && <span className="text-xs text-primary ml-1">(library)</span>}</td>
+                              <td className="px-3 py-2 text-sm text-muted-foreground">{p.units || '—'}</td>
+                              <td className="px-3 py-2 text-sm text-muted-foreground">{p.referenceRange || '—'}</td>
+                              <td className="px-3 py-2 text-right">
+                                <button onClick={() => removeInlineParam(p.tempId)} className="text-destructive hover:text-destructive/80 transition-colors"><Trash2 size={14} /></button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Save button */}
+                <div className="flex items-center gap-3 pt-4 border-t border-border">
+                  <Button type="button" variant="green" onClick={handleSaveTest} disabled={isSaving} className="px-8">
+                    {isSaving ? <Loader2 className="animate-spin mr-2" size={16}/> : <Save size={16} className="mr-2" />}
+                    {editingTestId ? "Update Test" : "Save Test"}
+                  </Button>
+                  {editingTestId && <Button type="button" variant="outline" onClick={resetTestForm}>Cancel</Button>}
+                </div>
+              </div>
+
+              {/* ── REGISTERED TESTS LIST (expandable) ── */}
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm">
+                <div className="flex flex-col gap-3 mb-4 pb-2 border-b border-border">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base font-semibold text-foreground">
+                      Registered Tests ({tests.length})
+                    </h3>
+                    {selectedTests.length > 0 && (
+                      <Button 
+                        type="button" 
+                        variant="red" 
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm(`Delete ${selectedTests.length} tests?`)) return;
+                          try {
+                            await Promise.all(selectedTests.map(id => deleteTest.mutateAsync(id)));
+                            toast.success("Deleted selected tests");
+                            setSelectedTests([]);
+                          } catch(err: any) { toast.error(err.message); }
+                        }}
+                      >
+                        <Trash2 size={14} className="mr-1.5" /> Delete Selected
+                      </Button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={searchTests}
+                      onChange={(e) => setSearchTests(e.target.value)}
+                      placeholder="Search tests by name or department..."
+                      className="w-full pl-9 pr-4 py-2 bg-background border border-border/60 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all"
                     />
                   </div>
-                  <div className="flex items-end">
-                    <Button 
-                      type="button" 
-                      variant="blue" 
-                      className="w-full"
+                </div>
+                {testsLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
+                ) : testsError ? (
+                  <div className="text-center py-12 text-destructive border border-destructive/20 rounded bg-destructive/5">
+                    <p className="text-sm font-medium">Error loading tests: {(testsError as Error).message}</p>
+                  </div>
+                ) : tests.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
+                    <FlaskConical className="mx-auto text-muted-foreground mb-3" size={40} />
+                    <p className="text-sm font-medium text-muted-foreground">No tests registered yet</p>
+                    <p className="text-xs text-muted-foreground mt-1">Use the form above to create your first test</p>
+                  </div>
+                ) : (
+                  <div className="border border-border/60 rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-muted border-b-2 border-border"><tr>
+                        <th className="px-3 py-2 text-left w-10">
+                          <Checkbox 
+                            checked={selectedTests.length === tests.length && tests.length > 0}
+                            onCheckedChange={(c) => setSelectedTests(c ? tests.map(t => t.id) : [])}
+                          />
+                        </th>
+                        <th className="w-8"></th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Test Name</th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Department</th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Cost</th>
+                        <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
+                      </tr></thead>
+                      <tbody>
+                        {filteredTests.map((test, index) => (
+                          <React.Fragment key={test.id}>{/* Main row */}
+                          <tr
+                            onClick={() => toggleTestSelection(test.id)}
+                            className={`border-t border-border cursor-pointer transition-colors ${
+                              selectedTests.includes(test.id) ? 'bg-primary/5' : index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'
+                            }`}>
+                            <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={selectedTests.includes(test.id)}
+                                onCheckedChange={() => toggleTestSelection(test.id)}
+                              />
+                            </td>
+                            <td className="px-2 py-2 text-center text-muted-foreground" onClick={(e) => { e.stopPropagation(); setExpandedTestId(prev => prev === test.id ? null : test.id); }}>
+                              {expandedTestId === test.id ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                            </td>
+                            <td className="px-3 py-2 text-sm font-medium text-foreground">{test.testName}</td>
+                            <td className="px-3 py-2 text-sm text-muted-foreground">{test.department}</td>
+                            <td className="px-3 py-2 text-sm text-muted-foreground">₵{test.testCost?.toFixed(2) ?? '0.00'}</td>
+                            <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                              <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => handleEditTest(test)}>
+                                <Edit size={13} />
+                              </Button>
+                            </td>
+                          </tr>
+                          {/* Expanded detail row */}
+                          {expandedTestId === test.id && (
+                            <tr key={test.id + '-detail'}>
+                              <td colSpan={6} className="bg-muted/20 px-6 py-4 border-t border-border/40">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Assigned Parameters</p>
+                                {!expandedTestDetail ? (
+                                  <Loader2 className="animate-spin text-muted-foreground" size={16} />
+                                ) : (expandedTestDetail.parameters?.length ?? 0) === 0 ? (
+                                  <p className="text-xs text-muted-foreground italic">No parameters assigned to this test</p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {expandedTestDetail.parameters?.map(p => (
+                                      <span key={p.id} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-background border border-border text-xs font-medium text-foreground">
+                                        {p.parameterName}
+                                        {p.units && <span className="text-muted-foreground">({p.units})</span>}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* ── FROM LIBRARY PICKER DIALOG ── */}
+              <Dialog open={showLibraryPicker} onOpenChange={setShowLibraryPicker}>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Select Parameters from Library</DialogTitle>
+                    <DialogDescription>Click a parameter to add it to the current test.</DialogDescription>
+                  </DialogHeader>
+                  <div className="max-h-64 overflow-auto border border-border rounded-lg">
+                    {parametersLoading ? (
+                      <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
+                    ) : parameters.length === 0 ? (
+                      <p className="text-sm text-center py-6 text-muted-foreground">No parameters in library yet. Type them inline above.</p>
+                    ) : (
+                      <table className="w-full">
+                        <thead className="bg-muted sticky top-0"><tr>
+                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Name</th>
+                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Units</th>
+                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Ref. Range</th>
+                        </tr></thead>
+                        <tbody>
+                          {parameters.map((p, i) => {
+                            const alreadyAdded = inlineParams.some(ip => ip.libraryId === p.id);
+                            return (
+                              <tr key={p.id} onClick={() => { if (!alreadyAdded) addFromLibrary(p); }}
+                                className={`border-t border-border transition-colors ${alreadyAdded ? 'bg-primary/10 opacity-60 cursor-default' : 'cursor-pointer hover:bg-muted/50'} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                                <td className="px-3 py-2 text-sm font-medium">{p.parameterName} {alreadyAdded && <span className="text-xs text-primary">✓</span>}</td>
+                                <td className="px-3 py-2 text-sm text-muted-foreground">{p.units || '—'}</td>
+                                <td className="px-3 py-2 text-sm text-muted-foreground">{p.referenceRange || '—'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowLibraryPicker(false)}>Done</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
+          {/* ── PARAMETER LIBRARY TAB ── */}
+          {activeTab === "parameter-library" && (
+            <div className="space-y-6 p-6">
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm">
+                <div className="border-b border-border pb-2 mb-6">
+                  <h3 className="text-base font-semibold text-foreground">
+                    {editingParameterId ? "Edit Parameter" : "Add Parameter to Library"}
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-4 items-end">
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Parameter Name *</label>
+                    <input type="text" value={libParamName} onChange={(e) => setLibParamName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Units</label>
+                    <input type="text" value={libUnits} onChange={(e) => setLibUnits(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Reference Range</label>
+                    <input type="text" value={libRange} onChange={(e) => setLibRange(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Order ID</label>
+                    <input type="text" value={libOrderId} onChange={(e) => setLibOrderId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Trimester Type</label>
+                    <input type="text" value={libTrimester} onChange={(e) => setLibTrimester(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="button" variant="blue" className="flex-1"
                       disabled={createParameter.isPending || updateParameter.isPending}
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        if (!parameterName) return toast.error("Parameter name is required");
+                      onClick={async () => {
+                        if (!libParamName.trim()) return toast.error("Parameter name is required");
                         try {
-                          const data = {
-                            parameterName,
-                            units: units || undefined,
-                            referenceRange: parameterReferenceRange || undefined,
-                            parameterOrderId: parseInt(parameterOrderId) || undefined,
-                            trimesterType: trimesterType || undefined,
-                          };
+                          const data = { parameterName: libParamName.trim(), units: libUnits.trim() || undefined, referenceRange: libRange.trim() || undefined, parameterOrderId: parseInt(libOrderId) || undefined, trimesterType: libTrimester.trim() || undefined };
                           if (editingParameterId) {
                             await updateParameter.mutateAsync({ id: editingParameterId, data });
                             toast.success("Parameter updated");
                             setEditingParameterId(null);
                           } else {
                             await createParameter.mutateAsync(data);
-                            toast.success("Parameter added");
+                            toast.success("Parameter added to library");
                           }
-                          setParameterName("");
-                          setUnits("");
-                          setParameterReferenceRange("");
-                          setTrimesterType("");
-                        } catch (err: any) {
-                          toast.error(err.message);
-                        }
-                      }}
-                    >
+                          setLibParamName(""); setLibUnits(""); setLibRange(""); setLibTrimester("");
+                        } catch (err: any) { toast.error(err.message); }
+                      }}>
                       {createParameter.isPending || updateParameter.isPending ? <Loader2 className="animate-spin mr-2" size={16}/> : null}
                       {editingParameterId ? "Update" : "Add"}
                     </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Parameter Order ID</label>
-                    <input 
-                      type="text"
-                      value={parameterOrderId}
-                      onChange={(e) => setParameterOrderId(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Trimester Type</label>
-                    <input 
-                      type="text" 
-                      value={trimesterType}
-                      onChange={(e) => setTrimesterType(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                </div>
-
-                {/* Parameter Table */}
-                {parametersLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
-                ) : parameters.length === 0 ? (
-                  <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30 mb-4">
-                    <FlaskConical className="mx-auto text-muted-foreground mb-3" size={40} />
-                    <p className="text-sm font-medium text-muted-foreground">No parameters registered yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Fill in the form above and click Add to create a parameter</p>
-                  </div>
-                ) : (
-                <div 
-                  className="border border-border outline-none rounded"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      setFocusedParameterIndex(prev => {
-                        const nextIndex = prev === null ? 0 : Math.min(prev + 1, parameters.length - 1);
-                        setSelectedParameter(nextIndex);
-                        return nextIndex;
-                      });
-                    } else if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      setFocusedParameterIndex(prev => {
-                        const nextIndex = prev === null ? parameters.length - 1 : Math.max(prev - 1, 0);
-                        setSelectedParameter(nextIndex);
-                        return nextIndex;
-                      });
-                    }
-                  }}
-                >
-                  <table className="w-full">
-                    <thead className="bg-muted sticky top-0 border-b-2 border-border">
-                      <tr>
-                        <th className="border-r border-border px-2 py-1 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Parameter Name</th>
-                        <th className="border-r border-border px-2 py-1 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Units</th>
-                        <th className="px-2 py-1 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Reference Range</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parameters.map((param, index) => (
-                        <tr 
-                          key={param.id} 
-                          onClick={() => setSelectedParameter(index)}
-                          className={`border-t border-border cursor-pointer transition-colors ${
-                            selectedParameter === index 
-                              ? 'bg-primary/10 border-l-4 border-l-primary' 
-                              : index === focusedParameterIndex 
-                                ? 'bg-muted ring-2 ring-inset ring-blue-500'
-                                : index % 2 === 0
-                                  ? 'bg-background hover:bg-muted/50'
-                                  : 'bg-muted/30 hover:bg-muted/50'
-                          }`}
-                        >
-                          <td className="border-r border-border px-2 py-1 text-xs text-foreground">{param.parameterName}</td>
-                          <td className="border-r border-border px-2 py-1 text-xs text-muted-foreground">{param.units}</td>
-                          <td className="px-2 py-1 text-xs text-muted-foreground">{param.referenceRange}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                )}
-
-                {/* Button Row */}
-                <div className="mt-4 flex items-center gap-2">
-                  <Button 
-                    type="button"
-                    variant="red"
-                    size="sm"
-                    onClick={async () => { 
-                      if (selectedParameter !== null) { 
-                        const param = parameters[selectedParameter];
-                        await deleteParameter.mutateAsync(param.id);
-                        setSelectedParameter(null); 
-                        toast("Deleted."); 
-                      } 
-                    }}
-                    disabled={selectedParameter === null || deleteParameter.isPending}
-                  >
-                    Delete Selected Parameter
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant="red"
-                    size="sm"
-                    onClick={() => toast("Deleted.")}
-                  >
-                    Delete All Parameters
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { 
-                      if (selectedParameter !== null) { 
-                        const param = parameters[selectedParameter];
-                        setEditingParameterId(param.id);
-                        setParameterName(param.parameterName);
-                        setUnits(param.units || "");
-                        setParameterReferenceRange(param.referenceRange || "");
-                        setParameterOrderId(param.parameterOrderId?.toString() || "10");
-                        setTrimesterType(param.trimesterType || "");
-                        toast.info("Edit mode active."); 
-                      } 
-                    }}
-                    disabled={selectedParameter === null}
-                  >
-                    Edit Parameter
-                  </Button>
-                  {editingParameterId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingParameterId(null);
-                        setParameterName("");
-                        setUnits("");
-                        setParameterReferenceRange("");
-                        setTrimesterType("");
-                      }}
-                    >
-                      Cancel Edit
-                    </Button>
-                  )}
-                  <Button 
-                    type="submit"
-                    variant="green"
-                    size="sm"
-                  >
-                    Save
-                  </Button>
-                </div>
-              </form>
-
-              {/* Test Name Section */}
-              <form 
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!testName) return toast.error("Test name is required");
-                  try {
-                    const data = {
-                      testName,
-                      department: department || '',
-                      resultHeader: resultHeader || undefined,
-                      referenceRange: testReferenceRange || undefined,
-                      testCost: testCost ? parseFloat(testCost) : undefined,
-                      includeComprehensive: includeComprehensive,
-                    };
-                    if (editingTestId) {
-                      await updateTest.mutateAsync({ id: editingTestId, data });
-                      toast.success("Test updated");
-                      setEditingTestId(null);
-                    } else {
-                      await createTest.mutateAsync(data);
-                      toast.success("Test added");
-                    }
-                    setTestName("");
-                    setDepartment("");
-                    setResultHeader("");
-                    setTestReferenceRange("");
-                    setTestCost("");
-                    setIncludeComprehensive(false);
-                  } catch (err: any) {
-                    toast.error(err.message);
-                  }
-                }}
-                className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="border-b border-border pb-2 mb-4">
-                  <h3 className="text-base font-semibold text-foreground">Test Name</h3>
-                </div>
-                
-                {/* Test Input Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end mb-4">
-                  <div className="hidden">
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Department</label>
-                    <select 
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    >
-                      <option value="">Select Department</option>
-                      {departments.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Test Name</label>
-                    <input 
-                      type="text" 
-                      value={testName}
-                      onChange={(e) => setTestName(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Result Header</label>
-                    <input 
-                      type="text" 
-                      value={resultHeader}
-                      onChange={(e) => setResultHeader(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Reference Range</label>
-                    <input 
-                      type="text" 
-                      value={testReferenceRange}
-                      onChange={(e) => setTestReferenceRange(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end mb-4">
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Test Cost</label>
-                    <input 
-                      type="number" 
-                      value={testCost}
-                      onChange={(e) => setTestCost(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60"
-                    />
-                  </div>
-                  <div className="sm:col-span-5">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={includeComprehensive}
-                        onCheckedChange={(checked) => setIncludeComprehensive(checked === true)}
-                      />
-                      <span className="text-xs text-muted-foreground">Include in Comprehensive Screening</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Test Name Table */}
-                {testsLoading ? (
-                  <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
-                ) : tests.length === 0 ? (
-                  <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30 mb-4">
-                    <FlaskConical className="mx-auto text-muted-foreground mb-3" size={40} />
-                    <p className="text-sm font-medium text-muted-foreground">No tests registered yet</p>
-                    <p className="text-xs text-muted-foreground mt-1">Fill in the form above and click Add to create a test</p>
-                  </div>
-                ) : (
-                <div 
-                  className="border border-border/60 bg-card rounded-xl overflow-hidden shadow-sm hover:shadow"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'ArrowDown') {
-                      e.preventDefault();
-                      setFocusedTestIndex(prev => {
-                        const nextIndex = prev === null ? 0 : Math.min(prev + 1, tests.length - 1);
-                        setSelectedTest(nextIndex);
-                        return nextIndex;
-                      });
-                    } else if (e.key === 'ArrowUp') {
-                      e.preventDefault();
-                      setFocusedTestIndex(prev => {
-                        const nextIndex = prev === null ? tests.length - 1 : Math.max(prev - 1, 0);
-                        setSelectedTest(nextIndex);
-                        return nextIndex;
-                      });
-                    }
-                  }}
-                >
-                  <table className="w-full">
-                    <thead className="bg-muted sticky top-0 border-b-2 border-border">
-                      <tr>
-                        <th className="border-r border-border px-2 py-1 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">TestName</th>
-                        <th className="border-r border-border px-2 py-1 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Department</th>
-                        <th className="px-2 py-1 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">TestCost</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tests.map((test, index) => (
-                        <tr 
-                          key={test.id} 
-                          onClick={() => setSelectedTest(index)}
-                          className={`border-t border-border cursor-pointer transition-colors ${
-                            selectedTest === index 
-                              ? 'bg-primary/10 border-l-4 border-l-primary' 
-                              : index === focusedTestIndex 
-                                ? 'bg-muted ring-2 ring-inset ring-blue-500'
-                                : index % 2 === 0
-                                  ? 'bg-background hover:bg-muted/50'
-                                  : 'bg-muted/30 hover:bg-muted/50'
-                          }`}
-                        >
-                          <td className="border-r border-border px-2 py-1 text-xs text-foreground">{test.testName}</td>
-                          <td className="border-r border-border px-2 py-1 text-xs text-muted-foreground">{test.department}</td>
-                          <td className="px-2 py-1 text-xs text-muted-foreground">₵{test.testCost?.toFixed(2) ?? '0.00'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                )}
-
-                {/* Button Row */}
-                <div className="flex items-center gap-2">
-                  <Button 
-                    type="button"
-                    variant="red"
-                    size="sm"
-                    onClick={async () => { 
-                      if (selectedTest !== null) { 
-                        const test = tests[selectedTest];
-                        await deleteTest.mutateAsync(test.id);
-                        setSelectedTest(null); 
-                        toast("Deleted."); 
-                      } 
-                    }}
-                    disabled={selectedTest === null || deleteTest.isPending}
-                  >
-                    Delete Test
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant="red"
-                    size="sm"
-                    onClick={() => toast("Deleted.")}
-                  >
-                    Delete All Tests
-                  </Button>
-                  <Button 
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { 
-                      if (selectedTest !== null) { 
-                        const test = tests[selectedTest];
-                        setEditingTestId(test.id);
-                        setTestName(test.testName);
-                        setDepartment(test.department);
-                        setResultHeader(test.resultHeader || "");
-                        setTestReferenceRange(test.referenceRange || "");
-                        setTestCost(test.testCost?.toString() || "");
-                        setIncludeComprehensive(test.includeComprehensive || false);
-                        toast.info("Edit mode active."); 
-                      } 
-                    }}
-                    disabled={selectedTest === null}
-                  >
-                    Edit Test
-                  </Button>
-                  {editingTestId && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingTestId(null);
-                        setTestName("");
-                        setDepartment("");
-                        setResultHeader("");
-                        setTestReferenceRange("");
-                        setTestCost("");
-                        setIncludeComprehensive(false);
-                      }}
-                    >
-                      Cancel Edit
-                    </Button>
-                  )}
-                  <Button 
-                    type="submit"
-                    variant="green"
-                    size="sm"
-                    disabled={createTest.isPending || updateTest.isPending}
-                  >
-                    {createTest.isPending || updateTest.isPending ? <Loader2 className="animate-spin mr-2" size={16}/> : null}
-                    {editingTestId ? "Update" : "Save"}
-                  </Button>
-                </div>
-
-                {/* ASSIGNED PARAMETERS SECTION */}
-                {activeTest && (
-                  <div className="mt-8 border-t border-border pt-6">
-                    <h4 className="text-sm font-semibold mb-4">Parameters assigned to {activeTest.testName}</h4>
-                    {testDetailLoading ? (
-                      <Loader2 className="animate-spin text-muted-foreground" size={24} />
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="border border-border/60 rounded-xl overflow-hidden">
-                          <table className="w-full">
-                            <thead className="bg-muted sticky top-0">
-                              <tr>
-                                <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Assigned Parameter</th>
-                                <th className="px-3 py-2 text-right text-xs uppercase font-bold text-muted-foreground">Action</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {testDetail?.parameters?.length === 0 ? (
-                                <tr>
-                                  <td colSpan={2} className="px-3 py-4 text-center text-sm text-muted-foreground">No parameters assigned</td>
-                                </tr>
-                              ) : (
-                                testDetail?.parameters?.map((p: any) => (
-                                  <tr key={p.id} className="border-t border-border bg-background hover:bg-muted/50">
-                                    <td className="px-3 py-2 text-sm font-medium">{p.parameterName}</td>
-                                    <td className="px-3 py-2 text-right">
-                                      <Button 
-                                        type="button" variant="red" size="sm" className="h-6 px-3 text-xs"
-                                        onClick={async () => {
-                                          try {
-                                            await unlinkParameter.mutateAsync({ testId: activeTest.id, parameterId: p.id });
-                                            toast.success("Parameter removed");
-                                          } catch (err: any) {
-                                            toast.error(err.message);
-                                          }
-                                        }}
-                                        disabled={unlinkParameter.isPending}
-                                      >
-                                        Remove
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <select 
-                            className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium"
-                            onChange={async (e) => {
-                              const paramId = e.target.value;
-                              if (!paramId) return;
-                              e.target.value = ""; // reset
-                              try {
-                                await linkParameter.mutateAsync({ testId: activeTest.id, parameterId: paramId, sortOrder: testDetail?.parameters?.length || 0 });
-                                toast.success("Parameter added");
-                              } catch (err: any) {
-                                toast.error(err.message);
-                              }
-                            }}
-                          >
-                            <option value="">+ Assign new parameter</option>
-                            {parameters
-                              .filter(p => !testDetail?.parameters?.find((assigned: any) => assigned.id === p.id))
-                              .map(p => (
-                                <option key={p.id} value={p.id}>{p.parameterName}</option>
-                              ))}
-                          </select>
-                        </div>
-                      </div>
+                    {editingParameterId && (
+                      <Button type="button" variant="outline" onClick={() => { setEditingParameterId(null); setLibParamName(""); setLibUnits(""); setLibRange(""); setLibTrimester(""); }}>Cancel</Button>
                     )}
                   </div>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm">
+                <div className="flex flex-col gap-3 mb-4 pb-2 border-b border-border">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-base font-semibold text-foreground">
+                      Parameter Library ({parameters.length})
+                    </h3>
+                    {selectedParameters.length > 0 && (
+                      <Button 
+                        type="button" 
+                        variant="red" 
+                        size="sm"
+                        onClick={async () => {
+                          if (!confirm(`Delete ${selectedParameters.length} parameters?`)) return;
+                          try {
+                            await Promise.all(selectedParameters.map(id => deleteParameter.mutateAsync(id)));
+                            toast.success("Deleted selected parameters");
+                            setSelectedParameters([]);
+                          } catch(err: any) { toast.error(err.message); }
+                        }}
+                      >
+                        <Trash2 size={14} className="mr-1.5" /> Delete Selected
+                      </Button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={searchParams}
+                      onChange={(e) => setSearchParams(e.target.value)}
+                      placeholder="Search parameters by name or units..."
+                      className="w-full pl-9 pr-4 py-2 bg-background border border-border/60 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all"
+                    />
+                  </div>
+                </div>
+                {parametersLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
+                ) : parametersError ? (
+                  <div className="text-center py-12 text-destructive border border-destructive/20 rounded bg-destructive/5">
+                    <p className="text-sm font-medium">Error loading parameters: {(parametersError as Error).message}</p>
+                  </div>
+                ) : parameters.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
+                    <FlaskConical className="mx-auto text-muted-foreground mb-3" size={40} />
+                    <p className="text-sm font-medium text-muted-foreground">No parameters in library yet</p>
+                  </div>
+                ) : (
+                  <div className="border border-border rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-muted border-b-2 border-border"><tr>
+                        <th className="px-3 py-2 text-left w-10">
+                          <Checkbox 
+                            checked={selectedParameters.length === parameters.length && parameters.length > 0}
+                            onCheckedChange={(c) => setSelectedParameters(c ? parameters.map(p => p.id) : [])}
+                          />
+                        </th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Name</th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Units</th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Ref. Range</th>
+                        <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
+                      </tr></thead>
+                      <tbody>
+                        {filteredParameters.map((param, index) => (
+                          <tr 
+                            key={param.id} 
+                            onClick={() => toggleParamSelection(param.id)}
+                            className={`cursor-pointer transition-colors ${
+                              selectedParameters.includes(param.id) ? 'bg-primary/5' : index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'
+                            }`}>
+                            <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={selectedParameters.includes(param.id)}
+                                onCheckedChange={() => toggleParamSelection(param.id)}
+                              />
+                            </td>
+                            <td className="px-3 py-2 text-sm font-medium text-foreground">{param.parameterName}</td>
+                            <td className="px-3 py-2 text-sm text-muted-foreground">{param.units || '—'}</td>
+                            <td className="px-3 py-2 text-sm text-muted-foreground">{param.referenceRange || '—'}</td>
+                            <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                              <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0"
+                                onClick={() => { setEditingParameterId(param.id); setLibParamName(param.parameterName); setLibUnits(param.units || ""); setLibRange(param.referenceRange || ""); setLibOrderId(param.parameterOrderId?.toString() || "10"); setLibTrimester(param.trimesterType || ""); }}>
+                                <Edit size={13} />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
-              </form>
+              </div>
             </div>
           )}
+
+
 
           {activeTab === "departments" && (
             <div className="space-y-6 flex-1 flex flex-col">
@@ -681,35 +726,173 @@ export function TestRegister() {
               <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="border-l-4 border-emerald-500 pl-4">
                   <h2 className="text-2xl font-bold text-foreground">Department Registry</h2>
-                  <p className="text-muted-foreground mt-2">Departments are derived from existing tests. Add a test with a new department name to register it here.</p>
+                  <p className="text-muted-foreground mt-2">Manage laboratory departments and categories.</p>
+                </div>
+              </div>
+
+              {/* Department Entry Form */}
+              <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="border-t-2 border-emerald-500 pt-6">
+                  <form 
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!deptName) return toast.error("Name is required");
+                      try {
+                        if (editingDeptId) {
+                          await updateDepartment.mutateAsync({ id: editingDeptId, name: deptName });
+                          toast.success("Department updated");
+                          setEditingDeptId(null);
+                        } else {
+                          await createDepartment.mutateAsync(deptName);
+                          toast.success("Department saved");
+                        }
+                        setDeptName("");
+                      } catch (err: any) {
+                        toast.error(err.message);
+                      }
+                    }}
+                    className="flex items-end gap-4"
+                  >
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">Department Name</label>
+                      <input
+                        type="text"
+                        value={deptName}
+                        onChange={(e) => setDeptName(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-background border border-border/60 text-foreground focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 font-medium rounded-xl transition-all"
+                        placeholder="Enter Department Name"
+                      />
+                    </div>
+                    {editingDeptId && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingDeptId(null);
+                          setDeptName("");
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button type="submit" variant="green" className="px-8 flex-shrink-0" disabled={createDepartment.isPending || updateDepartment.isPending}>
+                      {createDepartment.isPending || updateDepartment.isPending ? <Loader2 size={18} className="animate-spin mr-2" /> : <Save size={18} className="mr-2" />}
+                      {editingDeptId ? "Update" : "Save"}
+                    </Button>
+                  </form>
                 </div>
               </div>
 
               {/* Departments Table Panel */}
               <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b-2 border-border">
-                  Registered Departments
-                </h3>
+                <div className="flex flex-col gap-3 mb-4 pb-2 border-b-2 border-border">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h3 className="text-base font-semibold text-foreground">
+                      Registered Departments ({departments.length})
+                    </h3>
+                    {departments.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        {selectedDepartments.length > 0 && (
+                          <Button 
+                            type="button" 
+                            variant="red" 
+                            size="sm"
+                            onClick={async () => {
+                              if (!confirm(`Delete ${selectedDepartments.length} department(s)?`)) return;
+                              try {
+                                await Promise.all(selectedDepartments.map(id => deleteDepartment.mutateAsync(id)));
+                                toast.success("Deleted selected departments");
+                                setSelectedDepartments([]);
+                              } catch(err: any) { toast.error(err.message); }
+                            }}
+                          >
+                            <Trash2 size={14} className="mr-1.5" /> Delete Selected
+                          </Button>
+                        )}
+                        <Button 
+                          type="button" 
+                          variant="red" 
+                          size="sm"
+                          onClick={async () => {
+                            if (!confirm("Delete ALL departments? This cannot be undone.")) return;
+                            try {
+                              await Promise.all(departments.map(d => deleteDepartment.mutateAsync(d.id)));
+                              toast.success("Deleted all departments");
+                              setSelectedDepartments([]);
+                            } catch(err: any) { toast.error(err.message); }
+                          }}
+                        >
+                          <Trash2 size={14} className="mr-1.5" /> Delete All
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={searchDepts}
+                      onChange={(e) => setSearchDepts(e.target.value)}
+                      placeholder="Search departments..."
+                      className="w-full pl-9 pr-4 py-2 bg-background border border-border/60 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all"
+                    />
+                  </div>
+                </div>
+
                 {departmentsLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
                 ) : departments.length === 0 ? (
                   <div className="text-center py-12 border border-dashed border-border rounded bg-muted/30">
                     <FlaskConical className="mx-auto text-muted-foreground mb-3" size={40} />
                     <p className="text-sm font-medium text-muted-foreground">No departments found</p>
-                    <p className="text-xs text-muted-foreground mt-1">Create a test with a department name to see it here</p>
+                    <p className="text-xs text-muted-foreground mt-1">Departments added to the database will appear here</p>
                   </div>
                 ) : (
                   <div className="border border-border rounded">
                     <table className="w-full">
                       <thead className="bg-muted sticky top-0 border-b-2 border-border">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Name</th>
+                          <th className="px-3 py-2 text-left w-10">
+                            <Checkbox 
+                              checked={selectedDepartments.length === departments.length && departments.length > 0}
+                              onCheckedChange={(c) => setSelectedDepartments(c ? departments.map(d => d.id) : [])}
+                            />
+                          </th>
+                          <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Name</th>
+                          <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {departments.map((dep, index) => (
-                          <tr key={dep} className={index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'}>
-                            <td className="px-3 py-2 text-sm text-foreground font-medium">{dep}</td>
+                        {filteredDepartments.map((dep, index) => (
+                          <tr 
+                            key={dep.id} 
+                            onClick={() => toggleDeptSelection(dep.id)}
+                            className={`cursor-pointer transition-colors ${
+                              selectedDepartments.includes(dep.id) ? 'bg-primary/5' : index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'
+                            }`}>
+                            <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={selectedDepartments.includes(dep.id)}
+                                onCheckedChange={() => toggleDeptSelection(dep.id)}
+                              />
+                            </td>
+                            <td className="border-r border-border px-3 py-2 text-sm text-foreground font-medium">{dep.departmentName}</td>
+                            <td className="px-3 py-2 text-right">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingDeptId(dep.id);
+                                  setDeptName(dep.departmentName);
+                                  toast.info("Edit mode active.");
+                                }}
+                              >
+                                <Edit size={12} />
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -785,9 +968,28 @@ export function TestRegister() {
 
               {/* Antibiotics Table Panel */}
               <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b-2 border-border">
-                  Registered Antibiotics
-                </h3>
+                <div className="flex justify-between items-end mb-4 pb-2 border-b-2 border-border">
+                  <h3 className="text-base font-semibold text-foreground">
+                    Registered Antibiotics ({antibiotics.length})
+                  </h3>
+                  {selectedAntibiotics.length > 0 && (
+                    <Button 
+                      type="button" 
+                      variant="red" 
+                      size="sm"
+                      onClick={async () => {
+                        if (!confirm(`Delete ${selectedAntibiotics.length} antibiotics?`)) return;
+                        try {
+                          await Promise.all(selectedAntibiotics.map(id => deleteAntibiotic.mutateAsync(id)));
+                          toast.success("Deleted selected antibiotics");
+                          setSelectedAntibiotics([]);
+                        } catch(err: any) { toast.error(err.message); }
+                      }}
+                    >
+                      <Trash2 size={14} className="mr-1.5" /> Delete Selected
+                    </Button>
+                  )}
+                </div>
                 {antibioticsLoading ? (
                   <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
                 ) : antibiotics.length === 0 ? (
@@ -800,44 +1002,45 @@ export function TestRegister() {
                     <table className="w-full">
                       <thead className="bg-muted sticky top-0 border-b-2 border-border">
                         <tr>
+                          <th className="px-3 py-2 text-left w-10">
+                            <Checkbox 
+                              checked={selectedAntibiotics.length === antibiotics.length && antibiotics.length > 0}
+                              onCheckedChange={(c) => setSelectedAntibiotics(c ? antibiotics.map(a => a.id) : [])}
+                            />
+                          </th>
                           <th className="border-r border-border px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Name</th>
                           <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {antibiotics.map((ab, index) => (
-                          <tr key={ab.id} className={index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'}>
+                          <tr 
+                            key={ab.id} 
+                            onClick={() => toggleAntibioticSelection(ab.id)}
+                            className={`cursor-pointer transition-colors ${
+                              selectedAntibiotics.includes(ab.id) ? 'bg-primary/5' : index % 2 === 0 ? 'bg-background hover:bg-muted/50' : 'bg-muted/30 hover:bg-muted/50'
+                            }`}>
+                            <td className="px-3 py-2" onClick={e => e.stopPropagation()}>
+                              <Checkbox 
+                                checked={selectedAntibiotics.includes(ab.id)}
+                                onCheckedChange={() => toggleAntibioticSelection(ab.id)}
+                              />
+                            </td>
                             <td className="border-r border-border px-3 py-2 text-sm text-foreground font-medium">{ab.antibioticName}</td>
                             <td className="px-3 py-2 text-right">
                               <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="h-6 w-6 p-0 mr-2"
-                                onClick={() => {
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   setEditingAntibioticId(ab.id);
                                   setAntibioticName(ab.antibioticName);
                                   toast.info("Edit mode active.");
                                 }}
                               >
                                 <Edit size={12} />
-                              </Button>
-                              <Button 
-                                type="button" 
-                                variant="red" 
-                                size="sm" 
-                                className="h-6 w-6 p-0"
-                                onClick={async () => {
-                                  try {
-                                    await deleteAntibiotic.mutateAsync(ab.id);
-                                    toast.success("Deleted antibiotic");
-                                  } catch (err: any) {
-                                    toast.error(err.message);
-                                  }
-                                }}
-                                disabled={deleteAntibiotic.isPending}
-                              >
-                                <Trash2 size={12} />
                               </Button>
                             </td>
                           </tr>
