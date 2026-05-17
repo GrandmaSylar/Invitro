@@ -17,16 +17,16 @@ const AuditLogSection = React.lazy(() => import('./AuditLogSection'));
 const SystemHealthSection = React.lazy(() => import('./SystemHealthSection'));
 const AboutSection = React.lazy(() => import('./AboutSection'));
 const SETTINGS_SECTIONS = [
-  { id: 'general', label: 'General', icon: Settings, permissionKey: 'settings.general', group: 'General' },
-  { id: 'notifications', label: 'Notifications', icon: Bell, permissionKey: 'settings.notifications', group: 'General' },
-  { id: 'security', label: 'Security', icon: Shield, permissionKey: 'settings.security', group: 'General' },
-  { id: 'users', label: 'Users & Roles', icon: Users, permissionKey: 'settings.users', group: 'Administration' },
-  { id: 'smtp', label: 'Email / SMTP', icon: Mail, permissionKey: 'settings.smtp', group: 'Administration' },
-  { id: 'api_keys', label: 'API Keys', icon: Key, permissionKey: 'settings.api_keys', group: 'Administration' },
-  { id: 'backup', label: 'Backup & Restore', icon: Database, permissionKey: 'settings.backup', group: 'System' },
-  { id: 'audit_log', label: 'Audit Log', icon: FileText, permissionKey: 'settings.audit_log', group: 'System' },
-  { id: 'health', label: 'System Health', icon: Activity, permissionKey: 'settings.health', group: 'System' },
-  { id: 'about', label: 'About & Version', icon: Info, permissionKey: 'settings.general', group: 'System' },
+  { id: 'general', label: 'General', icon: Settings, permissionKey: 'settings.general', group: 'General', isMock: false },
+  { id: 'notifications', label: 'Notifications', icon: Bell, permissionKey: 'settings.notifications', group: 'General', isMock: true },
+  { id: 'security', label: 'Security', icon: Shield, permissionKey: 'settings.security', group: 'General', isMock: true },
+  { id: 'users', label: 'Users & Roles', icon: Users, permissionKey: 'settings.users', group: 'Administration', isMock: false },
+  { id: 'smtp', label: 'Email / SMTP', icon: Mail, permissionKey: 'settings.smtp', group: 'Administration', isMock: true },
+  { id: 'api_keys', label: 'API Keys', icon: Key, permissionKey: 'settings.api_keys', group: 'Administration', isMock: true },
+  { id: 'backup', label: 'Backup & Restore', icon: Database, permissionKey: 'settings.backup', group: 'System', isMock: false },
+  { id: 'audit_log', label: 'Audit Log', icon: FileText, permissionKey: 'settings.audit_log', group: 'System', isMock: false },
+  { id: 'health', label: 'System Health', icon: Activity, permissionKey: 'settings.health', group: 'System', isMock: true },
+  { id: 'about', label: 'About & Version', icon: Info, permissionKey: 'settings.general', group: 'System', isMock: false },
 ];
 
 export function SettingsPage() {
@@ -113,14 +113,20 @@ export function SettingsPage() {
                     key={section.id}
                     onClick={() => setActiveSectionId(section.id)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm font-medium transition-colors",
                       isActive
                         ? "bg-accent text-accent-foreground border-l-2 border-primary rounded-l-none pl-[10px]"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      section.isMock && "opacity-50"
                     )}
                   >
-                    <Icon className="h-4 w-4" />
-                    {section.label}
+                    <div className="flex items-center gap-2 truncate">
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{section.label}</span>
+                    </div>
+                    {section.isMock && (
+                      <span className="text-[10px] bg-muted-foreground/20 text-muted-foreground px-1.5 py-0.5 rounded font-mono uppercase tracking-wider shrink-0">In Dev</span>
+                    )}
                   </button>
                 );
               })}
@@ -132,19 +138,30 @@ export function SettingsPage() {
       {/* Content Area */}
       <div className="flex-1 overflow-y-auto pb-8">
         <div className="max-w-4xl">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold tracking-tight">{activeSection.label}</h2>
-            <p className="text-muted-foreground">Manage {activeSection.label.toLowerCase()} preferences.</p>
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold tracking-tight">{activeSection.label}</h2>
+                {activeSection.isMock && (
+                  <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-xs px-2.5 py-1 rounded-md font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                    <Info className="h-3.5 w-3.5" /> Under Development
+                  </span>
+                )}
+              </div>
+              <p className="text-muted-foreground mt-1">Manage {activeSection.label.toLowerCase()} preferences.</p>
+            </div>
           </div>
           
-          <Suspense fallback={
-            <div className="space-y-4">
-              <div className="h-[200px] w-full animate-pulse rounded-lg bg-muted" />
-              <div className="h-[200px] w-full animate-pulse rounded-lg bg-muted" />
-            </div>
-          }>
-            {renderActiveSection()}
-          </Suspense>
+          <div className={cn(activeSection.isMock && "opacity-50 relative pointer-events-none select-none transition-opacity duration-300")}>
+            <Suspense fallback={
+              <div className="space-y-4">
+                <div className="h-[200px] w-full animate-pulse rounded-lg bg-muted" />
+                <div className="h-[200px] w-full animate-pulse rounded-lg bg-muted" />
+              </div>
+            }>
+              {renderActiveSection()}
+            </Suspense>
+          </div>
         </div>
       </div>
       

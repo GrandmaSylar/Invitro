@@ -11,7 +11,7 @@ import type { AuditEvent, AuditFilters } from '../lib/types';
 export const auditService = {
   logEvent: async (event: Omit<AuditEvent, 'id' | 'timestamp'>): Promise<void> => {
     const { error } = await supabase
-      .from('audit_events')
+      .from('audit_logs')
       .insert({
         actor_id: event.actorId,
         actor_name: event.actorName,
@@ -30,7 +30,7 @@ export const auditService = {
 
   getEvents: async (filters?: AuditFilters): Promise<AuditEvent[]> => {
     let query = supabase
-      .from('audit_events')
+      .from('audit_logs')
       .select('*')
       .order('timestamp', { ascending: false });
 

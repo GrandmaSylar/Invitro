@@ -23,7 +23,9 @@ export default function ApiKeysSection() {
   
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null);
 
-  const apiKeys = settings.apiKeys || [];
+  const apiKeys = Array.isArray(settings.apiKeys) 
+    ? settings.apiKeys 
+    : Object.values(settings.apiKeys || {});
 
   const handleGenerateConfirm = async () => {
     if (!keyNameInput.trim()) {

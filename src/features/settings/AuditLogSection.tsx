@@ -9,7 +9,7 @@ import { useAuditLog } from '../../hooks/useAuditLog';
 import { FilterX } from 'lucide-react';
 
 export default function AuditLogSection() {
-  const { events } = useAuditLog();
+  const { events, loading, refresh } = useAuditLog();
 
   const [actionFilter, setActionFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -57,7 +57,12 @@ export default function AuditLogSection() {
       <Card>
         <CardHeader>
           <CardTitle>Audit Log</CardTitle>
-          <CardDescription>Review system events and security-related actions.</CardDescription>
+          <CardDescription>
+            Review system events and security-related actions. <br/>
+            <span className="text-xs text-muted-foreground mt-1 block">
+              Currently tracking: Logins, Logouts, User modifications, Role permission updates, and API key generation/revocation.
+            </span>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           
@@ -107,6 +112,14 @@ export default function AuditLogSection() {
               <FilterX className="h-4 w-4" />
               Clear
             </Button>
+            <Button 
+              variant="secondary" 
+              onClick={refresh}
+              disabled={loading}
+              className="gap-2 ml-auto"
+            >
+              {loading ? 'Refreshing...' : 'Refresh Logs'}
+            </Button>
           </div>
 
           <div className="rounded-md border">
@@ -121,10 +134,16 @@ export default function AuditLogSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredEvents.length === 0 ? (
+                {loading ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                      No audit events yet. Events appear as RBAC changes are made during this session.
+                      Loading audit logs...
+                    </TableCell>
+                  </TableRow>
+                ) : filteredEvents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      No audit events found. Events appear as changes are made.
                     </TableCell>
                   </TableRow>
                 ) : (

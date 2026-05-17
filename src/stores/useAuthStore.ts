@@ -19,11 +19,37 @@ const initialState: AuthSession = {
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
-      login: (user, resolvedPermissions, loginMethod) => 
-        set({ user, resolvedPermissions, isAuthenticated: true, loginMethod, pendingTwoFactor: user.twoFactorEnabled }),
+      login: (user, resolvedPermissions, loginMethod) => {
+        set({ user, resolvedPermissions, isAuthenticated: true, loginMethod, pendingTwoFactor: user.twoFactorEnabled });
+        import('./useAuditStore').then(({ useAuditStore }) => {
+          useAuditStore.getState().addEvent({
+            actorId: user.id,
+            actorName: user.fullName,
+            action: 'LOGIN',
+            targetType: 'system',
+            targetId: 'system',
+            targetName: 'LIMS application',
+            detail: `User logged in via ${loginMethod}`
+          });
+        });
+      },
       logout: () => {
+        const currentUser = get().user;
+        if (currentUser) {
+          import('./useAuditStore').then(({ useAuditStore }) => {
+            useAuditStore.getState().addEvent({
+              actorId: currentUser.id,
+              actorName: currentUser.fullName,
+              action: 'LOGOUT',
+              targetType: 'system',
+              targetId: 'system',
+              targetName: 'LIMS application',
+              detail: 'User logged out'
+            });
+          });
+        }
         set(initialState);
         localStorage.removeItem('lims-auth');
       },

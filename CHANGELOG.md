@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-05-17
+
+### Added
+- **Production Audit Logging**: Implemented a fully database-backed audit log system using the `audit_logs` Supabase table with proper RLS policies for authenticated and anonymous access.
+- **Login/Logout Tracking**: User authentication events (login and logout) are now automatically recorded to the audit log with actor identity and session method details.
+- **Full Database Backup & Restore**: Completely rewrote the Backup & Restore module to export and import **all 15 database tables** (patients, hospitals, doctors, lab records, test results, payments, roles, users, parameters, tests, departments, audit logs, and system settings) as a single JSON snapshot.
+- **Backup Restore Integrity**: Restore operations now delete existing data in reverse FK order (child → parent) and re-insert in forward order (parent → child) to prevent constraint violations.
+- **Legacy Backup Compatibility**: The restore system auto-detects and supports v1 settings-only backup files alongside the new v2 full-database format.
+
+### Changed
+- **Audit Log Scope**: Refined audit tracking to focus exclusively on security-relevant actions (logins, logouts, RBAC changes, API key operations). Removed transactional data operations (CRUD on hospitals/doctors) from audit scope.
+- **Audit Log UI**: Added descriptive information text listing all tracked action categories directly in the Audit Log settings page.
+- **Settings Sections**: Greyed out the API Keys tab as "Under Development" alongside Notifications, Security, SMTP, and System Health.
+- **Dashboard Cleanup**: Removed "Pages / Dashboard" breadcrumb from the dashboard header.
+- **Lab Banner**: Moved app name to the top-left header area with bold white styling; made all lab banner font colors white.
+- **Parallax Banner**: Replaced the interactive parallax effect with a subtle blur for a cleaner visual.
+
+### Fixed
+- **Audit Store Backend Integration**: Rewired `useAuditStore` to proxy `addEvent` calls directly to the Supabase `auditService` instead of accumulating events in ephemeral client-side state.
+- **Supabase Table Resolution**: Corrected the audit service to target `audit_logs` (the actual deployed table) and the parameter code RPC to call `generate_next_parameter_code` (the registered function name).
+- **Hospital/Doctor Delete 409 Conflict**: Added user-friendly error messages for foreign key constraint violations when attempting to delete hospitals or doctors that have dependent records.
+- **Backup Restore Race Condition**: Fixed a critical bug where iterative per-section settings restoration caused a race condition, with each section write overwriting the previous one. Replaced with a single atomic database update.
+- **AlertDialog ForwardRef Warning**: Rewrote all `alert-dialog.tsx` sub-components using `React.forwardRef` to eliminate the "Function components cannot be given refs" console warning.
+- **Missing Type Import**: Added the missing `Parameter` type import to `TestRegister.tsx` to resolve the "Cannot find name 'Parameter'" TypeScript compilation error.
+
 ## [0.1.4] - 2026-05-16
 
 ### Added

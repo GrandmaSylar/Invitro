@@ -6,8 +6,8 @@ import type { AppSettings, ApiKey } from '../lib/types';
 export const settingsService = {
   getSettings: async (): Promise<AppSettings> => {
     const { data, error } = await supabase
-      .from('app_settings')
-      .select('*')
+      .from('system_settings')
+      .select('settings')
       .eq('id', 1)
       .single();
 
@@ -16,19 +16,16 @@ export const settingsService = {
       return useSettingsStore.getState().settings;
     }
 
-    return {
-      general: data.general as any,
-      notifications: data.notifications as any,
-      security: data.security as any,
-      smtp: data.smtp as any,
-      apiKeys: [], // API keys are in a separate table
-    };
+    return data.settings as AppSettings;
   },
 
   updateSettings: async <K extends keyof AppSettings>(section: K, sectionData: AppSettings[K]) => {
+    const currentSettings = await settingsService.getSettings();
+    const newSettings = { ...currentSettings, [section]: sectionData };
+
     const { error } = await supabase
-      .from('app_settings')
-      .update({ [section]: sectionData as any, updated_at: new Date().toISOString() })
+      .from('system_settings')
+      .update({ settings: newSettings as any, updated_at: new Date().toISOString() })
       .eq('id', 1);
 
     if (error) throw new Error(`Failed to update settings: ${error.message}`);
@@ -36,13 +33,13 @@ export const settingsService = {
   },
 
   patchSettings: async <K extends keyof AppSettings>(section: K, partialData: Partial<AppSettings[K]>) => {
-    // Fetch current, merge, then update
-    const current = await settingsService.getSettings();
-    const merged = { ...current[section], ...partialData };
+    const currentSettings = await settingsService.getSettings();
+    const mergedSection = { ...currentSettings[section], ...partialData };
+    const newSettings = { ...currentSettings, [section]: mergedSection };
 
     const { error } = await supabase
-      .from('app_settings')
-      .update({ [section]: merged as any, updated_at: new Date().toISOString() })
+      .from('system_settings')
+      .update({ settings: newSettings as any, updated_at: new Date().toISOString() })
       .eq('id', 1);
 
     if (error) throw new Error(`Failed to patch settings: ${error.message}`);

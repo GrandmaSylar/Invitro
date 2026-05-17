@@ -159,7 +159,7 @@ export const catalogService = {
 
   // ── PARAMETERS ───────────────────────────────────────────────
   previewParameterCode: async (): Promise<string> => {
-    const { data, error } = await supabase.rpc('preview_parameter_code');
+    const { data, error } = await supabase.rpc('generate_next_parameter_code');
     if (error) throw new Error(`Failed to preview parameter code: ${error.message}`);
     return data;
   },

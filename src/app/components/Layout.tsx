@@ -17,6 +17,7 @@ import { useTheme } from "next-themes";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Toaster } from "./ui/sonner";
 import { useAuth } from "../../hooks/useAuth";
+import { useSettingsStore } from "../../stores/useSettingsStore";
 import { usePermission } from "../../hooks/usePermission";
 import { PERMISSIONS } from "../../lib/permissions";
 import { MyPermissionsModal } from "./MyPermissionsModal";
@@ -109,6 +110,7 @@ export function Layout() {
   const [mounted, setMounted] = useState(false);
   
   const { user, logout } = useAuth();
+  const { settings } = useSettingsStore();
   const [showPermissions, setShowPermissions] = useState(false);
   const [showSignOut, setShowSignOut] = useState(false);
 
@@ -129,12 +131,21 @@ export function Layout() {
         onMouseLeave={() => setIsExpanded(false)}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <div className={`w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 shrink-0 rounded ${!isExpanded ? "mx-auto" : ""}`}></div>
+        <div className="p-3 border-b border-sidebar-border h-[68px] flex items-center">
+          <div className="flex items-center gap-3">
+            {settings.general.logoUrl ? (
+              <img 
+                src={settings.general.logoUrl} 
+                alt="Logo" 
+                className={`w-11 h-11 object-contain shrink-0 rounded bg-white p-0.5 ${!isExpanded ? "mx-auto" : ""}`} 
+              />
+            ) : (
+              <div className={`w-11 h-11 bg-gradient-to-br from-blue-600 to-purple-600 shrink-0 rounded ${!isExpanded ? "mx-auto" : ""}`}></div>
+            )}
             <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"}`}>
-              <div className="font-bold text-xs text-sidebar-foreground leading-tight">Laboratory Inventory</div>
-              <div className="font-bold text-xs text-sidebar-foreground leading-tight">Management System</div>
+              <div className="font-bold text-sm text-sidebar-foreground leading-tight truncate">
+                {settings.general.appName || "Laboratory System"}
+              </div>
             </div>
           </div>
         </div>
@@ -158,8 +169,16 @@ export function Layout() {
         <header className="bg-card border-b border-border px-8 py-4 transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Pages / {pageLabel}</p>
-              <h1 className="text-xl font-bold text-foreground">{pageLabel}</h1>
+              {location.pathname !== '/' ? (
+                <>
+                  <p className="text-xs text-muted-foreground mb-1">Pages / {pageLabel}</p>
+                  <h1 className="text-xl font-bold text-foreground">{pageLabel}</h1>
+                </>
+              ) : (
+                <h1 className="text-2xl font-black text-foreground tracking-tight uppercase">
+                  {settings.general.appName || "Laboratory System"}
+                </h1>
+              )}
             </div>
             
             <div className="flex items-center gap-4">

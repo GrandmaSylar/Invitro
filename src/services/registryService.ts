@@ -59,7 +59,12 @@ export const registryService = {
 
   deleteHospital: async (id: string): Promise<void> => {
     const { error } = await supabase.from('hospitals').delete().eq('id', id);
-    if (error) throw new Error(`Failed to delete hospital: ${error.message}`);
+    if (error) {
+      if (error.code === '23503') {
+        throw new Error('Cannot delete hospital because it is currently assigned to one or more doctors or patients.');
+      }
+      throw new Error(`Failed to delete hospital: ${error.message}`);
+    }
   },
 
   // ── DOCTORS ──────────────────────────────────────────────────
@@ -124,6 +129,11 @@ export const registryService = {
 
   deleteDoctor: async (id: string): Promise<void> => {
     const { error } = await supabase.from('doctors').delete().eq('id', id);
-    if (error) throw new Error(`Failed to delete doctor: ${error.message}`);
+    if (error) {
+      if (error.code === '23503') {
+        throw new Error('Cannot delete doctor because they are currently assigned to one or more patients or tests.');
+      }
+      throw new Error(`Failed to delete doctor: ${error.message}`);
+    }
   },
 };

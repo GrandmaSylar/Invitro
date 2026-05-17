@@ -30,7 +30,13 @@ export const useSettingsStore = create<SettingsStore>()(
           
           for (const key in fetchedSettings) {
              const k = key as keyof AppSettings;
-             mergedSettings[k] = { ...mergedSettings[k], ...fetchedSettings[k] } as any;
+             if (Array.isArray(fetchedSettings[k])) {
+               mergedSettings[k] = fetchedSettings[k] as any;
+             } else if (typeof fetchedSettings[k] === 'object' && fetchedSettings[k] !== null) {
+               mergedSettings[k] = { ...mergedSettings[k], ...fetchedSettings[k] } as any;
+             } else {
+               mergedSettings[k] = fetchedSettings[k] as any;
+             }
           }
           
           set({ settings: mergedSettings, isLoading: false });

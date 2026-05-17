@@ -1,8 +1,11 @@
 import { Activity, Users, TestTube, TrendingUp, FlaskConical, Clock, BarChart3, PieChart as PieChartIcon } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "../../stores/useAuthStore";
+import { useSettingsStore } from "../../stores/useSettingsStore";
 import { useDashboardStats, useDashboardCharts } from "../../hooks/useDashboardStats";
 import { Button } from "./ui/button";
+import { motion } from "motion/react";
+import { useState, MouseEvent } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -130,40 +133,79 @@ function ChartEmptyState({ message }: { message: string }) {
 export function MainDashboard() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { settings } = useSettingsStore();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: charts, isLoading: chartsLoading } = useDashboardCharts();
+
+  const handleInteract = () => {
+    if (typeof navigator.vibrate === 'function') {
+      navigator.vibrate(20);
+    }
+  };
 
   return (
     <div className="p-6 sm:p-8 max-w-[1440px] mx-auto space-y-8">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user?.fullName?.split(' ')[0] || "User"}!
-          </h1>
-          <p className="text-muted-foreground mt-1.5">
-            Here's what's happening in your laboratory today.
-          </p>
+      {/* Hero Banner */}
+      <motion.div 
+        className="relative w-full rounded-3xl overflow-hidden shadow-2xl" 
+        style={{ height: '240px' }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+      >
+        {/* Background image strip with subtle blur */}
+        <img
+          src="/lab-banner.jpeg"
+          alt="Laboratory"
+          className="absolute inset-0 w-full h-full object-cover object-center blur-[3px] scale-105"
+          style={{ objectPosition: 'center 40%' }}
+        />
+
+        {/* Colour-tinted dark overlay so text stays readable */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent" />
+
+        {/* Bottom fade-to-background */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-32"
+          style={{
+            background: 'linear-gradient(to bottom, transparent, hsl(var(--background)))',
+          }}
+        />
+
+        {/* Content overlay */}
+        <div className="relative h-full flex flex-col justify-center px-8 py-6 z-10">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
+                Welcome back, <span className="text-white">{user?.fullName?.split(' ')[0] || 'User'}</span>!
+              </h1>
+              <p className="text-white mt-2 text-base md:text-lg drop-shadow-md max-w-xl">
+                Here's what's happening in your laboratory today. Let's get to work.
+              </p>
+            </div>
+            <div className="flex gap-4 shrink-0">
+              <Button
+                size="lg"
+                variant="outline"
+                className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white backdrop-blur-md shadow-lg text-md font-semibold transition-all duration-300 hover:scale-105"
+                onClick={(e) => { handleInteract(); navigate('/patients?tab=existing-patient'); }}
+              >
+                <Activity size={18} />
+                Existing Patients
+              </Button>
+              <Button
+                size="lg"
+                className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xl text-md font-bold border-none transition-all duration-300 hover:scale-105 hover:shadow-indigo-500/50"
+                onClick={(e) => { handleInteract(); navigate('/patients?tab=new-patient'); }}
+              >
+                <Users size={18} />
+                Register Patient
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => navigate("/patients?tab=existing-patient")}
-          >
-            <Activity size={16} />
-            Existing Patients
-          </Button>
-          <Button
-            className="gap-2"
-            onClick={() => navigate("/patients?tab=new-patient")}
-          >
-            <Users size={16} />
-            Register Patient
-          </Button>
-        </div>
-      </div>
+      </motion.div>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

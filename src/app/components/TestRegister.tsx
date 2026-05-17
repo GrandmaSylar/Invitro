@@ -15,6 +15,7 @@ import {
   useTestDetail, useLinkParameter, useUnlinkParameter
 } from "../../hooks/useCatalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog";
+import type { Parameter } from "../../lib/types";
 
 type Tab = "tests" | "parameter-library" | "departments" | "antibiotics";
 
