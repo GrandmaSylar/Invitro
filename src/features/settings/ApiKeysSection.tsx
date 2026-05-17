@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../app/components/ui/card';
 import { Button } from '../../app/components/ui/button';
 import { Input } from '../../app/components/ui/input';
@@ -6,16 +6,17 @@ import { Label } from '../../app/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../app/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../app/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../../app/components/ui/alert-dialog';
-import { useSettingsStore } from '../../stores/useSettingsStore';
 import { settingsService } from '../../services/settingsService';
 import { useAuditLog } from '../../hooks/useAuditLog';
 import { ApiKey } from '../../lib/types';
 import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
 
 export default function ApiKeysSection() {
-  const { settings } = useSettingsStore();
   const { addEvent } = useAuditLog();
 
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [keyNameInput, setKeyNameInput] = useState('');
   
@@ -23,9 +24,28 @@ export default function ApiKeysSection() {
   
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null);
 
-  const apiKeys = Array.isArray(settings.apiKeys) 
-    ? settings.apiKeys 
-    : Object.values(settings.apiKeys || {});
+  useEffect(() => {
+    let active = true;
+    const fetchKeys = async () => {
+      try {
+        setIsLoading(true);
+        const keys = await settingsService.getApiKeys();
+        if (active) {
+          setApiKeys(keys);
+        }
+      } catch (e) {
+        toast.error('Failed to load API keys');
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchKeys();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleGenerateConfirm = async () => {
     if (!keyNameInput.trim()) {
@@ -42,6 +62,7 @@ export default function ApiKeysSection() {
         permissions: []
       });
 
+      setApiKeys(prev => [createdKey, ...prev]);
       setNewlyGeneratedKey(fullKey);
       setGenerateDialogOpen(false);
       setKeyNameInput('');
@@ -72,6 +93,7 @@ export default function ApiKeysSection() {
 
     try {
       await settingsService.revokeApiKey(revokeTarget.id);
+      setApiKeys(prev => prev.filter(k => k.id !== revokeTarget.id));
       addEvent({
         actorId: 'admin',
         actorName: 'Admin',
@@ -112,7 +134,16 @@ export default function ApiKeysSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {apiKeys.length === 0 ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span>Loading API keys...</span>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : apiKeys.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                       No API keys yet.

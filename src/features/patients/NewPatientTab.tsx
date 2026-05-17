@@ -176,7 +176,7 @@ export function NewPatientTab() {
 
     const confirmed = await showConfirm({
       title: "Confirm Registration",
-      description: `Register patient "${patientName}" with ${selectedTests.size} test(s)?`,
+      description: `Register patient "${patientName}" with ${tests.length} test(s)?`,
       confirmText: "Register"
     });
     if (!confirmed) return;

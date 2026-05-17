@@ -156,7 +156,7 @@ export function MainDashboard() {
       >
         {/* Background image strip with subtle blur */}
         <img
-          src="/lab-banner.jpeg"
+          src="./lab-banner.jpeg"
           alt="Laboratory"
           className="absolute inset-0 w-full h-full object-cover object-center blur-[3px] scale-105"
           style={{ objectPosition: 'center 40%' }}

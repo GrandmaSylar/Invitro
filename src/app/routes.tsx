@@ -1,4 +1,4 @@
-import { createBrowserRouter, redirect, useLoaderData } from "react-router";
+import { createHashRouter, redirect, useLoaderData } from "react-router";
 import { Layout } from "./components/Layout";
 import { MainDashboard } from "./components/MainDashboard";
 import { DashboardAlpha } from "./components/DashboardAlpha";
@@ -74,7 +74,7 @@ const withPermission = (WrappedComponent: React.ComponentType) => {
   };
 };
 
-export const router = createBrowserRouter([
+export const router = createHashRouter([
   {
     path: "/",
     children: [

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starting Invitro LIMS</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e3c54 0%, #295577 100%);
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .logo-container {
+            margin-bottom: 24px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .logo {
+            width: 48px;
+            height: 48px;
+            color: #ffffff;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 12px 0;
+            letter-spacing: -0.5px;
+            animation: fadeIn 1s ease-out 0.2s both;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            font-weight: 400;
+            color: #b0d1e8;
+            margin: 0 0 48px 0;
+            animation: fadeIn 1s ease-out 0.4s both;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 24px;
+            opacity: 0;
+            animation: spin 1s linear infinite, fadeIn 0.5s ease-out 0.6s forwards;
+        }
+
+        .status {
+            font-size: 13px;
+            font-weight: 500;
+            color: #d1e5f5;
+            animation: fadeIn 1s ease-out 0.8s both;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            0% { opacity: 0; transform: translateY(-20px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <!-- Minimalistic Lab Flask SVG (using Lucide style) -->
+        <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
+            <path d="M8.5 2h7" />
+            <path d="M14 9.527a2 2 0 0 1-.211.896L12 14l-1.789-3.577A2 2 0 0 1 10 9.527" />
+            <path d="M6 16h12" />
+        </svg>
+    </div>
+
+    <h1 class="title">Invitro LIMS</h1>
+    <h2 class="subtitle">Quality Smart Laboratory Information System</h2>
+
+    <div class="spinner"></div>
+
+    <div class="status">Initializing Invitro LIMS...</div>
+
+</body>
+</html>

@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 import { readFileSync } from 'fs'
 import { execSync } from 'child_process'
 
+import electron from 'vite-plugin-electron/simple'
+
 const gitPlugin = () => {
   const virtualModuleId = 'virtual:git-info'
   const resolvedVirtualModuleId = '\0' + virtualModuleId
@@ -71,10 +73,19 @@ const gitPlugin = () => {
 }
 
 export default defineConfig({
+  base: './',
   plugins: [
     react(),
     tailwindcss(),
-    gitPlugin()
+    gitPlugin(),
+    electron({
+      main: {
+        entry: 'electron/main.ts',
+      },
+      preload: {
+        input: 'electron/preload.ts',
+      },
+    })
   ],
   resolve: {
     alias: {

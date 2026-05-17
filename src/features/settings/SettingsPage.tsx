@@ -22,7 +22,7 @@ const SETTINGS_SECTIONS = [
   { id: 'security', label: 'Security', icon: Shield, permissionKey: 'settings.security', group: 'General', isMock: true },
   { id: 'users', label: 'Users & Roles', icon: Users, permissionKey: 'settings.users', group: 'Administration', isMock: false },
   { id: 'smtp', label: 'Email / SMTP', icon: Mail, permissionKey: 'settings.smtp', group: 'Administration', isMock: true },
-  { id: 'api_keys', label: 'API Keys', icon: Key, permissionKey: 'settings.api_keys', group: 'Administration', isMock: true },
+  { id: 'api_keys', label: 'API Keys', icon: Key, permissionKey: 'settings.api_keys', group: 'Administration', isMock: false },
   { id: 'backup', label: 'Backup & Restore', icon: Database, permissionKey: 'settings.backup', group: 'System', isMock: false },
   { id: 'audit_log', label: 'Audit Log', icon: FileText, permissionKey: 'settings.audit_log', group: 'System', isMock: false },
   { id: 'health', label: 'System Health', icon: Activity, permissionKey: 'settings.health', group: 'System', isMock: true },

@@ -55,15 +55,15 @@ export const dashboardService = {
       // Pending results: lab_record_tests that have zero test_results
       supabase.rpc('count_pending_results'),
 
-      // Revenue this month
+      // Revenue this month (using actual payment dates!)
       supabase
-        .from('lab_records')
-        .select('amount_paid')
-        .gte('record_date', monthISO),
+        .from('payments')
+        .select('amount')
+        .gte('payment_date', monthISO),
     ]);
 
     const revenueThisMonth = (revenueRes.data ?? [])
-      .reduce((sum: number, row: any) => sum + Number(row.amount_paid), 0);
+      .reduce((sum: number, row: any) => sum + Number(row.amount), 0);
 
     return {
       patientsToday: patientsRes.count ?? 0,
@@ -104,12 +104,12 @@ export const dashboardService = {
         .from('lab_record_tests')
         .select('department'),
 
-      // Revenue over last 30 days
+      // Revenue over last 30 days (using actual payment dates!)
       supabase
-        .from('lab_records')
-        .select('record_date, amount_paid')
-        .gte('record_date', thirtyDaysAgo.toISOString())
-        .order('record_date', { ascending: true }),
+        .from('payments')
+        .select('payment_date, amount')
+        .gte('payment_date', thirtyDaysAgo.toISOString())
+        .order('payment_date', { ascending: true }),
 
       // Result flags distribution
       supabase
@@ -171,9 +171,9 @@ export const dashboardService = {
     }
 
     for (const row of revenueRes.data ?? []) {
-      const key = new Date(row.record_date).toISOString().slice(0, 10);
+      const key = new Date(row.payment_date).toISOString().slice(0, 10);
       if (revenueMap.has(key)) {
-        revenueMap.set(key, (revenueMap.get(key) ?? 0) + Number(row.amount_paid));
+        revenueMap.set(key, (revenueMap.get(key) ?? 0) + Number(row.amount));
       }
     }
 

@@ -111,12 +111,14 @@ export function Layout() {
   
   const { user, logout } = useAuth();
   const { settings } = useSettingsStore();
+  const initializeSettings = useSettingsStore(state => state.initialize);
   const [showPermissions, setShowPermissions] = useState(false);
   const [showSignOut, setShowSignOut] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    initializeSettings();
+  }, [initializeSettings]);
 
   const pageLabel = PAGE_LABELS[location.pathname] || "Dashboard";
 
