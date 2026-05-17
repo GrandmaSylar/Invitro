@@ -100,10 +100,10 @@ export interface TestItem {
 export interface Test {
   id: string;
   testName: string;
+  testCode?: string;
   department: string;
   testCost: number;
   resultHeader?: string;
-  referenceRange?: string;
   includeComprehensive: boolean;
   isActive?: boolean;
   createdAt: string;

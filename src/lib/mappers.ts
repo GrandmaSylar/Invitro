@@ -104,10 +104,10 @@ export function mapTestRow(row: any): Test {
   return {
     id: row.id,
     testName: row.test_name,
+    testCode: row.test_code ?? undefined,
     department: row.department,
     testCost: Number(row.test_cost),
     resultHeader: row.result_header ?? undefined,
-    referenceRange: row.reference_range ?? undefined,
     includeComprehensive: row.include_comprehensive ?? false,
     isActive: row.is_active ?? true,
     createdAt: row.created_at,

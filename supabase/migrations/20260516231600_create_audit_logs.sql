@@ -1,4 +1,4 @@
-create table public.audit_logs (
+create table IF NOT EXISTS public.audit_logs (
   id uuid default gen_random_uuid() primary key,
   actor_id text not null,
   actor_name text not null,

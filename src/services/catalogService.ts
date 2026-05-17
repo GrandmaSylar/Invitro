@@ -54,10 +54,10 @@ export const catalogService = {
       .from('tests')
       .insert({
         test_name: testData.testName,
+        test_code: testData.testCode ?? null,
         department: testData.department,
         test_cost: testData.testCost,
         result_header: testData.resultHeader ?? null,
-        reference_range: testData.referenceRange ?? null,
         include_comprehensive: testData.includeComprehensive ?? false,
       })
       .select()
@@ -73,10 +73,10 @@ export const catalogService = {
   ): Promise<Test> => {
     const updates: Record<string, any> = {};
     if (testData.testName !== undefined) updates.test_name = testData.testName;
+    if (testData.testCode !== undefined) updates.test_code = testData.testCode;
     if (testData.department !== undefined) updates.department = testData.department;
     if (testData.testCost !== undefined) updates.test_cost = testData.testCost;
     if (testData.resultHeader !== undefined) updates.result_header = testData.resultHeader;
-    if (testData.referenceRange !== undefined) updates.reference_range = testData.referenceRange;
     if (testData.includeComprehensive !== undefined) updates.include_comprehensive = testData.includeComprehensive;
 
     const { data, error } = await supabase
@@ -155,6 +155,13 @@ export const catalogService = {
       .eq('parameter_id', parameterId);
 
     if (error) throw new Error(`Failed to unlink parameter: ${error.message}`);
+  },
+
+  // ── TEST CODE ────────────────────────────────────────────────
+  previewTestCode: async (): Promise<string> => {
+    const { data, error } = await supabase.rpc('generate_next_test_code');
+    if (error) throw new Error(`Failed to preview test code: ${error.message}`);
+    return data;
   },
 
   // ── PARAMETERS ───────────────────────────────────────────────

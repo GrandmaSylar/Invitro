@@ -12,7 +12,7 @@ import {
   useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
   useParameters, useCreateParameter, useUpdateParameter, useDeleteParameter, usePreviewParameterCode,
   useAntibiotics, useCreateAntibiotic, useUpdateAntibiotic, useDeleteAntibiotic,
-  useTestDetail, useLinkParameter, useUnlinkParameter
+  useTestDetail, useLinkParameter, useUnlinkParameter, usePreviewTestCode
 } from "../../hooks/useCatalog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "./ui/dialog";
 import type { Parameter } from "../../lib/types";
@@ -36,6 +36,7 @@ export function TestRegister() {
   const updateParameter = useUpdateParameter();
   const deleteParameter = useDeleteParameter();
   const { data: nextParamCode } = usePreviewParameterCode();
+  const { data: nextTestCode } = usePreviewTestCode();
   
 
   
@@ -57,7 +58,7 @@ export function TestRegister() {
   const [department, setDepartment] = useState("");
   const [newDepartment, setNewDepartment] = useState("");
   const [resultHeader, setResultHeader] = useState("");
-  const [testReferenceRange, setTestReferenceRange] = useState("");
+  const [testCode, setTestCode] = useState("");
   const [testCost, setTestCost] = useState("");
   const [includeComprehensive, setIncludeComprehensive] = useState(false);
   const [editingTestId, setEditingTestId] = useState<string | null>(null);
@@ -101,6 +102,13 @@ export function TestRegister() {
       setLibParamCode(nextParamCode);
     }
   }, [editingParameterId, nextParamCode, setLibParamCode]);
+
+  // Auto-populate test code when adding new
+  React.useEffect(() => {
+    if (!editingTestId && nextTestCode) {
+      setTestCode(nextTestCode);
+    }
+  }, [editingTestId, nextTestCode, setTestCode]);
 
   // Selection states for other tables
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
@@ -173,7 +181,7 @@ export function TestRegister() {
 
   const resetTestForm = () => {
     setTestName(""); setDepartment(""); setNewDepartment(""); setResultHeader("");
-    setTestReferenceRange(""); setTestCost(""); setIncludeComprehensive(false);
+    setTestCode(nextTestCode || ""); setTestCost(""); setIncludeComprehensive(false);
     setInlineParams([]); setEditingTestId(null);
   };
 
@@ -194,9 +202,9 @@ export function TestRegister() {
       setIsSaving(true);
       const testData = {
         testName: testName.trim(),
+        testCode: testCode || undefined,
         department: dept,
         resultHeader: resultHeader.trim() || undefined,
-        referenceRange: testReferenceRange.trim() || undefined,
         testCost: testCost ? parseFloat(testCost) : undefined,
         includeComprehensive,
       };
@@ -252,9 +260,9 @@ export function TestRegister() {
   const handleEditTest = async (test: typeof tests[0]) => {
     setEditingTestId(test.id);
     setTestName(test.testName);
+    setTestCode(test.testCode || "");
     setDepartment(test.department);
     setResultHeader(test.resultHeader || "");
-    setTestReferenceRange(test.referenceRange || "");
     setTestCost(test.testCost?.toString() || "");
     setIncludeComprehensive(test.includeComprehensive || false);
     // Load existing parameters into inline params
@@ -360,9 +368,9 @@ export function TestRegister() {
                       className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground mb-2">Reference Range</label>
-                    <input type="text" value={testReferenceRange} onChange={(e) => setTestReferenceRange(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">Test ID</label>
+                    <input type="text" value={testCode} readOnly placeholder="Auto-generated"
+                      className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-muted/30 text-muted-foreground text-sm focus:outline-none transition-all font-medium cursor-not-allowed" />
                   </div>
                   <div className="flex items-end pb-1 sm:col-span-2">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -525,6 +533,7 @@ export function TestRegister() {
                         </th>
                         <th className="w-8"></th>
                         <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Test Name</th>
+                        <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Test ID</th>
                         <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Department</th>
                         <th className="px-3 py-2 text-left text-xs uppercase tracking-wide font-bold text-muted-foreground">Cost</th>
                         <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
@@ -547,6 +556,7 @@ export function TestRegister() {
                               {expandedTestId === test.id ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                             </td>
                             <td className="px-3 py-2 text-sm font-medium text-foreground">{test.testName}</td>
+                            <td className="px-3 py-2 text-sm text-muted-foreground">{test.testCode || '—'}</td>
                             <td className="px-3 py-2 text-sm text-muted-foreground">{test.department}</td>
                             <td className="px-3 py-2 text-sm text-muted-foreground">₵{test.testCost?.toFixed(2) ?? '0.00'}</td>
                             <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
@@ -558,7 +568,7 @@ export function TestRegister() {
                           {/* Expanded detail row */}
                           {expandedTestId === test.id && (
                             <tr key={test.id + '-detail'}>
-                              <td colSpan={6} className="bg-muted/20 px-6 py-4 border-t border-border/40">
+                              <td colSpan={7} className="bg-muted/20 px-6 py-4 border-t border-border/40">
                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Assigned Parameters</p>
                                 {!expandedTestDetail ? (
                                   <Loader2 className="animate-spin text-muted-foreground" size={16} />

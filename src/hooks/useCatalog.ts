@@ -41,6 +41,7 @@ export function useCreateTest() {
       qc.invalidateQueries({ queryKey: ['departments'] });
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] });
       qc.invalidateQueries({ queryKey: ['dashboard-charts'] });
+      qc.invalidateQueries({ queryKey: ['test-code-preview'] });
     },
   });
 }
@@ -139,6 +140,14 @@ export function useParameters() {
   return useQuery({
     queryKey: catalogKeys.parameters,
     queryFn: () => catalogService.getParameters(),
+  });
+}
+
+export function usePreviewTestCode() {
+  return useQuery({
+    queryKey: ['test-code-preview'],
+    queryFn: () => catalogService.previewTestCode(),
+    staleTime: 0,
   });
 }
 
