@@ -22,6 +22,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { PERMISSIONS } from "../../lib/permissions";
 import { MyPermissionsModal } from "./MyPermissionsModal";
 import { GlobalDialogs } from "./GlobalDialogs";
+import { TitleBar } from "./TitleBar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -111,6 +112,7 @@ export function Layout() {
   
   const { user, logout } = useAuth();
   const { settings } = useSettingsStore();
+  const isElectron = !!window.electronAPI;
   const initializeSettings = useSettingsStore(state => state.initialize);
   const [showPermissions, setShowPermissions] = useState(false);
   const [showSignOut, setShowSignOut] = useState(false);
@@ -123,12 +125,16 @@ export function Layout() {
   const pageLabel = PAGE_LABELS[location.pathname] || "Dashboard";
 
   return (
-    <div className="flex h-screen bg-background text-foreground transition-colors duration-200">
+    <div className="flex flex-col h-screen bg-background text-foreground transition-colors duration-200">
+      {/* Custom Titlebar (Electron only) */}
+      <TitleBar />
+
+      <div className="flex flex-1 overflow-hidden">
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 top-0 bottom-0 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-all duration-200 ease-in-out ${
+        className={`fixed left-0 bottom-0 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-all duration-300 ease-in-out ${
           isExpanded ? "w-60" : "w-14"
-        }`}
+        } ${isElectron ? "top-9" : "top-0"}`}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
@@ -238,8 +244,11 @@ export function Layout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto bg-background transition-colors duration-200">
-          <Outlet />
+          <div key={location.pathname} className="animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out">
+            <Outlet />
+          </div>
         </main>
+      </div>
       </div>
       <Toaster />
       

@@ -38,8 +38,8 @@ const gitPlugin = () => {
           // Parse CHANGELOG.md for the most recent version
           try {
             const md = readFileSync(path.resolve(__dirname, 'CHANGELOG.md'), 'utf8');
-            // Find the first section under ## [version]
-            const match = md.match(/## \[[^\]]+\][^\n]*\n([\s\S]*?)(?=## \[|$)/);
+            // Find the first section under ## Version or any ## header
+            const match = md.match(/## [^\n]*\n([\s\S]*?)(?=## |$)/);
             if (match && match[1]) {
               const lines = match[1].split('\n').filter(l => l.trim().startsWith('-'));
               changelog = lines.map((line, i) => {

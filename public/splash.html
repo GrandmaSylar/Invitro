@@ -5,101 +5,156 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Starting Invitro LIMS</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
         body {
-            margin: 0;
-            padding: 0;
             height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #1e3c54 0%, #295577 100%);
+            background: linear-gradient(135deg, #124f47 0%, #1A7A6E 40%, #22998a 100%);
             color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
+            position: relative;
+        }
+
+        /* Subtle floating orbs for depth */
+        body::before, body::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            animation: floatOrb 8s ease-in-out infinite alternate;
+        }
+        body::before {
+            width: 300px; height: 300px;
+            background: #4aeacc;
+            top: -80px; left: -60px;
+        }
+        body::after {
+            width: 250px; height: 250px;
+            background: #0d3d36;
+            bottom: -60px; right: -40px;
+            animation-delay: 4s;
         }
 
         .logo-container {
-            margin-bottom: 24px;
-            animation: fadeInDown 0.8s ease-out;
+            margin-bottom: 28px;
+            animation: scaleIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .logo-ring {
+            width: 72px;
+            height: 72px;
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.06);
+            backdrop-filter: blur(8px);
+            animation: pulseRing 3s ease-in-out infinite;
         }
 
         .logo {
-            width: 48px;
-            height: 48px;
+            width: 36px;
+            height: 36px;
             color: #ffffff;
         }
 
         .title {
-            font-size: 28px;
+            font-size: 30px;
             font-weight: 700;
-            margin: 0 0 12px 0;
+            margin: 0 0 8px 0;
             letter-spacing: -0.5px;
-            animation: fadeIn 1s ease-out 0.2s both;
+            animation: fadeSlideUp 0.8s ease-out 0.15s both;
         }
 
         .subtitle {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 400;
-            color: #b0d1e8;
+            color: rgba(255,255,255,0.7);
             margin: 0 0 48px 0;
-            animation: fadeIn 1s ease-out 0.4s both;
+            letter-spacing: 0.5px;
+            animation: fadeSlideUp 0.8s ease-out 0.3s both;
         }
 
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(255, 255, 255, 0.2);
-            border-top-color: #ffffff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 24px;
-            opacity: 0;
-            animation: spin 1s linear infinite, fadeIn 0.5s ease-out 0.6s forwards;
+        /* Modern dots loader */
+        .loader {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 28px;
+            animation: fadeSlideUp 0.6s ease-out 0.45s both;
         }
+        .loader-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+            animation: bounce 1.4s ease-in-out infinite;
+        }
+        .loader-dot:nth-child(1) { animation-delay: 0s; }
+        .loader-dot:nth-child(2) { animation-delay: 0.15s; }
+        .loader-dot:nth-child(3) { animation-delay: 0.3s; }
 
         .status {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
-            color: #d1e5f5;
-            animation: fadeIn 1s ease-out 0.8s both;
+            color: rgba(255,255,255,0.5);
+            animation: fadeSlideUp 0.8s ease-out 0.6s both;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        /* Keyframes */
+        @keyframes scaleIn {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
         }
-
-        @keyframes fadeInDown {
-            0% { opacity: 0; transform: translateY(-20px); }
+        @keyframes fadeSlideUp {
+            0% { opacity: 0; transform: translateY(12px); }
             100% { opacity: 1; transform: translateY(0); }
         }
-
-        @keyframes fadeIn {
-            0% { opacity: 0; }
-            100% { opacity: 1; }
+        @keyframes pulseRing {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.1); }
+            50% { box-shadow: 0 0 0 12px rgba(255,255,255,0); }
+        }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(30px, 20px); }
         }
     </style>
 </head>
 <body>
     <div class="logo-container">
-        <!-- Minimalistic Lab Flask SVG (using Lucide style) -->
-        <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
-            <path d="M8.5 2h7" />
-            <path d="M14 9.527a2 2 0 0 1-.211.896L12 14l-1.789-3.577A2 2 0 0 1 10 9.527" />
-            <path d="M6 16h12" />
-        </svg>
+        <div class="logo-ring">
+            <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
+                <path d="M8.5 2h7" />
+                <path d="M14 9.527a2 2 0 0 1-.211.896L12 14l-1.789-3.577A2 2 0 0 1 10 9.527" />
+                <path d="M6 16h12" />
+            </svg>
+        </div>
     </div>
 
     <h1 class="title">Invitro LIMS</h1>
     <h2 class="subtitle">Quality Smart Laboratory Information System</h2>
 
-    <div class="spinner"></div>
+    <div class="loader">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+    </div>
 
-    <div class="status">Initializing Invitro LIMS...</div>
-
+    <div class="status">Initializing</div>
 </body>
 </html>

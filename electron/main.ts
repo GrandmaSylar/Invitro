@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, nativeTheme } from 'electron';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import log from 'electron-log/main';
@@ -45,15 +45,21 @@ function createMainWindow() {
     height: 800,
     minWidth: 900,
     minHeight: 600,
-    show: false, // Don't show until ready
-    backgroundColor: '#ffffff',
+    show: false,
+    frame: false,
+    titleBarStyle: 'hidden',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#09090b' : '#ffffff',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: join(__dirname, 'preload.js'),
+      preload: join(__dirname, 'preload.mjs'),
     },
     icon: join(publicPath, 'icon.png')
   });
+
+  // Notify renderer when maximize state changes
+  mainWindow.on('maximize', () => mainWindow?.webContents.send('maximize-change', true));
+  mainWindow.on('unmaximize', () => mainWindow?.webContents.send('maximize-change', false));
 
   // Security: Prevent external links from opening in the Electron window
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -114,6 +120,17 @@ app.on('window-all-closed', () => {
 
 // IPC Setup
 ipcMain.handle('get-app-version', () => app.getVersion());
+
+// Window Controls
+ipcMain.handle('window-minimize', () => mainWindow?.minimize());
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+ipcMain.handle('window-close', () => mainWindow?.close());
 
 // Auto Updater Setup
 autoUpdater.logger = log;

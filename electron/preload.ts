@@ -4,7 +4,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   onUpdateAvailable: (callback: () => void) => {
     ipcRenderer.on('update-available', callback);
-    // return cleanup function
     return () => ipcRenderer.removeAllListeners('update-available');
   },
   onUpdateDownloaded: (callback: () => void) => {
@@ -21,4 +20,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   installUpdate: () => ipcRenderer.invoke('install-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+  onMaximizeChange: (callback: (event: any, maximized: boolean) => void) => {
+    ipcRenderer.on('maximize-change', callback);
+  },
+  offMaximizeChange: (callback: (event: any, maximized: boolean) => void) => {
+    ipcRenderer.removeListener('maximize-change', callback);
+  },
 });

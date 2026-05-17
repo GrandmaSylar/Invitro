@@ -4,6 +4,7 @@ import { useAuthStore } from "../../stores/useAuthStore";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import { useDashboardStats, useDashboardCharts } from "../../hooks/useDashboardStats";
 import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
 import { motion } from "motion/react";
 import { useState, MouseEvent } from "react";
 import {
@@ -65,15 +66,16 @@ function ChartTooltip({ active, payload, label }: any) {
 
 // ── Stat Card Component ────────────────────────────────────────
 
-function StatCard({ title, value, icon: Icon, gradient, iconBg }: {
+function StatCard({ title, value, icon: Icon, gradient, iconBg, isLoading }: {
   title: string;
   value: string | number;
   icon: any;
   gradient: string;
   iconBg: string;
+  isLoading?: boolean;
 }) {
   return (
-    <div className={`relative rounded-2xl border border-border/50 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md transition-shadow duration-300`}>
+    <div className={`relative rounded-2xl border border-border/50 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300`}>
       <div className={`absolute inset-0 opacity-[0.03] ${gradient}`} />
       <div className="relative flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
@@ -82,7 +84,11 @@ function StatCard({ title, value, icon: Icon, gradient, iconBg }: {
         </div>
       </div>
       <div className="relative">
-        <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
+        {isLoading ? (
+          <Skeleton className="h-9 w-24" />
+        ) : (
+          <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
+        )}
       </div>
     </div>
   );
@@ -211,31 +217,35 @@ export function MainDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Patients Today"
-          value={statsLoading ? "…" : stats?.patientsToday ?? 0}
+          value={stats?.patientsToday ?? 0}
           icon={Users}
           gradient="bg-gradient-to-br from-blue-500 to-blue-700"
           iconBg="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+          isLoading={statsLoading}
         />
         <StatCard
           title="Tests Ordered Today"
-          value={statsLoading ? "…" : stats?.testsToday ?? 0}
+          value={stats?.testsToday ?? 0}
           icon={FlaskConical}
           gradient="bg-gradient-to-br from-purple-500 to-purple-700"
           iconBg="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+          isLoading={statsLoading}
         />
         <StatCard
           title="Pending Results"
-          value={statsLoading ? "…" : stats?.pendingResults ?? 0}
+          value={stats?.pendingResults ?? 0}
           icon={Clock}
           gradient="bg-gradient-to-br from-amber-500 to-amber-700"
           iconBg="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+          isLoading={statsLoading}
         />
         <StatCard
           title="Revenue (Month)"
-          value={statsLoading ? "…" : `₵${(stats?.revenueThisMonth ?? 0).toLocaleString()}`}
+          value={`₵${(stats?.revenueThisMonth ?? 0).toLocaleString()}`}
           icon={TrendingUp}
           gradient="bg-gradient-to-br from-emerald-500 to-emerald-700"
           iconBg="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+          isLoading={statsLoading}
         />
       </div>
 
@@ -458,7 +468,7 @@ export function MainDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift"
           onClick={() => navigate("/patients?tab=new-patient")}
         >
           <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
@@ -469,7 +479,7 @@ export function MainDashboard() {
 
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift"
           onClick={() => navigate("/patients?tab=existing-patient")}
         >
           <div className="p-2.5 bg-teal-100 dark:bg-teal-900/30 rounded-full">
@@ -480,7 +490,7 @@ export function MainDashboard() {
 
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift"
           onClick={() => navigate("/results-entry")}
         >
           <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-full">

@@ -11,6 +11,11 @@ All notable updates to this project will be documented here in plain, easy-to-un
 - **Automatic Background Updates**: Added an automatic update feature. The application will now silently download updates in the background and show a friendly notification to restart and apply them when ready.
 
 ### Improvements & Refinements
+- **Custom Window Title Bar**: Replaced the generic Windows title bar with a sleek, theme-aware custom title bar that matches your dark or light mode setting.
+- **Redesigned Welcome Screen**: Refreshed the startup splash screen with a modern teal color scheme, floating animations, and a smooth bouncing loader.
+- **Skeleton Loading Screens**: Added polished loading placeholders across all pages so you see a smooth animated preview instead of blank screens while data loads.
+- **Smooth Page Transitions**: Navigating between pages now plays a calm fade-and-slide animation for a more seamless experience.
+- **Hover & Click Effects**: Added subtle lift-on-hover animations to cards and buttons, and a satisfying press effect when clicking for a more responsive feel.
 - **Live Dashboard Analytics**: Connected the dashboard charts to live data with accurate accounting logic to show true daily collections.
 - **Manual Update Check**: Added a "Check for Updates" button in Settings -> About & Version to manually trigger an update check.
 - **Instant Test Suggestions**: When typing the name of a test in the Test Builder, the system now displays a quick dropdown of matching tests, allowing you to select them instantly without searching the entire library.

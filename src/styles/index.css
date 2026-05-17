@@ -1,3 +1,31 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* ── Custom Titlebar Drag Region ─────────────────────── */
+.app-drag-region {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.app-drag-region button,
+.app-drag-region a,
+.app-drag-region input {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* ── Haptic-feel Button Press ────────────────────────── */
+button:not(:disabled):active,
+[role="button"]:not(:disabled):active {
+  transform: scale(0.97);
+  transition: transform 80ms ease-out;
+}
+
+/* ── Smooth Sidebar & Card Hover Polish ──────────────── */
+.hover-lift {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
