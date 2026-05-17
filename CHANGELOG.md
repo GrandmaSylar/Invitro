@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1] - 2026-05-17
+
+### Added
+- **Inline Parameter Autocomplete**: Typing in the parameter name field within the Test Builder now shows a live dropdown of matching suggestions from the parameter library, allowing quick selection without opening the full library picker.
+- **Library Picker Search**: Added a search bar to the "From Library" popup dialog, enabling instant filtering of parameters by name, units, or parameter code.
+
+### Fixed
+- **Department/Cost Field Overlap**: Resolved layout overlap between the "New Department" text input and the "Test Cost" field by switching to a 4-column grid and spanning the Department field across 2 columns.
+- **Test Combobox Dropdown Width**: Fixed the "Select tests to add" popover dropdown in the Patients tab to match the full width of its trigger button instead of rendering at a narrow fixed 288px.
+- **Missing Type Import**: Added the missing `Parameter` type import to `TestRegister.tsx`.
+
 ## [0.2.0] - 2026-05-17
 
 ### Added

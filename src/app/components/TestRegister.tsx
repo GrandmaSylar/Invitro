@@ -68,6 +68,8 @@ export function TestRegister() {
   const [inlineParamUnits, setInlineParamUnits] = useState("");
   const [inlineParamRange, setInlineParamRange] = useState("");
   const [showLibraryPicker, setShowLibraryPicker] = useState(false);
+  const [libraryPickerSearch, setLibraryPickerSearch] = useState("");
+  const [showInlineSuggestions, setShowInlineSuggestions] = useState(false);
 
   // Expandable test list
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
@@ -329,22 +331,22 @@ export function TestRegister() {
                 </div>
 
                 {/* Test Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-muted-foreground mb-2">Test Name *</label>
                     <input type="text" value={testName} onChange={(e) => setTestName(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="e.g. Full Blood Count" />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-muted-foreground mb-2">Department *</label>
                     <div className="flex gap-2">
                       <select value={department} onChange={(e) => { setDepartment(e.target.value); setNewDepartment(""); }}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium">
+                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium">
                         <option value="">Select or type new →</option>
                         {departments.map(d => <option key={d.id} value={d.departmentName}>{d.departmentName}</option>)}
                       </select>
                       <input type="text" value={newDepartment} onChange={(e) => { setNewDepartment(e.target.value); setDepartment(""); }}
-                        className="flex-1 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="New department" />
+                        className="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" placeholder="New department" />
                     </div>
                   </div>
                   <div>
@@ -362,7 +364,7 @@ export function TestRegister() {
                     <input type="text" value={testReferenceRange} onChange={(e) => setTestReferenceRange(e.target.value)}
                       className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
                   </div>
-                  <div className="flex items-end pb-1">
+                  <div className="flex items-end pb-1 sm:col-span-2">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <Checkbox checked={includeComprehensive} onCheckedChange={(c) => setIncludeComprehensive(c === true)} />
                       <span className="text-xs text-muted-foreground">Include in Comprehensive Screening</span>
@@ -381,11 +383,35 @@ export function TestRegister() {
 
                   {/* Inline add row */}
                   <div className="flex gap-2 mb-4 items-end">
-                    <div className="flex-[2]">
+                    <div className="flex-[2] relative">
                       <label className="block text-xs font-medium text-muted-foreground mb-1">Name</label>
-                      <input type="text" value={inlineParamName} onChange={(e) => setInlineParamName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInlineParam(); }}}
-                        className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="Parameter name" />
+                      <input type="text" value={inlineParamName}
+                        onChange={(e) => { setInlineParamName(e.target.value); setShowInlineSuggestions(e.target.value.length > 0); }}
+                        onFocus={() => { if (inlineParamName.length > 0) setShowInlineSuggestions(true); }}
+                        onBlur={() => { setTimeout(() => setShowInlineSuggestions(false), 200); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInlineParam(); setShowInlineSuggestions(false); } if (e.key === 'Escape') setShowInlineSuggestions(false); }}
+                        className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="Start typing to search library…" />
+                      {/* Autocomplete suggestions dropdown */}
+                      {showInlineSuggestions && inlineParamName.length > 0 && (() => {
+                        const suggestions = parameters.filter(p =>
+                          p.parameterName.toLowerCase().includes(inlineParamName.toLowerCase()) &&
+                          !inlineParams.some(ip => ip.libraryId === p.id)
+                        ).slice(0, 8);
+                        if (suggestions.length === 0) return null;
+                        return (
+                          <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-48 overflow-auto">
+                            {suggestions.map(p => (
+                              <button key={p.id} type="button"
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2"
+                                onMouseDown={(e) => { e.preventDefault(); addFromLibrary(p); setInlineParamName(""); setShowInlineSuggestions(false); }}
+                              >
+                                <span className="font-medium truncate">{p.parameterName}</span>
+                                <span className="text-xs text-muted-foreground shrink-0">{p.units || ''} {p.referenceRange ? `(${p.referenceRange})` : ''}</span>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex-1">
                       <label className="block text-xs font-medium text-muted-foreground mb-1">Units</label>
@@ -397,7 +423,7 @@ export function TestRegister() {
                       <input type="text" value={inlineParamRange} onChange={(e) => setInlineParamRange(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. 12-16" />
                     </div>
-                    <Button type="button" variant="blue" size="sm" onClick={addInlineParam} className="shrink-0">
+                    <Button type="button" variant="blue" size="sm" onClick={() => { addInlineParam(); setShowInlineSuggestions(false); }} className="shrink-0">
                       <Plus size={14} className="mr-1" /> Add
                     </Button>
                   </div>
@@ -566,33 +592,55 @@ export function TestRegister() {
                     <DialogTitle>Select Parameters from Library</DialogTitle>
                     <DialogDescription>Click a parameter to add it to the current test.</DialogDescription>
                   </DialogHeader>
+                  {/* Search bar */}
+                  <div className="relative">
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={libraryPickerSearch}
+                      onChange={(e) => setLibraryPickerSearch(e.target.value)}
+                      placeholder="Search parameters…"
+                      className="w-full pl-9 pr-4 py-2 bg-background border border-border/60 text-sm text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all"
+                    />
+                  </div>
                   <div className="max-h-64 overflow-auto border border-border rounded-lg">
                     {parametersLoading ? (
                       <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted-foreground" /></div>
                     ) : parameters.length === 0 ? (
                       <p className="text-sm text-center py-6 text-muted-foreground">No parameters in library yet. Type them inline above.</p>
-                    ) : (
-                      <table className="w-full">
-                        <thead className="bg-muted sticky top-0"><tr>
-                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Name</th>
-                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Units</th>
-                          <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Ref. Range</th>
-                        </tr></thead>
-                        <tbody>
-                          {parameters.map((p, i) => {
-                            const alreadyAdded = inlineParams.some(ip => ip.libraryId === p.id);
-                            return (
-                              <tr key={p.id} onClick={() => { if (!alreadyAdded) addFromLibrary(p); }}
-                                className={`border-t border-border transition-colors ${alreadyAdded ? 'bg-primary/10 opacity-60 cursor-default' : 'cursor-pointer hover:bg-muted/50'} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
-                                <td className="px-3 py-2 text-sm font-medium">{p.parameterName} {alreadyAdded && <span className="text-xs text-primary">✓</span>}</td>
-                                <td className="px-3 py-2 text-sm text-muted-foreground">{p.units || '—'}</td>
-                                <td className="px-3 py-2 text-sm text-muted-foreground">{p.referenceRange || '—'}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    )}
+                    ) : (() => {
+                      const filteredLibParams = parameters.filter(p =>
+                        libraryPickerSearch === "" ||
+                        p.parameterName.toLowerCase().includes(libraryPickerSearch.toLowerCase()) ||
+                        (p.units || "").toLowerCase().includes(libraryPickerSearch.toLowerCase()) ||
+                        (p.parameterCode || "").toLowerCase().includes(libraryPickerSearch.toLowerCase())
+                      );
+                      if (filteredLibParams.length === 0) {
+                        return <p className="text-sm text-center py-6 text-muted-foreground">No matching parameters found.</p>;
+                      }
+                      return (
+                        <table className="w-full">
+                          <thead className="bg-muted sticky top-0"><tr>
+                            <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Name</th>
+                            <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Units</th>
+                            <th className="px-3 py-2 text-left text-xs uppercase font-bold text-muted-foreground">Ref. Range</th>
+                          </tr></thead>
+                          <tbody>
+                            {filteredLibParams.map((p, i) => {
+                              const alreadyAdded = inlineParams.some(ip => ip.libraryId === p.id);
+                              return (
+                                <tr key={p.id} onClick={() => { if (!alreadyAdded) addFromLibrary(p); }}
+                                  className={`border-t border-border transition-colors ${alreadyAdded ? 'bg-primary/10 opacity-60 cursor-default' : 'cursor-pointer hover:bg-muted/50'} ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
+                                  <td className="px-3 py-2 text-sm font-medium">{p.parameterName} {alreadyAdded && <span className="text-xs text-primary">✓</span>}</td>
+                                  <td className="px-3 py-2 text-sm text-muted-foreground">{p.units || '—'}</td>
+                                  <td className="px-3 py-2 text-sm text-muted-foreground">{p.referenceRange || '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setShowLibraryPicker(false)}>Done</Button>
