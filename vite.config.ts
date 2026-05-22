@@ -39,12 +39,12 @@ const gitPlugin = () => {
           try {
             const md = readFileSync(path.resolve(__dirname, 'CHANGELOG.md'), 'utf8');
             // Find the first section under ## Version or any ## header
-            const match = md.match(/## [^\n]*\n([\s\S]*?)(?=## |$)/);
+            const match = md.match(/##\s+[^\r\n]*[\r\n]+([\s\S]*?)(?=\r?\n##\s+|$)/);
             if (match && match[1]) {
-              const lines = match[1].split('\n').filter(l => l.trim().startsWith('-'));
+              const lines = match[1].split(/\r?\n/).filter(l => l.trim().startsWith('-'));
               changelog = lines.map((line, i) => {
                 // Keep the styling clean for the UI
-                const msg = line.replace(/^- \*\*(.*?)\*\*:\s*/, '$1: ').replace(/^- /, '');
+                const msg = line.trim().replace(/^- \*\*(.*?)\*\*:\s*/, '$1: ').replace(/^- /, '');
                 return { hash: `log-${i}`, msg, time: new Date().toLocaleDateString(), author: 'Release Team' };
               });
             }

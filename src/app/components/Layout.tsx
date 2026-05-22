@@ -60,7 +60,7 @@ function NavLink({ item, isExpanded, isActive }: { item: any; isExpanded: boolea
   const linkContent = (
     <Link
       to={item.path}
-      className={`flex items-center transition-all duration-200 rounded ${
+      className={`flex items-center transition-all duration-200 rounded-md ${
         isExpanded ? "gap-3 px-4 py-2.5" : "justify-center w-10 h-10 mx-auto"
       } ${
         isActive
@@ -133,27 +133,16 @@ export function Layout() {
       {/* Sidebar */}
       <aside 
         className={`fixed left-0 bottom-0 bg-sidebar border-r border-sidebar-border flex flex-col z-50 transition-all duration-300 ease-in-out ${
-          isExpanded ? "w-60" : "w-14"
+          isExpanded ? "w-60 shadow-[4px_0_24px_rgba(0,0,0,0.04)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.2)]" : "w-14 shadow-none"
         } ${isElectron ? "top-9" : "top-0"}`}
         onMouseEnter={() => setIsExpanded(true)}
         onMouseLeave={() => setIsExpanded(false)}
       >
-        {/* Logo */}
+        {/* Logo (Removed per request) */}
         <div className="p-3 border-b border-sidebar-border h-[68px] flex items-center">
-          <div className="flex items-center gap-3">
-            {settings.general.logoUrl ? (
-              <img 
-                src={settings.general.logoUrl} 
-                alt="Logo" 
-                className={`w-11 h-11 object-contain shrink-0 rounded bg-white p-0.5 ${!isExpanded ? "mx-auto" : ""}`} 
-              />
-            ) : (
-              <div className={`w-11 h-11 bg-gradient-to-br from-blue-600 to-purple-600 shrink-0 rounded ${!isExpanded ? "mx-auto" : ""}`}></div>
-            )}
-            <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isExpanded ? "w-auto opacity-100" : "w-0 opacity-0 hidden"}`}>
-              <div className="font-bold text-sm text-sidebar-foreground leading-tight truncate">
-                {settings.general.appName || "Laboratory System"}
-              </div>
+          <div className={`overflow-hidden whitespace-nowrap transition-all duration-200 ${isExpanded ? "w-auto opacity-100 pl-2.5" : "w-0 opacity-0 hidden"}`}>
+            <div className="font-bold text-sm text-sidebar-foreground leading-tight truncate">
+              {settings.general.appName || "Laboratory System"}
             </div>
           </div>
         </div>
@@ -174,7 +163,7 @@ export function Layout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden ml-14">
         {/* Top Bar */}
-        <header className="bg-card border-b border-border px-8 py-4 transition-colors duration-200">
+        <header className="bg-card/90 backdrop-blur-md border-b border-border/80 px-8 py-4 transition-colors duration-200">
           <div className="flex items-center justify-between">
             <div>
               {location.pathname !== '/' ? (
@@ -208,7 +197,7 @@ export function Layout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="shrink-0 outline-none flex items-center gap-2 hover:bg-accent p-1 -mr-1 rounded-md transition-colors">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-md flex items-center justify-center text-white font-bold text-sm shrink-0">
                       {user?.fullName?.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
                     </div>
                     <span className="text-sm font-medium truncate max-w-[150px] hidden sm:block pr-2">

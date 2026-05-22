@@ -2,6 +2,23 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 0.2.6
+
+### System-Wide Visual Redesign & Close Interception
+- **Close Window Confirmation**: Added a dynamic, theme-matched confirmation dialog screen when the user clicks the top-right close window (`X`) button in the titlebar or the power icon on the login page, preventing accidental exits.
+- **Unified Brand Color Palette**: Standardized the system-wide accent highlights using a signature deep corporate navy (`#0c2e5a`) in Light Mode and vibrant cobalt blue (`#3b82f6`) in Dark Mode, seamlessly propagated across active sidebar tabs, interactive charts, stats cards, and input indicators.
+- **Standardized Border Curvature (8px)**: Mapped all container, card, button, and input corner roundness styles to exactly `8px` (`0.5rem`) via global Tailwind config tokens, ensuring absolute visual consistency.
+- **Hero Banner Styling & Fade Refinements**: Refined the main dashboard's Welcome Banner by removing the drop shadow and reducing the bottom white gradient length from `128px` to `80px` to create a flatter, cleaner design that blends smoothly with the background.
+- **Auxiliary Screens Overhaul**: Refreshed the 404 page, profile avatar fallback gradients, input focus ring highlights, and catalog registration buttons with responsive, theme-consistent styling.
+
+## Version 0.2.5
+
+### User Management & Account Creation
+- **Direct Account Creation**: Replaced the email-invite workflow with a direct creation system. Users with the 'Dev' role can now manually create accounts, assign roles, and set passwords directly within the app without requiring email verification.
+- **UI Freeze Fixes**: Resolved critical UI freezing issues caused by overlapping Radix UI dialogs. Removed redundant confirmation dialogs for saving changes and creating users.
+- **Direct Auth API Integration**: Refactored the user creation backend to use direct HTTP fetch requests to Supabase Auth. This prevents session overrides and avoids conflicts with the active admin session.
+- **Smooth Success Notifications**: Replaced blocking modal dialogs with smooth, non-intrusive toast notifications for successful user creation and updates.
+
 ## Version 0.2
 
 ### Standalone Desktop Application

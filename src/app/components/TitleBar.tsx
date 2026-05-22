@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Minus, Square, X, Copy } from "lucide-react";
+import { showConfirm } from "../../stores/useDialogStore";
 
 /**
  * Custom title bar that replaces the native Windows chrome.
@@ -21,16 +22,25 @@ export function TitleBar() {
     };
   }, [isElectron]);
 
+  const handleClose = async () => {
+    const confirmed = await showConfirm({
+      title: "Exit Application",
+      description: "Are you sure you want to close Invitro LIMS? Any unsaved changes may be lost.",
+      confirmText: "Exit",
+      cancelText: "Cancel",
+      variant: "destructive"
+    });
+    if (confirmed) {
+      window.electronAPI?.closeWindow?.();
+    }
+  };
+
   if (!isElectron) return null;
 
   return (
     <div className="title-bar select-none flex items-center h-9 bg-sidebar border-b border-sidebar-border text-sidebar-foreground shrink-0 z-[9999]">
       {/* Drag region — fills the space between logo and window controls */}
       <div className="flex-1 h-full flex items-center pl-3 gap-2 app-drag-region">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-60 shrink-0">
-          <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
-          <path d="M8.5 2h7" />
-        </svg>
         <span className="text-xs font-semibold tracking-wide opacity-60">Invitro LIMS</span>
       </div>
 
@@ -54,7 +64,7 @@ export function TitleBar() {
           }
         </button>
         <button
-          onClick={() => window.electronAPI?.closeWindow?.()}
+          onClick={handleClose}
           className="h-full w-12 flex items-center justify-center hover:bg-red-600 hover:text-white transition-colors duration-150 focus:outline-none rounded-tr-none"
           aria-label="Close"
         >
@@ -64,3 +74,4 @@ export function TitleBar() {
     </div>
   );
 }
+

@@ -383,7 +383,7 @@ export function NewPatientTab() {
                       value={labNumber} 
                       readOnly
                       placeholder="Auto-generating..."
-                      className="flex-1 font-mono text-lg font-bold bg-blue-500/5 border-blue-500/20 text-blue-700 dark:text-blue-400 cursor-default" 
+                      className="flex-1 font-mono text-lg font-bold bg-primary/5 border-primary/20 text-primary dark:text-primary-foreground cursor-default" 
                       disabled={isSaving}
                     />
                     <div className="px-4 py-2 border rounded-md bg-muted">
@@ -395,7 +395,7 @@ export function NewPatientTab() {
                 </div>
               </div>
               <div className="flex items-end">
-                <div className="w-full p-4 bg-gradient-to-r from-blue-500/10 to-teal-500/10 border border-blue-500/20 rounded-xl">
+                <div className="w-full p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl">
                   <p className="text-xs text-muted-foreground font-semibold mb-1">Status</p>
                   <p className="text-sm font-bold text-green-700 flex items-center gap-1.5"><Circle className="h-2.5 w-2.5 fill-current" /> Active Registration</p>
                 </div>
@@ -408,7 +408,7 @@ export function NewPatientTab() {
         <Card>
           <CardHeader className="pb-4 border-b mb-4">
             <div className="flex items-center gap-2">
-              <User size={20} className="text-blue-600" />
+              <User size={20} className="text-primary" />
               <CardTitle>Patient Information</CardTitle>
             </div>
           </CardHeader>
@@ -497,7 +497,7 @@ export function NewPatientTab() {
           <Card>
             <CardHeader className="pb-4 border-b mb-4 flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
-                <Stethoscope size={20} className="text-teal-600" />
+                <Stethoscope size={20} className="text-primary" />
                 <CardTitle>Referral Information</CardTitle>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setReferralExpanded(false)}>Collapse</Button>
@@ -600,7 +600,7 @@ export function NewPatientTab() {
           <CardHeader className="pb-4 border-b mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TestTube size={20} className="text-green-600" />
+                <TestTube size={20} className="text-primary" />
                 <CardTitle>Test Selection</CardTitle>
               </div>
               <Badge variant="secondary">{tests.length} Selected</Badge>

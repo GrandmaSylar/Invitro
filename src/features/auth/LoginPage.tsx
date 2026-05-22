@@ -1,16 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
-import { motion, AnimatePresence } from 'motion/react';
-import { Card, CardContent } from '../../app/components/ui/card';
+import { motion } from 'motion/react';
 import { Button } from '../../app/components/ui/button';
-import { Input } from '../../app/components/ui/input';
-import { Label } from '../../app/components/ui/label';
 import { Checkbox } from '../../app/components/ui/checkbox';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../app/components/ui/tabs';
-import { Eye, EyeOff, Loader2, Mail, User, Lock } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, User, Lock, Power, ShieldCheck, Zap, RefreshCw, FlaskConical, Layers } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../stores/useAuthStore';
-import { useRbacStore } from '../../stores/useRbacStore';
+import { showConfirm } from '../../stores/useDialogStore';
+import { GlobalDialogs } from '../../app/components/GlobalDialogs';
 
 type LoginMethod = 'email' | 'username';
 
@@ -18,8 +15,19 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const loginToStore = useAuthStore((s) => s.login);
-  const rbacUsers = useRbacStore((s) => s.users);
-  const rbacRoles = useRbacStore((s) => s.roles);
+
+  const handleClose = async () => {
+    const confirmed = await showConfirm({
+      title: "Exit Application",
+      description: "Are you sure you want to close Invitro LIMS? Any unsaved changes may be lost.",
+      confirmText: "Exit",
+      cancelText: "Cancel",
+      variant: "destructive"
+    });
+    if (confirmed) {
+      window.electronAPI?.closeWindow?.();
+    }
+  };
 
   // Active tab
   const [activeTab, setActiveTab] = useState<LoginMethod>('username');
@@ -56,8 +64,7 @@ export function LoginPage() {
     return () => clearInterval(timer);
   }, [lockoutSeconds]);
 
-  // ── Helpers ──────────────────────────────────────────────────
-
+  // Handle Login
   const handleCredentialLogin = async (identifier: 'email' | 'username') => {
     if (lockoutSeconds > 0) return;
     setError('');
@@ -91,209 +98,336 @@ export function LoginPage() {
     }
   };
 
-  // Reset form when switching tabs
-  const handleTabChange = (value: string) => {
-    setActiveTab(value as LoginMethod);
+  const handleTabChange = (method: LoginMethod) => {
+    setActiveTab(method);
     setError('');
   };
 
   const isLocked = lockoutSeconds > 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+    <div className="relative min-h-screen flex items-center justify-center bg-[#0d233a] overflow-hidden p-6 md:p-12">
+      
+      {/* Subtle background glow blobs to match premium styling */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[10%] -left-[10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
+        <div className="absolute -bottom-[10%] -right-[10%] w-[50%] h-[50%] rounded-full bg-indigo-500/10 blur-[120px] pointer-events-none" />
+      </div>
+
+      {/* Top Right Power Icon to Shutdown System (Electron App Exit) */}
+      <button
+        type="button"
+        className="absolute top-6 right-6 text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-full transition-colors outline-none cursor-pointer z-20"
+        onClick={handleClose}
+        title="Close Application"
       >
-        <Card className="w-full max-w-[460px] shadow-2xl">
-          <CardContent className="p-8">
-            {/* ── Header ─────────────────────────────────────── */}
-            <div className="flex flex-col items-center gap-3 mb-6">
-              <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10">
-                <Lock className="size-6 text-primary" />
-              </div>
-              <div className="text-center">
-                <p className="text-xs font-semibold tracking-widest uppercase text-primary mb-1">
-                  Invitro AIDMED Diagnostics
-                </p>
-                <h1 className="text-xl font-bold">Welcome back</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Sign in to your account
+        <Power className="size-5" />
+      </button>
+
+      {/* Main Layout Grid */}
+      <div className="w-full max-w-[1100px] grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center z-10">
+        
+        {/* Left Side: System branding & Features grid */}
+        <div className="lg:col-span-7 text-white space-y-8">
+          
+          {/* Brand Header */}
+          <div className="flex items-center gap-3.5">
+            <div className="flex items-center justify-center size-13 rounded-xl bg-white/10 text-white border border-white/20 shadow-[inset_0_2px_4px_rgba(255,255,255,0.1)]">
+              <FlaskConical className="size-6.5 text-white" />
+            </div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Invitro LIMS</h1>
+          </div>
+
+          <h2 className="text-lg md:text-xl text-white/95 font-medium tracking-wide border-b border-white/15 pb-6">
+            Modern Laboratory Information Management System
+          </h2>
+
+          {/* 2x2 Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            
+            {/* Feature 1 */}
+            <div className="flex items-start gap-3">
+              <Layers className="size-5 text-white/80 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Multi-Lab Support</h3>
+                <p className="text-xs text-white/70 mt-1 leading-normal">
+                  Manage multiple laboratory sites with real-time data consolidation
                 </p>
               </div>
             </div>
 
-            {/* ── Lockout Banner ──────────────────────────────── */}
-            {isLocked && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                className="mb-4 rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-center"
+            {/* Feature 2 */}
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="size-5 text-white/80 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Secure & Compliant</h3>
+                <p className="text-xs text-white/70 mt-1 leading-normal">
+                  Role-based access control with comprehensive immutable audit trails
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="flex items-start gap-3">
+              <Zap className="size-5 text-white/80 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Real-time Processing</h3>
+                <p className="text-xs text-white/70 mt-1 leading-normal">
+                  Instant sample processing, auto-flagging, and rapid result dispatch
+                </p>
+              </div>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="flex items-start gap-3">
+              <RefreshCw className="size-5 text-white/80 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Automated Backups</h3>
+                <p className="text-xs text-white/70 mt-1 leading-normal">
+                  Seamless scheduled backups with zero system downtime
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Right Side: Login Card */}
+        <div className="lg:col-span-5 flex justify-center lg:justify-end">
+          <div className="w-full max-w-[420px] bg-white rounded-2xl border border-gray-100 shadow-[0_15px_30px_rgba(0,0,0,0.15)] p-8">
+            
+            {/* Card Header */}
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Welcome Back</h3>
+              <p className="text-xs text-gray-500 mt-1.5">
+                Sign in to access your laboratory system
+              </p>
+            </div>
+
+            {/* Custom Sleek Tab Selector */}
+            <div className="flex border-b border-gray-200 mb-6">
+              <button
+                type="button"
+                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all duration-200 cursor-pointer ${
+                  activeTab === 'username'
+                    ? 'border-[#0c2e5a] text-[#0c2e5a]'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+                onClick={() => handleTabChange('username')}
               >
-                <p className="text-sm font-medium text-destructive">
+                Username Login
+              </button>
+              <button
+                type="button"
+                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all duration-200 cursor-pointer ${
+                  activeTab === 'email'
+                    ? 'border-[#0c2e5a] text-[#0c2e5a]'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
+                }`}
+                onClick={() => handleTabChange('email')}
+              >
+                Email Login
+              </button>
+            </div>
+
+            {/* Lockout Banner */}
+            {isLocked && (
+              <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-center">
+                <p className="text-xs font-bold text-red-600">
                   Account locked. Try again in {lockoutSeconds}s
                 </p>
-              </motion.div>
+              </div>
             )}
 
-            {/* ── Tabs ────────────────────────────────────────── */}
-            <Tabs value={activeTab} onValueChange={handleTabChange}>
-              <TabsList className="w-full grid grid-cols-2 gap-1 h-auto py-1 mb-2">
-                <TabsTrigger value="username" className="text-xs gap-1 py-1.5">
-                  <User className="size-3.5" />
-                  Username
-                </TabsTrigger>
-                <TabsTrigger value="email" className="text-xs gap-1 py-1.5">
-                  <Mail className="size-3.5" />
-                  Email
-                </TabsTrigger>
-              </TabsList>
-
-
-                {/* ── Username / Password ───────────────────────── */}
-                <TabsContent value="username" key="username-tab">
-                  <motion.div
-                    key="username"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.2 }}
+            {/* Login Forms */}
+            {activeTab === 'username' ? (
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleCredentialLogin('username'); }}
+                className="space-y-5"
+              >
+                {/* Username Input with Custom Outline Floating Label */}
+                <div className="relative mt-4">
+                  <label
+                    htmlFor="login-username"
+                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
                   >
-                    <form
-                      onSubmit={(e) => { e.preventDefault(); handleCredentialLogin('username'); }}
-                      className="space-y-3 pt-2"
-                    >
-                      <div className="space-y-1.5">
-                        <Label htmlFor="login-username">Username</Label>
-                        <Input
-                          id="login-username"
-                          placeholder="kmensah"
-                          value={username}
-                          onChange={(e) => { setUsername(e.target.value); setError(''); }}
-                          disabled={isLocked}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="login-password-user">Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="login-password-user"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                            disabled={isLocked}
-                          />
-                          <button
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setShowPassword(!showPassword)}
-                            tabIndex={-1}
-                          >
-                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="remember-user"
-                            checked={rememberMe}
-                            onCheckedChange={(c) => setRememberMe(c === true)}
-                          />
-                          <label htmlFor="remember-user" className="text-xs text-muted-foreground cursor-pointer">
-                            Remember me
-                          </label>
-                        </div>
-                        <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                          Forgot password?
-                        </Link>
-                      </div>
-                      {error && <p className="text-xs text-destructive">{error}</p>}
-                      <Button type="submit" className="w-full" disabled={loading || isLocked}>
-                        {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-                        Sign In
-                      </Button>
-                    </form>
-                  </motion.div>
-                </TabsContent>
+                    Username *
+                  </label>
+                  <div className="relative flex items-center">
+                    <User className="absolute left-3.5 size-4 text-[#5f748d]" />
+                    <input
+                      id="login-username"
+                      type="text"
+                      className="w-full h-11 pl-10 pr-3 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      placeholder="e.g. kmensah"
+                      value={username}
+                      onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                      disabled={isLocked}
+                      autoFocus
+                    />
+                  </div>
+                </div>
 
-                {/* ── Email / Password ──────────────────────────── */}
-                <TabsContent value="email" key="email-tab">
-                  <motion.div
-                    key="email"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.2 }}
+                {/* Password Input with Custom Outline Floating Label */}
+                <div className="relative mt-4">
+                  <label
+                    htmlFor="login-password-user"
+                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
                   >
-                    <form
-                      onSubmit={(e) => { e.preventDefault(); handleCredentialLogin('email'); }}
-                      className="space-y-3 pt-2"
+                    Password *
+                  </label>
+                  <div className="relative flex items-center">
+                    <Lock className="absolute left-3.5 size-4 text-[#5f748d]" />
+                    <input
+                      id="login-password-user"
+                      type={showPassword ? 'text' : 'password'}
+                      className="w-full h-11 pl-10 pr-10 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                      disabled={isLocked}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
                     >
-                      <div className="space-y-1.5">
-                        <Label htmlFor="login-email">Email</Label>
-                        <Input
-                          id="login-email"
-                          type="email"
-                          placeholder="you@example.com"
-                          value={email}
-                          onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                          disabled={isLocked}
-                          autoFocus
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="login-password-email">Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="login-password-email"
-                            type={showPassword ? 'text' : 'password'}
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                            disabled={isLocked}
-                          />
-                          <button
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setShowPassword(!showPassword)}
-                            tabIndex={-1}
-                          >
-                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            id="remember-email"
-                            checked={rememberMe}
-                            onCheckedChange={(c) => setRememberMe(c === true)}
-                          />
-                          <label htmlFor="remember-email" className="text-xs text-muted-foreground cursor-pointer">
-                            Remember me
-                          </label>
-                        </div>
-                        <Link to="/forgot-password" className="text-xs text-primary hover:underline">
-                          Forgot password?
-                        </Link>
-                      </div>
-                      {error && <p className="text-xs text-destructive">{error}</p>}
-                      <Button type="submit" className="w-full" disabled={loading || isLocked}>
-                        {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-                        Sign In
-                      </Button>
-                    </form>
-                  </motion.div>
-                </TabsContent>
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
 
-            </Tabs>
-          </CardContent>
-        </Card>
-      </motion.div>
+                {/* Remember Me & Forgot Password */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember-user"
+                      checked={rememberMe}
+                      onCheckedChange={(c) => setRememberMe(c === true)}
+                      className="border-[#ccd3dc] data-[state=checked]:bg-[#0c2e5a] data-[state=checked]:border-[#0c2e5a]"
+                    />
+                    <label htmlFor="remember-user" className="text-xs font-bold text-[#5f748d] cursor-pointer select-none">
+                      Remember me
+                    </label>
+                  </div>
+                  <Link to="/forgot-password" className="text-xs font-bold text-[#0c2e5a] hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+
+                {error && <p className="text-xs text-red-600 font-bold pt-1">{error}</p>}
+
+                {/* Action Button */}
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-[#0c2e5a] hover:bg-[#092244] text-white font-bold rounded-md shadow-md mt-6 flex items-center justify-center transition-colors border-none cursor-pointer"
+                  disabled={loading || isLocked}
+                >
+                  {loading ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+                  Sign In
+                </Button>
+              </form>
+            ) : (
+              <form
+                onSubmit={(e) => { e.preventDefault(); handleCredentialLogin('email'); }}
+                className="space-y-5"
+              >
+                {/* Email Input with Custom Outline Floating Label */}
+                <div className="relative mt-4">
+                  <label
+                    htmlFor="login-email"
+                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
+                  >
+                    Email Address *
+                  </label>
+                  <div className="relative flex items-center">
+                    <Mail className="absolute left-3.5 size-4 text-[#5f748d]" />
+                    <input
+                      id="login-email"
+                      type="email"
+                      className="w-full h-11 pl-10 pr-3 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                      disabled={isLocked}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Password Input with Custom Outline Floating Label */}
+                <div className="relative mt-4">
+                  <label
+                    htmlFor="login-password-email"
+                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
+                  >
+                    Password *
+                  </label>
+                  <div className="relative flex items-center">
+                    <Lock className="absolute left-3.5 size-4 text-[#5f748d]" />
+                    <input
+                      id="login-password-email"
+                      type={showPassword ? 'text' : 'password'}
+                      className="w-full h-11 pl-10 pr-10 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                      disabled={isLocked}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me & Forgot Password */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="remember-email"
+                      checked={rememberMe}
+                      onCheckedChange={(c) => setRememberMe(c === true)}
+                      className="border-[#ccd3dc] data-[state=checked]:bg-[#0c2e5a] data-[state=checked]:border-[#0c2e5a]"
+                    />
+                    <label htmlFor="remember-email" className="text-xs font-bold text-[#5f748d] cursor-pointer select-none">
+                      Remember me
+                    </label>
+                  </div>
+                  <Link to="/forgot-password" className="text-xs font-bold text-[#0c2e5a] hover:underline">
+                    Forgot password?
+                  </Link>
+                </div>
+
+                {error && <p className="text-xs text-red-600 font-bold pt-1">{error}</p>}
+
+                {/* Action Button */}
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-[#0c2e5a] hover:bg-[#092244] text-white font-bold rounded-md shadow-md mt-6 flex items-center justify-center transition-colors border-none cursor-pointer"
+                  disabled={loading || isLocked}
+                >
+                  {loading ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
+                  Sign In
+                </Button>
+              </form>
+            )}
+
+            {/* Card Footer matching QSS Version Printout */}
+            <p className="text-center text-[10px] text-[#8c9ba5] font-bold tracking-wider mt-8">
+              Invitro LIMS v0.2.5
+            </p>
+
+          </div>
+        </div>
+
+      </div>
+      <GlobalDialogs />
     </div>
   );
 }

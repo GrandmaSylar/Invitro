@@ -81,20 +81,41 @@ export const rbacService = {
   ): Promise<User> => {
     const password = userData.password || 'tempPassword123!';
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: userData.email,
-      password,
-      options: {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    // Use raw fetch to bypass GoTrueClient entirely. 
+    // This guarantees no session persistence, no broadcast channel interference, 
+    // and no accidental admin logouts or UI freezes.
+    const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+      method: 'POST',
+      headers: {
+        'apikey': supabaseAnonKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: userData.email,
+        password,
         data: {
           full_name: userData.fullName,
           username: userData.username,
-        },
-      },
+        }
+      })
     });
 
-    if (authError) throw new Error(`Auth signup failed: ${authError.message}`);
+    if (!response.ok) {
+      let errorMsg = 'Unknown error';
+      try {
+        const errorData = await response.json();
+        errorMsg = errorData.msg || errorData.message || errorMsg;
+      } catch (e) {}
+      throw new Error(`Auth signup failed: ${errorMsg}`);
+    }
+
+    const authData = await response.json();
 
     const userId = authData.user?.id
+      || authData.id
       || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
     const { data, error } = await supabase

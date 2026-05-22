@@ -32,7 +32,7 @@ export function GlobalDialogs() {
               <div className={`p-2 rounded-full ${
                 confirmOptions?.variant === 'destructive' 
                   ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-500' 
-                  : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-500'
+                  : 'bg-primary/10 text-primary dark:bg-primary/20'
               }`}>
                 {confirmOptions?.variant === 'destructive' ? <AlertTriangle size={20} /> : <Info size={20} />}
               </div>

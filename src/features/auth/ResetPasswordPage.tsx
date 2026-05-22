@@ -57,22 +57,29 @@ export function ResetPasswordPage() {
   if (!token) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden p-4">
+      {/* Dynamic Glowing Mesh Background Blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-500/20 to-indigo-500/20 blur-[130px] dark:from-blue-500/10 dark:to-indigo-500/10 animate-[pulse_8s_infinite_ease-in-out]" />
+        <div className="absolute -bottom-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-[130px] dark:from-purple-500/10 dark:to-pink-500/10 animate-[pulse_10s_infinite_ease-in-out_2s]" />
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="w-full max-w-[420px] relative z-10"
       >
-        <Card className="w-full max-w-[420px] shadow-2xl">
+        <Card className="border border-border/50 bg-card/75 backdrop-blur-xl shadow-2xl">
           <CardContent className="p-8">
             {/* Header */}
             <div className="flex flex-col items-center gap-3 mb-8">
-              <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10">
-                <KeyRound className="size-6 text-primary" />
+              <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 border border-primary/20 shadow-inner">
+                <KeyRound className="size-5 text-primary" />
               </div>
               <div className="text-center">
-                <h1 className="text-xl font-bold">Reset Password</h1>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h1 className="text-2xl font-black tracking-tight text-foreground">Reset Password</h1>
+                <p className="text-sm text-muted-foreground mt-1.5">
                   Choose a new, strong password for your account
                 </p>
               </div>
@@ -94,7 +101,7 @@ export function ResetPasswordPage() {
                   />
                   <button
                     type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowNew(!showNew)}
                     tabIndex={-1}
                   >
@@ -102,7 +109,7 @@ export function ResetPasswordPage() {
                   </button>
                 </div>
                 {errors.newPassword && (
-                  <p className="text-xs text-destructive">{errors.newPassword}</p>
+                  <p className="text-xs text-destructive font-medium">{errors.newPassword}</p>
                 )}
                 <PasswordStrengthMeter password={newPassword} />
               </div>
@@ -120,7 +127,7 @@ export function ResetPasswordPage() {
                   />
                   <button
                     type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowConfirm(!showConfirm)}
                     tabIndex={-1}
                   >
@@ -128,14 +135,14 @@ export function ResetPasswordPage() {
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">{errors.confirmPassword}</p>
+                  <p className="text-xs text-destructive font-medium">{errors.confirmPassword}</p>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button type="submit" className="w-full h-10 font-bold" disabled={loading}>
                 {loading ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin mr-2" />
                     Resetting…
                   </>
                 ) : (
@@ -147,7 +154,7 @@ export function ResetPasswordPage() {
             <div className="mt-6 text-center">
               <Link
                 to="/login"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors hover:underline"
               >
                 Back to login
               </Link>

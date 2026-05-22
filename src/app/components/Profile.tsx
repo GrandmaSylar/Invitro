@@ -65,7 +65,7 @@ export function Profile() {
     <div className="p-8 space-y-6">
       {/* User Info Card */}
       <div className="bg-card rounded p-6 flex flex-col md:flex-row items-center md:items-start gap-6" style={{ boxShadow: 'var(--shadow-card)' }}>
-        <div className="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center shadow-lg">
+        <div className="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-primary to-primary/70 rounded flex items-center justify-center shadow-lg">
           <span className="text-white text-3xl font-bold">{user?.fullName?.charAt(0).toUpperCase() || "U"}</span>
         </div>
         <div className="flex-1 text-center md:text-left">
@@ -102,7 +102,7 @@ export function Profile() {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -111,7 +111,7 @@ export function Profile() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <div>
@@ -120,7 +120,7 @@ export function Profile() {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full px-4 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <Button

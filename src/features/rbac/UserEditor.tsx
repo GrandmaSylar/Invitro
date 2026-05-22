@@ -50,7 +50,6 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
     username: '',
     password: '',
     roleId: '',
-    sendInvite: true,
   });
 
   const [localOverrides, setLocalOverrides] = useState<PermissionMap>({});
@@ -65,7 +64,6 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
           username: user.username,
           password: '',
           roleId: user.roleId,
-          sendInvite: false,
         });
         setLocalOverrides({ ...(user.permissionOverrides || {}) });
       } else {
@@ -75,7 +73,6 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
           username: '',
           password: '',
           roleId: roles.length > 0 ? roles[0].id : '',
-          sendInvite: true,
         });
         setLocalOverrides({});
       }
@@ -97,7 +94,7 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
     try {
       setLoading(true);
       await rbacService.deactivateUser(user.id);
-      showSuccess({ title: "User Deactivated", description: "The user has been deactivated." });
+      toast.success('User has been deactivated');
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
@@ -112,14 +109,6 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
   };
 
   const handleSave = async () => {
-    const actionStr = mode === 'create' ? 'create this new user' : 'save changes to this user';
-    const confirmed = await showConfirm({
-      title: mode === 'create' ? "Create User" : "Save Changes",
-      description: `Are you sure you want to ${actionStr}?`,
-      confirmText: mode === 'create' ? "Create" : "Save"
-    });
-    if (!confirmed) return;
-    
     try {
       setLoading(true);
       if (mode === 'create') {
@@ -134,11 +123,7 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
         };
         await rbacService.createUser(payload);
         
-        if (formData.sendInvite) {
-          showSuccess({ title: "User Created", description: `User created and invitation sent to ${formData.email}` });
-        } else {
-          showSuccess({ title: "User Created", description: 'User created successfully' });
-        }
+        toast.success('User created successfully');
       } else if (user) {
         await rbacService.updateUser(user.id, {
           fullName: formData.fullName,
@@ -147,8 +132,10 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
           ...(formData.password ? { password: formData.password } : {})
         });
         await rbacService.updateUserOverrides(user.id, localOverrides);
-        showSuccess({ title: "User Updated", description: 'User updated successfully' });
+        
+        toast.success('User updated successfully');
       }
+      
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
@@ -162,10 +149,10 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full sm:max-w-2xl flex flex-col max-h-[90vh] z-[100] p-0 gap-0 overflow-hidden backdrop-blur-sm">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>{mode === 'create' ? 'Invite New User' : 'Edit User'}</DialogTitle>
+          <DialogTitle>{mode === 'create' ? 'Create New User' : 'Edit User'}</DialogTitle>
           <DialogDescription>
             {mode === 'create' 
-              ? 'Add a new user to the system and assign their role.' 
+              ? 'Create a new user account and assign their role.' 
               : 'Update user details and role assignment.'}
           </DialogDescription>
         </DialogHeader>
@@ -244,21 +231,6 @@ export function UserEditor({ open, onOpenChange, mode, user, onSuccess }: UserEd
                 </SelectContent>
               </Select>
             </div>
-            
-            {mode === 'create' && (
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="space-y-0.5">
-                  <Label className="text-base">Send Invitation</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Email an invite link to the user.
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.sendInvite as boolean}
-                  onCheckedChange={(checked) => handleChange('sendInvite', checked)}
-                />
-              </div>
-            )}
             
             {mode === 'edit' && user && (
               <div className="rounded-lg border p-4 space-y-4">

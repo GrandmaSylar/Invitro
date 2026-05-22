@@ -42,7 +42,7 @@ export function HospitalRecords() {
     <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600">
+        <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20 text-primary">
           <Building2 size={24} />
         </div>
         <div>
@@ -211,7 +211,7 @@ export function HospitalRecords() {
                           selectedHospital === index 
                             ? 'bg-primary/10 border-l-4 border-l-primary' 
                             : index === focusedHospitalIndex
-                              ? 'bg-muted ring-2 ring-inset ring-blue-500'
+                              ? 'bg-muted ring-2 ring-inset ring-primary'
                               : index % 2 === 0
                                 ? 'bg-background hover:bg-muted/50'
                                 : 'bg-muted/30 hover:bg-muted/50'
@@ -450,7 +450,7 @@ export function HospitalRecords() {
                           selectedDoctor === index 
                             ? 'bg-primary/10 border-l-4 border-l-primary' 
                             : index === focusedDoctorIndex
-                              ? 'bg-muted ring-2 ring-inset ring-blue-500'
+                              ? 'bg-muted ring-2 ring-inset ring-primary'
                               : index % 2 === 0
                                 ? 'bg-background hover:bg-muted/50'
                                 : 'bg-muted/30 hover:bg-muted/50'

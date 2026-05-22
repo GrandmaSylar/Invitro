@@ -57,7 +57,7 @@ export function PaymentPanel({
 
   return (
     <Card className={cn("shadow-md border-primary/10 overflow-hidden group", className)}>
-      <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-teal-400" />
+      <div className="h-1.5 w-full bg-gradient-to-r from-primary to-primary/60" />
       <CardHeader className="pb-3 bg-muted/20">
         <div className="flex items-center gap-2">
           <Receipt className="text-primary h-5 w-5" />

@@ -75,7 +75,7 @@ function StatCard({ title, value, icon: Icon, gradient, iconBg, isLoading }: {
   isLoading?: boolean;
 }) {
   return (
-    <div className={`relative rounded-2xl border border-border/50 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300`}>
+    <div className={`relative rounded-xl border border-border/50 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300`}>
       <div className={`absolute inset-0 opacity-[0.03] ${gradient}`} />
       <div className="relative flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
@@ -104,7 +104,7 @@ function ChartCard({ title, subtitle, icon: Icon, children, className = "" }: {
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-border/50 bg-card shadow-sm overflow-hidden ${className}`}>
+    <div className={`rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden ${className}`}>
       <div className="p-6 pb-2">
         <div className="flex items-center gap-2.5 mb-1">
           <Icon size={18} className="text-primary" />
@@ -154,7 +154,7 @@ export function MainDashboard() {
 
       {/* Hero Banner */}
       <motion.div 
-        className="relative w-full rounded-3xl overflow-hidden shadow-2xl" 
+        className="relative w-full rounded-xl overflow-hidden" 
         style={{ height: '240px' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -169,13 +169,13 @@ export function MainDashboard() {
         />
 
         {/* Colour-tinted dark overlay so text stays readable */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/65 to-slate-950/30" />
 
         {/* Bottom fade-to-background */}
         <div
-          className="absolute inset-x-0 bottom-0 h-32"
+          className="absolute inset-x-0 bottom-0 h-20 pointer-events-none"
           style={{
-            background: 'linear-gradient(to bottom, transparent, hsl(var(--background)))',
+            background: 'linear-gradient(to bottom, transparent, var(--background))',
           }}
         />
 
@@ -202,7 +202,7 @@ export function MainDashboard() {
               </Button>
               <Button
                 size="lg"
-                className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xl text-md font-bold border-none transition-all duration-300 hover:scale-105 hover:shadow-indigo-500/50"
+                className="gap-2 bg-gradient-to-r from-primary to-[#1a447c] hover:from-primary/90 hover:to-[#1e4e8d] text-white shadow-xl shadow-primary/10 text-md font-bold border-none transition-all duration-300 hover:scale-105"
                 onClick={(e) => { handleInteract(); navigate('/patients?tab=new-patient'); }}
               >
                 <Users size={18} />
@@ -219,8 +219,8 @@ export function MainDashboard() {
           title="Patients Today"
           value={stats?.patientsToday ?? 0}
           icon={Users}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-700"
-          iconBg="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+          gradient="bg-gradient-to-br from-primary to-[#1a447c]"
+          iconBg="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground"
           isLoading={statsLoading}
         />
         <StatCard
@@ -268,8 +268,8 @@ export function MainDashboard() {
               <ComposedChart data={charts.dailyTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gradPatients" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(221, 83%, 53%)" stopOpacity={0} />
+                    <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gradTests" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0.3} />
@@ -298,7 +298,7 @@ export function MainDashboard() {
                 <Area
                   type="monotone"
                   dataKey="patients"
-                  stroke="hsl(221, 83%, 53%)"
+                  stroke="var(--primary)"
                   strokeWidth={2.5}
                   fill="url(#gradPatients)"
                   name="patients"
@@ -468,29 +468,29 @@ export function MainDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl hover-lift"
           onClick={() => navigate("/patients?tab=new-patient")}
         >
-          <div className="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-            <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-full">
+            <Users className="h-6 w-6 text-primary dark:text-primary-foreground" />
           </div>
           Register New Patient
         </Button>
 
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl hover-lift"
           onClick={() => navigate("/patients?tab=existing-patient")}
         >
-          <div className="p-2.5 bg-teal-100 dark:bg-teal-900/30 rounded-full">
-            <Activity className="h-6 w-6 text-teal-600 dark:text-teal-400" />
+          <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-full">
+            <Activity className="h-6 w-6 text-primary dark:text-primary-foreground" />
           </div>
           Existing Patients
         </Button>
 
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl hover-lift"
           onClick={() => navigate("/results-entry")}
         >
           <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-full">

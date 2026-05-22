@@ -58,12 +58,12 @@ export function ExistingPatientTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-teal-500/10 border-l-4 border-teal-600 p-5 shadow-sm rounded">
+      <div className="bg-primary/10 dark:bg-primary/20 border-l-4 border-primary p-5 shadow-sm rounded-md">
         <div className="flex items-center gap-3">
-          <User className="text-teal-700" size={24} />
+          <User className="text-primary dark:text-primary-foreground" size={24} />
           <div>
-            <h3 className="font-bold text-teal-700 dark:text-teal-400">Existing Patient Search</h3>
-            <p className="text-sm text-teal-700 dark:text-teal-400">Search for patients to view their laboratory history.</p>
+            <h3 className="font-bold text-primary dark:text-primary-foreground">Existing Patient Search</h3>
+            <p className="text-sm text-primary/80 dark:text-primary-foreground/80">Search for patients to view their laboratory history.</p>
           </div>
         </div>
       </div>
@@ -271,8 +271,8 @@ export function RecordItem({ record, onOpen }: { record: LabRecord, onOpen: () =
   return (
     <div className="flex items-center justify-between p-3 bg-background border rounded-lg hover:border-primary/50 transition-colors">
       <div className="flex items-center gap-4">
-        <div className="p-2 bg-blue-500/10 rounded">
-          <FileText className="text-blue-600" size={20} />
+        <div className="p-2 bg-primary/10 dark:bg-primary/20 rounded">
+          <FileText className="text-primary dark:text-primary-foreground" size={20} />
         </div>
         <div>
           <div className="font-mono text-sm font-semibold text-foreground">{record.labNumber}</div>

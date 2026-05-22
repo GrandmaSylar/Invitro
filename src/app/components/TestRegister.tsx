@@ -431,7 +431,7 @@ export function TestRegister() {
                       <input type="text" value={inlineParamRange} onChange={(e) => setInlineParamRange(e.target.value)}
                         className="w-full px-3 py-2 rounded-lg border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all" placeholder="e.g. 12-16" />
                     </div>
-                    <Button type="button" variant="blue" size="sm" onClick={() => { addInlineParam(); setShowInlineSuggestions(false); }} className="shrink-0">
+                    <Button type="button" variant="default" size="sm" onClick={() => { addInlineParam(); setShowInlineSuggestions(false); }} className="shrink-0">
                       <Plus size={14} className="mr-1" /> Add
                     </Button>
                   </div>
@@ -696,7 +696,7 @@ export function TestRegister() {
                       className="w-full px-4 py-2.5 rounded-xl border border-border/60 bg-background/50 text-foreground text-sm focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium" />
                   </div>
                   <div className="flex gap-2">
-                    <Button type="button" variant="blue" className="flex-1"
+                    <Button type="button" variant="default" className="flex-1"
                       disabled={createParameter.isPending || updateParameter.isPending}
                       onClick={async () => {
                         if (!libParamName.trim()) return toast.error("Parameter name is required");

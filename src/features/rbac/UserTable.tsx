@@ -140,7 +140,7 @@ export function UserTable() {
             <p className="text-muted-foreground">Manage users, their roles, and individual permissions.</p>
           </div>
           <Button onClick={() => openEditor('create')} className="gap-2">
-            <Plus size={16} /> Invite User
+            <Plus size={16} /> Create User
           </Button>
         </div>
 
