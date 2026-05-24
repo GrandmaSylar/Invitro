@@ -2,6 +2,15 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.0.0
+
+### Major UI & Theming Engine Overhaul
+- **Theme Preset System**: Introduced a new `ThemePresetSection` allowing users to quickly swap between curated color themes and appearances.
+- **Global Search**: Added a powerful `GlobalSearch` component with a command palette (`Ctrl+K`) for instantly jumping to patients, tests, settings, and other resources.
+- **Login Experience**: Redesigned the `LoginPage` for a smoother authentication flow and improved aesthetics.
+- **Centralized Dialog Management**: Refactored application modals into `GlobalDialogs` to reduce overlapping windows, fix Z-index issues, and streamline user workflows.
+- **Release Ready**: Graduated from the `0.x` beta phase into a stable `1.0.0` major release, solidifying the core architecture and UI components.
+
 ## Version 0.2.6
 
 ### System-Wide Visual Redesign & Close Interception
