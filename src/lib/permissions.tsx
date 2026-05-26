@@ -1,4 +1,4 @@
-import { LucideIcon, BarChart3, Stethoscope, TestTubes, Hospital, ClipboardPen, User, Settings, ShieldCheck } from 'lucide-react';
+import { LucideIcon, BarChart3, Stethoscope, TestTubes, Hospital, ClipboardPen, User, Settings, ShieldCheck, Bell } from 'lucide-react';
 
 export const PERMISSIONS = {
   'dashboard.view': 'dashboard.view',
@@ -24,6 +24,7 @@ export const PERMISSIONS = {
   'settings.audit_log': 'settings.audit_log',
   'settings.health': 'settings.health',
   'settings.database': 'settings.database',
+  'notifications.view': 'notifications.view',
   'rbac.manage_roles': 'rbac.manage_roles',
   'rbac.manage_users': 'rbac.manage_users',
   'rbac.view_audit': 'rbac.view_audit',
@@ -110,6 +111,13 @@ export const PERMISSION_MODULES: PermissionModule[] = [
       { key: 'rbac.manage_roles', label: 'Manage Roles', description: 'Create, edit, or delete custom roles' },
       { key: 'rbac.manage_users', label: 'Manage Users', description: 'Assign roles and overrides to users' },
       { key: 'rbac.view_audit', label: 'View Audit Logs', description: 'View RBAC related audit logs' },
+    ]
+  },
+  {
+    label: 'Notifications',
+    icon: Bell,
+    permissions: [
+      { key: 'notifications.view', label: 'View Notifications', description: 'Access the notifications page' },
     ]
   }
 ];

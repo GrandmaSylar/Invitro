@@ -16,6 +16,7 @@ export interface User {
   phone?: string;
   roleId: string;
   permissionOverrides: Record<string, boolean>;
+  themePreset?: 'default' | 'ocean-breeze' | 'turquoise-harmony' | 'silent-waters';
   twoFactorEnabled: boolean;
   twoFactorMethod?: 'totp' | 'sms' | 'email';
   status: 'active' | 'inactive' | 'suspended';
@@ -237,6 +238,18 @@ export interface AuditFilters {
   dateTo?: string;
   limit?: number;
   offset?: number;
+}
+
+// ── Notifications ──────────────────────────────────────────────
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  type: 'info' | 'warning' | 'success' | 'error';
+  createdAt: string;
 }
 
 // ── Settings ───────────────────────────────────────────────────

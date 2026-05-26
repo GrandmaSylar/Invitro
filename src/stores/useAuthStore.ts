@@ -7,6 +7,7 @@ interface AuthStore extends AuthSession {
   logout: () => void;
   completeTwoFactor: () => void;
   updateResolvedPermissions: (permissions: PermissionMap) => void;
+  updateThemePreset: (preset: 'default' | 'ocean-breeze' | 'turquoise-harmony' | 'silent-waters') => void;
 }
 
 const initialState: AuthSession = {
@@ -55,6 +56,12 @@ export const useAuthStore = create<AuthStore>()(
       },
       completeTwoFactor: () => set({ pendingTwoFactor: false }),
       updateResolvedPermissions: (resolvedPermissions) => set({ resolvedPermissions }),
+      updateThemePreset: (preset) => {
+        const currentUser = get().user;
+        if (currentUser) {
+          set({ user: { ...currentUser, themePreset: preset } });
+        }
+      },
     }),
     {
       name: 'lims-auth',

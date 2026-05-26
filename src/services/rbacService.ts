@@ -186,4 +186,43 @@ export const rbacService = {
     if (error) throw new Error(`Failed to deactivate user: ${error.message}`);
     return mapUserRow(data);
   },
+
+  updateThemePreset: async (userId: string, preset: 'default' | 'ocean-breeze' | 'turquoise-harmony' | 'silent-waters'): Promise<User> => {
+    try {
+      // 1. Try directly updating the dedicated theme_preset column
+      const { data, error } = await supabase
+        .from('users')
+        .update({ theme_preset: preset })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return mapUserRow(data);
+    } catch (err) {
+      // 2. Fallback: Save within permission_overrides JSONB
+      const { data: userRow, error: fetchError } = await supabase
+        .from('users')
+        .select('permission_overrides')
+        .eq('id', userId)
+        .single();
+
+      if (fetchError || !userRow) throw new Error(`User profile not found: ${fetchError?.message}`);
+
+      const overrides = {
+        ...(userRow.permission_overrides as Record<string, any> || {}),
+        _theme_preset: preset
+      };
+
+      const { data, error: updateError } = await supabase
+        .from('users')
+        .update({ permission_overrides: overrides })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (updateError) throw new Error(`Failed to save theme preset: ${updateError.message}`);
+      return mapUserRow(data);
+    }
+  },
 };

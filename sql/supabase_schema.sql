@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone                TEXT,
     role_id              TEXT        NOT NULL REFERENCES roles(id),
     permission_overrides JSONB       NOT NULL DEFAULT '{}',
+    theme_preset         TEXT        NOT NULL DEFAULT 'default',
     two_factor_enabled   BOOLEAN     NOT NULL DEFAULT FALSE,
     two_factor_method    TEXT,
     status               TEXT        NOT NULL DEFAULT 'active',
@@ -196,6 +197,20 @@ CREATE TABLE IF NOT EXISTS test_results (
 
 CREATE INDEX IF NOT EXISTS ix_test_results_lab_record_test_id ON test_results(lab_record_test_id);
 
+-- ── 16. NOTIFICATIONS ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS notifications (
+    id                TEXT        NOT NULL PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+    user_id           TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title             TEXT        NOT NULL,
+    message           TEXT        NOT NULL,
+    is_read           BOOLEAN     NOT NULL DEFAULT FALSE,
+    type              TEXT        NOT NULL DEFAULT 'info',
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS ix_notifications_created_at ON notifications(created_at DESC);
+
 -- ============================================================
 -- SEED DATA: Default system roles
 -- ============================================================
@@ -251,6 +266,7 @@ ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lab_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE lab_record_tests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE test_results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Permissive policies: allow authenticated users full access
 -- (tighten these per-table as needed for production)
@@ -281,7 +297,13 @@ CREATE POLICY "Allow authenticated all" ON patients FOR ALL TO authenticated USI
 CREATE POLICY "Allow authenticated all" ON lab_records FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated all" ON lab_record_tests FOR ALL TO authenticated USING (true);
 CREATE POLICY "Allow authenticated all" ON test_results FOR ALL TO authenticated USING (true);
+CREATE POLICY "Allow authenticated all" ON notifications FOR ALL TO authenticated USING (true);
 
 -- Allow anon access to roles and users for login flow (read-only)
 CREATE POLICY "Allow anon read roles" ON roles FOR SELECT TO anon USING (true);
 CREATE POLICY "Allow anon read users" ON users FOR SELECT TO anon USING (true);
+
+-- ── MIGRATIONS ───────────────────────────────────────────────
+-- Run this query to update an existing database:
+-- ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preset TEXT NOT NULL DEFAULT 'default';
+

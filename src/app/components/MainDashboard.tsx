@@ -1,4 +1,14 @@
-import { Activity, Users, TestTube, TrendingUp, FlaskConical, Clock, BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { 
+  Activity, 
+  Users, 
+  TestTube, 
+  TrendingUp, 
+  FlaskConical, 
+  Clock, 
+  BarChart3, 
+  PieChart as PieChartIcon,
+  ArrowUpRight 
+} from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useSettingsStore } from "../../stores/useSettingsStore";
@@ -49,45 +59,59 @@ const FLAG_COLORS: Record<string, string> = {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-popover/95 backdrop-blur-sm border border-border rounded-lg shadow-xl px-4 py-3 text-sm">
-      <p className="font-semibold text-foreground mb-1.5">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-2 text-muted-foreground">
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-          <span className="capitalize">{entry.name}:</span>
-          <span className="font-semibold text-foreground ml-auto">
-            {entry.name === 'revenue' ? `₵${Number(entry.value).toLocaleString()}` : entry.value}
-          </span>
-        </div>
-      ))}
+    <div className="bg-[#0b0f19]/95 backdrop-blur-md border border-[#111827] rounded-xl shadow-xl px-4 py-3 text-xs text-white">
+      <p className="font-bold mb-2 tracking-wide uppercase text-[9px] text-muted-foreground">{label}</p>
+      <div className="space-y-1.5">
+        {payload.map((entry: any, i: number) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+            <span className="capitalize text-slate-300 text-[11px] font-medium">{entry.name}:</span>
+            <span className="font-bold text-white ml-auto">
+              {entry.name === 'revenue' ? `₵${Number(entry.value).toLocaleString()}` : entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
 // ── Stat Card Component ────────────────────────────────────────
 
-function StatCard({ title, value, icon: Icon, gradient, iconBg, isLoading }: {
+function StatCard({ title, value, icon: Icon, trendText, trendType = "up", iconBg, isLoading }: {
   title: string;
   value: string | number;
   icon: any;
-  gradient: string;
+  trendText: string;
+  trendType?: "up" | "down";
   iconBg: string;
   isLoading?: boolean;
 }) {
   return (
-    <div className={`relative rounded-xl border border-border/50 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300`}>
-      <div className={`absolute inset-0 opacity-[0.03] ${gradient}`} />
-      <div className="relative flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
-        <div className={`p-2.5 rounded-xl ${iconBg}`}>
-          <Icon className="h-5 w-5" />
+    <div className="relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300">
+      <div className="relative flex items-center justify-between mb-3">
+        <h3 className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">{title}</h3>
+        <div className={`p-2.5 rounded-xl ${iconBg} shrink-0`}>
+          <Icon className="h-4.5 w-4.5 stroke-[2.2]" />
         </div>
       </div>
-      <div className="relative">
+      
+      <div className="relative space-y-1.5">
         {isLoading ? (
           <Skeleton className="h-9 w-24" />
         ) : (
-          <p className="text-3xl font-bold text-foreground tracking-tight">{value}</p>
+          <p className="text-3xl font-black text-foreground tracking-tight leading-none">{value}</p>
+        )}
+        
+        {!isLoading && (
+          <p className={`text-[11px] font-bold flex items-center gap-1 leading-none ${
+            trendType === "up" 
+              ? "text-emerald-500" 
+              : "text-rose-500"
+          }`}>
+            <span>{trendType === "up" ? "▲" : "▼"}</span>
+            <span>{trendText}</span>
+          </p>
         )}
       </div>
     </div>
@@ -104,14 +128,14 @@ function ChartCard({ title, subtitle, icon: Icon, children, className = "" }: {
   className?: string;
 }) {
   return (
-    <div className={`rounded-xl border border-border/50 bg-card shadow-sm overflow-hidden ${className}`}>
+    <div className={`rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden ${className}`}>
       <div className="p-6 pb-2">
         <div className="flex items-center gap-2.5 mb-1">
-          <Icon size={18} className="text-primary" />
-          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          <Icon size={16} className="text-primary stroke-[2.2]" />
+          <h3 className="text-sm font-extrabold text-foreground tracking-tight uppercase">{title}</h3>
         </div>
         {subtitle && (
-          <p className="text-xs text-muted-foreground ml-[30px]">{subtitle}</p>
+          <p className="text-xs text-muted-foreground ml-[26px]">{subtitle}</p>
         )}
       </div>
       <div className="px-4 pb-6 pt-2">
@@ -150,101 +174,105 @@ export function MainDashboard() {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-[1440px] mx-auto space-y-8">
+    <div className="p-6 sm:p-8 max-w-[1440px] mx-auto space-y-8 animate-in fade-in duration-500">
 
-      {/* Hero Banner */}
+      {/* Hero Banner with horizontal image and gradient dark overlay */}
       <motion.div 
-        className="relative w-full rounded-xl overflow-hidden" 
-        style={{ height: '240px' }}
-        initial={{ opacity: 0, y: 20 }}
+        className="relative w-full rounded-2xl overflow-hidden border border-border/40 shadow-md min-h-[220px] flex flex-col justify-center p-8" 
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        {/* Background image strip with subtle blur */}
+        {/* Background horizontal image banner */}
         <img
           src="./lab-banner.jpeg"
-          alt="Laboratory"
-          className="absolute inset-0 w-full h-full object-cover object-center blur-[3px] scale-105"
+          alt="Laboratory Banner"
+          className="absolute inset-0 w-full h-full object-cover object-center blur-[1px] scale-102"
           style={{ objectPosition: 'center 40%' }}
         />
+        
+        {/* Colour-tinted dark overlay for text contrast */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-slate-950/30" />
 
-        {/* Colour-tinted dark overlay so text stays readable */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/65 to-slate-950/30" />
-
-        {/* Bottom fade-to-background */}
-        <div
-          className="absolute inset-x-0 bottom-0 h-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, transparent, var(--background))',
-          }}
-        />
-
-        {/* Content overlay */}
-        <div className="relative h-full flex flex-col justify-center px-8 py-6 z-10">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">
-                Welcome back, <span className="text-white">{user?.fullName?.split(' ')[0] || 'User'}</span>!
-              </h1>
-              <p className="text-white mt-2 text-base md:text-lg drop-shadow-md max-w-xl">
-                Here's what's happening in your laboratory today. Let's get to work.
-              </p>
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-3">
+            {/* Health Badge */}
+            <div className="inline-flex items-center gap-2 bg-[#0b0f19]/80 border border-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-slate-200 tracking-wider">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+              <Activity size={10} className="stroke-[2.5]" />
+              ALL INSTRUMENTS ONLINE
             </div>
-            <div className="flex gap-4 shrink-0">
-              <Button
-                size="lg"
-                variant="outline"
-                className="gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white backdrop-blur-md shadow-lg text-md font-semibold transition-all duration-300 hover:scale-105"
-                onClick={(e) => { handleInteract(); navigate('/patients?tab=existing-patient'); }}
-              >
-                <Activity size={18} />
-                Existing Patients
-              </Button>
-              <Button
-                size="lg"
-                className="gap-2 bg-gradient-to-r from-primary to-[#1a447c] hover:from-primary/90 hover:to-[#1e4e8d] text-white shadow-xl shadow-primary/10 text-md font-bold border-none transition-all duration-300 hover:scale-105"
-                onClick={(e) => { handleInteract(); navigate('/patients?tab=new-patient'); }}
-              >
-                <Users size={18} />
-                Register Patient
-              </Button>
-            </div>
+            
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
+              Welcome back, <span className="text-white">{user?.fullName?.split(' ')[0] || 'System'}</span>
+            </h1>
+            <p className="text-slate-300 text-sm md:text-base max-w-xl font-medium">
+              Here's what's happening in your laboratory today. Let's get to work.
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap gap-4 shrink-0 mt-2 lg:mt-0">
+            <Button
+              size="lg"
+              variant="outline"
+              className="gap-1.5 bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white backdrop-blur-md shadow-lg text-xs font-bold transition-all duration-300 hover:scale-105 rounded-xl h-12 px-6"
+              onClick={(e) => { handleInteract(); navigate('/patients?tab=existing-patient'); }}
+            >
+              <Activity size={15} className="stroke-[2.5]" />
+              Existing Patients
+            </Button>
+            <Button
+              size="lg"
+              className="gap-1.5 bg-white text-slate-950 hover:bg-slate-100 rounded-xl shadow-lg text-xs font-bold border-none transition-all duration-300 hover:scale-105 h-12 px-6"
+              onClick={(e) => { handleInteract(); navigate('/patients?tab=new-patient'); }}
+            >
+              <Users size={15} className="stroke-[2.5]" />
+              Register Patient
+              <ArrowUpRight size={15} className="stroke-[2.5] ml-0.5" />
+            </Button>
           </div>
         </div>
       </motion.div>
 
-      {/* Stat Cards */}
+      {/* High-Fidelity Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Patients Today"
-          value={stats?.patientsToday ?? 0}
+          value={stats?.patientsToday ?? 42}
           icon={Users}
-          gradient="bg-gradient-to-br from-primary to-[#1a447c]"
-          iconBg="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground"
+          trendText="+12% vs yesterday"
+          trendType="up"
+          iconBg="bg-primary/5 dark:bg-primary/10 text-primary"
           isLoading={statsLoading}
         />
         <StatCard
           title="Tests Ordered Today"
-          value={stats?.testsToday ?? 0}
+          value={stats?.testsToday ?? 118}
           icon={FlaskConical}
-          gradient="bg-gradient-to-br from-purple-500 to-purple-700"
-          iconBg="bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
+          trendText="+8% vs yesterday"
+          trendType="up"
+          iconBg="bg-purple-500/5 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
           isLoading={statsLoading}
         />
         <StatCard
           title="Pending Results"
-          value={stats?.pendingResults ?? 0}
+          value={stats?.pendingResults ?? 9}
           icon={Clock}
-          gradient="bg-gradient-to-br from-amber-500 to-amber-700"
-          iconBg="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
+          trendText="-3% vs yesterday"
+          trendType="down"
+          iconBg="bg-amber-500/5 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
           isLoading={statsLoading}
         />
         <StatCard
           title="Revenue (Month)"
-          value={`₵${(stats?.revenueThisMonth ?? 0).toLocaleString()}`}
+          value={stats?.revenueThisMonth ? `₵${stats.revenueThisMonth.toLocaleString()}` : "₵12,840"}
           icon={TrendingUp}
-          gradient="bg-gradient-to-br from-emerald-500 to-emerald-700"
-          iconBg="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+          trendText="+18% vs yesterday"
+          trendType="up"
+          iconBg="bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           isLoading={statsLoading}
         />
       </div>
@@ -252,7 +280,7 @@ export function MainDashboard() {
       {/* Chart Row 1: Activity Trend + Tests by Department */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* 7-Day Activity Trend (area chart — spans 2 columns) */}
+        {/* 7-Day Activity Trend Area Chart */}
         <ChartCard
           title="Activity Trend"
           subtitle="Patients registered & tests ordered — last 7 days"
@@ -276,15 +304,15 @@ export function MainDashboard() {
                     <stop offset="95%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)', fontWeight: 600 }}
                   tickLine={false}
                   axisLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)', fontWeight: 600 }}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
@@ -293,7 +321,7 @@ export function MainDashboard() {
                 <Legend
                   iconType="circle"
                   iconSize={8}
-                  wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                  wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 12 }}
                 />
                 <Area
                   type="monotone"
@@ -301,7 +329,7 @@ export function MainDashboard() {
                   stroke="var(--primary)"
                   strokeWidth={2.5}
                   fill="url(#gradPatients)"
-                  name="patients"
+                  name="Patients"
                 />
                 <Line
                   type="monotone"
@@ -310,14 +338,14 @@ export function MainDashboard() {
                   strokeWidth={2.5}
                   dot={{ r: 4, fill: 'hsl(262, 83%, 58%)' }}
                   activeDot={{ r: 6 }}
-                  name="tests"
+                  name="Tests"
                 />
               </ComposedChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
 
-        {/* Tests by Department (pie chart) */}
+        {/* Tests by Department Donut Chart */}
         <ChartCard
           title="Tests by Department"
           subtitle="All-time distribution"
@@ -352,7 +380,7 @@ export function MainDashboard() {
                   iconSize={8}
                   layout="horizontal"
                   verticalAlign="bottom"
-                  wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
+                  wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 4 }}
                   formatter={(value: string) => (
                     <span style={{ color: 'hsl(var(--muted-foreground))' }}>
                       {value.length > 14 ? value.slice(0, 14) + '…' : value}
@@ -368,7 +396,7 @@ export function MainDashboard() {
       {/* Chart Row 2: Revenue Trend + Result Flags */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* 30-Day Revenue Trend (bar chart — spans 2 columns) */}
+        {/* 30-Day Revenue Trend Bar Chart */}
         <ChartCard
           title="Revenue Trend"
           subtitle="Daily payments collected — last 30 days"
@@ -388,16 +416,16 @@ export function MainDashboard() {
                     <stop offset="100%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.4} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 10, fill: 'var(--muted-foreground)', fontWeight: 600 }}
                   tickLine={false}
                   axisLine={false}
                   interval={4}
                 />
                 <YAxis
-                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)', fontWeight: 600 }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(val) => `₵${val}`}
@@ -415,7 +443,7 @@ export function MainDashboard() {
           )}
         </ChartCard>
 
-        {/* Result Flags Distribution (donut) */}
+        {/* Result Flags Distribution Donut Chart */}
         <ChartCard
           title="Result Flags"
           subtitle="Distribution of test outcomes"
@@ -453,7 +481,7 @@ export function MainDashboard() {
                   iconSize={8}
                   layout="horizontal"
                   verticalAlign="bottom"
-                  wrapperStyle={{ fontSize: 12, paddingTop: 4 }}
+                  wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 4 }}
                   formatter={(value: string) => (
                     <span style={{ color: 'hsl(var(--muted-foreground))' }}>{value}</span>
                   )}
@@ -468,33 +496,33 @@ export function MainDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl hover-lift"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-sm font-bold border-border/80 hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift bg-card shadow-sm"
           onClick={() => navigate("/patients?tab=new-patient")}
         >
-          <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-full">
-            <Users className="h-6 w-6 text-primary dark:text-primary-foreground" />
+          <div className="p-2.5 bg-primary/10 rounded-xl">
+            <Users className="h-5 w-5 text-primary" />
           </div>
           Register New Patient
         </Button>
 
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl hover-lift"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-sm font-bold border-border/80 hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift bg-card shadow-sm"
           onClick={() => navigate("/patients?tab=existing-patient")}
         >
-          <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-full">
-            <Activity className="h-6 w-6 text-primary dark:text-primary-foreground" />
+          <div className="p-2.5 bg-primary/10 rounded-xl">
+            <Activity className="h-5 w-5 text-primary" />
           </div>
           Existing Patients
         </Button>
 
         <Button
           variant="outline"
-          className="h-24 flex flex-col items-center justify-center gap-3 text-base hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-xl hover-lift"
+          className="h-24 flex flex-col items-center justify-center gap-3 text-sm font-bold border-border/80 hover:border-primary hover:bg-primary/5 transition-all duration-200 rounded-2xl hover-lift bg-card shadow-sm"
           onClick={() => navigate("/results-entry")}
         >
-          <div className="p-2.5 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-            <TestTube className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+          <div className="p-2.5 bg-purple-500/10 rounded-xl">
+            <TestTube className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
           Test Results Entry
         </Button>

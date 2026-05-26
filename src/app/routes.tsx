@@ -10,6 +10,8 @@ import { Profile } from "./components/Profile";
 import { useAuthStore } from "../stores/useAuthStore";
 import { PERMISSIONS } from "../lib/permissions";
 import { SettingsPage } from "../features/settings/SettingsPage";
+import { HelpPage } from "../features/help/HelpPage";
+import { NotificationsPage } from "../features/notifications/NotificationsPage";
 
 import { LoginPage } from "../features/auth/LoginPage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
@@ -93,6 +95,8 @@ export const router = createHashRouter([
           { path: "results-entry", Component: withPermission(ResultsEntry), loader: requirePermission(PERMISSIONS['results_entry.view']) },
           { path: "profile", Component: withPermission(Profile), loader: requirePermission(PERMISSIONS['profile.view']) },
           { path: "settings", Component: withPermission(SettingsPage), loader: requirePermission(PERMISSIONS['settings.view']) },
+          { path: "help", Component: HelpPage },
+          { path: "notifications", Component: withPermission(NotificationsPage), loader: requirePermission(PERMISSIONS['notifications.view']) },
           { path: "rbac/users", Component: withPermission(UserTable), loader: requirePermission(PERMISSIONS['rbac.manage_users']) },
           { path: "rbac/permissions", Component: withPermission(PermissionMatrix), loader: requirePermission(PERMISSIONS['rbac.manage_roles']) },
           { path: "*", Component: NotFound },

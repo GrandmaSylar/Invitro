@@ -383,7 +383,7 @@ export function NewPatientTab() {
                       value={labNumber} 
                       readOnly
                       placeholder="Auto-generating..."
-                      className="flex-1 font-mono text-lg font-bold bg-primary/5 border-primary/20 text-primary dark:text-primary-foreground cursor-default" 
+                      className="flex-1 font-mono text-lg font-bold bg-primary/5 border-primary/20 text-primary dark:text-white cursor-default" 
                       disabled={isSaving}
                     />
                     <div className="px-4 py-2 border rounded-md bg-muted">

@@ -392,7 +392,7 @@ export function ResultPreview({
                         <th className="text-left py-2.5 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[20%]">
                           Reference Range
                         </th>
-                        <th className="text-left py-2.5 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[15%]">
+                        <th className="text-left py-2.5 px-4 text-[10px] font-bold text-muted-foreground uppercase tracking-wider w-[15%] no-print">
                           Status
                         </th>
                       </tr>
@@ -430,7 +430,7 @@ export function ResultPreview({
                             <td className="py-2.5 px-4 text-xs text-muted-foreground font-mono">
                               {row.referenceRange || "—"}
                             </td>
-                            <td className="py-2.5 px-4">
+                            <td className="py-2.5 px-4 no-print">
                               <span
                                 className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${flagStyle.bg} ${flagStyle.text} ${flagStyle.border} border`}
                               >

@@ -316,12 +316,14 @@ async function recalculateRecordTotals(labRecordId: string): Promise<void> {
         requiredResultsCount += (params && params.length > 0) ? params.length : 1;
       }
 
-      // Now get actual results count
+      // Now get actual results count (only counting non-empty, completed entries)
       const testIds = testsWithParams.map(t => t.id);
       const { count: actualResultsCount } = await supabase
         .from('test_results')
         .select('*', { count: 'exact', head: true })
-        .in('lab_record_test_id', testIds);
+        .in('lab_record_test_id', testIds)
+        .not('result', 'is', null)
+        .not('result', 'eq', '');
       
       if (actualResultsCount !== null && actualResultsCount >= requiredResultsCount) {
         newStatus = 'Closed';

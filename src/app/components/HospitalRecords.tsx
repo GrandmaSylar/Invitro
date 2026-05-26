@@ -52,31 +52,29 @@ export function HospitalRecords() {
       </div>
 
       <div className="flex flex-col">
-
-        {/* Tabs */}
-        <div className="border-b border-border/50 px-6 bg-muted/20">
-          <div className="flex gap-4">
-            {(["hospital", "doctor"] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className="relative px-2 py-4 text-sm font-semibold transition-colors duration-200 outline-none"
-              >
-                <span className={cn(
-                  "relative z-10",
-                  activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}>
-                  {tab === "hospital" ? "Hospital Register" : "Doctor's Register"}
-                </span>
-                {activeTab === tab && (
-                  <motion.div
-                    layoutId="activeTabIndicator"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"
-                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                  />
-                )}
-              </button>
-            ))}
+        {/* Premium pill sub-tabs */}
+        <div className="px-6 py-4 border-b border-border/50 bg-card/45">
+          <div className="border border-border/50 bg-muted/25 rounded-2xl p-1.5 inline-flex gap-1.5 shrink-0 max-w-full overflow-x-auto">
+            {(["hospital", "doctor"] as const).map((tab) => {
+              const isActive = activeTab === tab;
+              const Icon = tab === "hospital" ? Building2 : UserRound;
+              const label = tab === "hospital" ? "Hospital Register" : "Doctor's Register";
+              
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold transition-all duration-200 whitespace-nowrap rounded-xl cursor-pointer outline-none ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon size={15} className="shrink-0" />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

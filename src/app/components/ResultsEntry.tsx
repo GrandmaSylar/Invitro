@@ -1,8 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { toast } from "sonner";
-import { Search, Loader2, ArrowLeft, ArrowDownAz, ArrowUpZa } from "lucide-react";
-import { LabBanner } from "./LabBanner";
+import { 
+  Search, 
+  Loader2, 
+  ArrowLeft, 
+  ArrowDownAz, 
+  ArrowUpZa, 
+  User, 
+  Hash, 
+  Clock, 
+  Calendar, 
+  ChevronRight, 
+  Save, 
+  Printer,
+  FileText
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { useLabRecord, useLabRecordTests } from "../../hooks/useLabRecords";
@@ -10,6 +23,7 @@ import { usePatientsList } from "../../hooks/usePatients";
 import { PatientSearchBar, PatientResultsList } from "../../features/patients/ExistingPatientTab";
 import { useBulkEnterResults, useResultsByRecord } from "../../hooks/useResults";
 import { ResultPreview } from "../../features/patients/ResultPreview";
+import { useDoctors, useHospitals } from "../../hooks/useRegistry";
 import type { ResultFlag, LabRecord } from "../../lib/types";
 
 interface ResultRow {
@@ -21,6 +35,7 @@ interface ResultRow {
   unit: string;
   result: string;
   flag: ResultFlag;
+  isSaved?: boolean;
 }
 
 function computeFlag(result: string, refRange: string): ResultFlag {
@@ -75,18 +90,35 @@ export function ResultsEntry() {
   const { data: matchedRecord, isLoading: recordLoading } = useLabRecord(activeRecordId || "");
   const { data: recordTests = [], isLoading: testsLoading } = useLabRecordTests(activeRecordId || "");
   
+  // Existing saved results query to prevent vanishing values & edit locking
+  const { data: existingResults = [], isLoading: existingResultsLoading } = useResultsByRecord(activeRecordId || "");
+  
+  // Registry queries for doctor & hospital referral names
+  const { data: doctors = [] } = useDoctors();
+  const { data: hospitals = [] } = useHospitals();
+
+  const [panelSearchQuery, setPanelSearchQuery] = useState("");
+  const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
+
   // Mutations
   const bulkEnterResults = useBulkEnterResults();
 
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
+  const loadedRecordIdRef = useRef<string | null>(null);
+  const isDataReady = !recordLoading && !testsLoading && !existingResultsLoading;
 
-  // Update rows when record tests are loaded
+  // Update rows only once when record tests & existing results have finished loading
   useEffect(() => {
-    if (recordTests.length > 0) {
+    if (activeRecordId && isDataReady && recordTests.length > 0 && loadedRecordIdRef.current !== activeRecordId) {
       const rows: ResultRow[] = [];
       recordTests.forEach(test => {
         if (test.parameters && test.parameters.length > 0) {
           test.parameters.forEach(param => {
+            const saved = existingResults.find(r => 
+              r.labRecordTestId === test.id && 
+              r.testName === param.parameterName
+            );
+            
             rows.push({
               labRecordTestId: test.id,
               parentTestName: test.testName,
@@ -94,11 +126,17 @@ export function ResultsEntry() {
               department: test.department,
               referenceRange: param.referenceRange || "",
               unit: param.units || "",
-              result: "",
-              flag: "Normal",
+              result: saved ? (saved.result || "") : "",
+              flag: saved ? saved.flag : "Normal",
+              isSaved: !!saved && saved.result !== undefined && saved.result !== "",
             });
           });
         } else {
+          const saved = existingResults.find(r => 
+            r.labRecordTestId === test.id && 
+            r.testName === test.testName
+          );
+          
           rows.push({
             labRecordTestId: test.id,
             parentTestName: test.testName,
@@ -106,27 +144,57 @@ export function ResultsEntry() {
             department: test.department,
             referenceRange: "",
             unit: "",
-            result: "",
-            flag: "Normal",
+            result: saved ? (saved.result || "") : "",
+            flag: saved ? saved.flag : "Normal",
+            isSaved: !!saved && saved.result !== undefined && saved.result !== "",
           });
         }
       });
       setResultRows(rows);
+      loadedRecordIdRef.current = activeRecordId;
     }
-  }, [recordTests]);
+  }, [activeRecordId, isDataReady, recordTests, existingResults]);
+
+  // Auto-select the first test panel when loaded
+  useEffect(() => {
+    if (recordTests.length > 0 && !selectedTestId) {
+      setSelectedTestId(recordTests[0].id);
+    }
+  }, [recordTests, selectedTestId]);
+
+  const getReferralText = () => {
+    if (!matchedRecord) return "None";
+    if (matchedRecord.referralOption === "Doctor" && matchedRecord.referralDoctorId) {
+      const doc = doctors.find(d => d.id === matchedRecord.referralDoctorId);
+      return doc ? `Dr. ${doc.doctorName}${doc.speciality ? ` - ${doc.speciality}` : ""}` : "Loading Doctor...";
+    }
+    if (matchedRecord.referralOption === "Hospital" && matchedRecord.referralHospitalId) {
+      const hosp = hospitals.find(h => h.id === matchedRecord.referralHospitalId);
+      return hosp ? hosp.hospitalName : "Loading Hospital...";
+    }
+    return matchedRecord.referralOption || "None";
+  };
 
   const handleSubmit = async () => {
     if (!matchedRecord) return;
+    
+    // Filter to only submit newly entered/unsaved values to prevent DB row duplication
+    const unsavedRows = resultRows.filter(row => !row.isSaved && row.result.trim() !== "");
+    if (unsavedRows.length === 0) {
+      toast.info("No new parameter results to save.");
+      return;
+    }
+    
     const confirmed = await showConfirm({
       title: "Submit Results",
-      description: `Submit ${resultRows.length} result(s) for ${matchedRecord.patient?.patientName || "this patient"}?`,
+      description: `Submit ${unsavedRows.length} new result(s) for ${matchedRecord.patient?.patientName || "this patient"}?`,
       confirmText: "Submit"
     });
     if (!confirmed) return;
     
     try {
       await bulkEnterResults.mutateAsync(
-        resultRows.map(row => ({
+        unsavedRows.map(row => ({
           labRecordTestId: row.labRecordTestId,
           testName: row.testName,
           department: row.department,
@@ -141,6 +209,9 @@ export function ResultsEntry() {
       setPreviewRecordId(activeRecordId);
       setActiveRecordId(null);
       setResultRows([]);
+      setSelectedTestId(null);
+      setPanelSearchQuery("");
+      loadedRecordIdRef.current = null;
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -271,129 +342,325 @@ export function ResultsEntry() {
                 onClick={() => {
                   setActiveRecordId(null);
                   setResultRows([]);
+                  setSelectedTestId(null);
+                  setPanelSearchQuery("");
+                  loadedRecordIdRef.current = null;
                 }} 
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground -ml-2"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground -ml-2 shrink-0"
               >
                 <ArrowLeft size={16} />
                 Back to Patient List
               </Button>
 
-          {/* Patient banner — only when matchedRecord !== null */}
-          {matchedRecord && (
-            <div className="bg-primary/5 border border-primary/20 p-5 sm:p-6 rounded-2xl flex flex-wrap gap-8 shadow-sm">
-              <div>
-                <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Patient Name</p>
-                <p className="text-base font-bold text-foreground">{matchedRecord.patient?.patientName || "Unknown"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Lab Number</p>
-                <p className="text-base font-bold text-foreground font-mono">{matchedRecord.labNumber}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Date</p>
-                <p className="text-base font-bold text-foreground">{new Date(matchedRecord.recordDate).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary font-semibold uppercase tracking-wider mb-1">Tests Ordered</p>
-                <p className="text-base font-bold text-foreground">{recordTests.length}</p>
-              </div>
-            </div>
-          )}
+              {/* Patient summary strip — only when matchedRecord !== null */}
+              {matchedRecord && (
+                <div className="bg-card border border-border/60 p-5 rounded-2xl flex flex-wrap items-center justify-between gap-6 shadow-sm">
+                  <div className="flex items-center gap-3 min-w-[200px]">
+                    <div className="w-10 h-10 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <User size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        Patient
+                      </p>
+                      <p className="text-sm font-bold text-foreground">
+                        {matchedRecord.patient?.patientName || "Unknown"}
+                      </p>
+                    </div>
+                  </div>
 
-          {/* Results table — only when resultRows.length > 0 */}
-          {resultRows.length > 0 && (
-            <div className="bg-card border border-border/60 p-6 sm:p-8 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b border-border/60">Enter Test Results</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-muted border-b border-border/60">
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">Test Group</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide">Parameter / Test</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-32">Department</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-32">Ref Range</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-40">Result</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-24">Unit</th>
-                      <th className="text-left py-3 px-4 text-xs font-bold text-muted-foreground uppercase tracking-wide w-32">Flag</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {resultRows.map((row, i) => (
-                      <tr key={i} className="border-b border-border odd:bg-background even:bg-muted/30 hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 text-sm font-bold text-foreground bg-muted/10">{row.parentTestName}</td>
-                        <td className="py-3 px-4 text-sm font-semibold text-foreground pl-6 border-l-2 border-primary/20">{row.testName}</td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground">{row.department}</td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground font-mono">{row.referenceRange}</td>
-                        <td className="py-3 px-4">
-                          <input
-                            data-element-id={`result-${i + 1}`}
-                            className="w-full px-3 py-2 rounded border border-border/60 bg-background focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-mono font-medium text-foreground"
-                            value={row.result}
-                            onChange={e => updateResultRow(i, "result", e.target.value)}
-                            placeholder="0.00"
-                          />
-                        </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground">{row.unit}</td>
-                        <td className="py-3 px-4">
-                          <select
-                            className={`w-full px-3 py-2 border rounded focus:outline-none transition-all font-semibold text-sm ${
-                              row.flag === "Normal" ? "border-border/60 bg-background text-foreground focus:border-primary focus:ring-4 focus:ring-primary/10" :
-                              row.flag === "Abnormal" ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10" :
-                              "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
-                            }`}
-                            value={row.flag}
-                            onChange={e => updateResultRow(i, "flag", e.target.value as ResultFlag)}
-                          >
-                            <option value="Normal">Normal</option>
-                            <option value="Abnormal">Abnormal</option>
-                            <option value="Critical">Critical</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  <div className="flex items-center gap-3 min-w-[180px]">
+                    <div className="w-10 h-10 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <FileText size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        Lab Number
+                      </p>
+                      <p className="text-sm font-bold text-foreground font-mono">
+                        {matchedRecord.labNumber}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex justify-end mt-6 pt-4 border-t border-border gap-3">
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  data-element-id="preview-results-btn"
-                  onClick={() => {
-                    if (activeRecordId) setPreviewRecordId(activeRecordId);
-                  }}
-                  className="px-6"
-                >
-                  View Existing Results
-                </Button>
-                <Button 
-                  variant="green"
-                  size="lg"
-                  data-element-id="submit-results-btn"
-                  onClick={handleSubmit}
-                  disabled={bulkEnterResults.isPending}
-                  className="px-8 text-lg shadow-md hover:shadow-lg"
-                >
-                  {bulkEnterResults.isPending ? <Loader2 className="animate-spin mr-2" /> : null}
-                  Submit Results
-                </Button>
-              </div>
-            </div>
-          )}
-          
-          {(recordLoading || testsLoading) && (
-            <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
-              <Loader2 size={32} className="animate-spin mb-4" />
-              Loading lab record...
-            </div>
-          )}
-          
-          {!recordLoading && !testsLoading && resultRows.length === 0 && (
-            <div className="p-12 text-center text-muted-foreground border border-dashed rounded-xl">
-              No tests found for this lab record.
-            </div>
-          )}
+                  <div className="flex items-center gap-3 min-w-[120px]">
+                    <div className="w-10 h-10 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <Calendar size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Age
+                      </p>
+                      <p className="text-sm font-bold text-foreground">
+                        {matchedRecord.patient?.age ? `${matchedRecord.patient.age} years` : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 min-w-[120px]">
+                    <div className="w-10 h-10 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <FileText size={18} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Total Tests
+                      </p>
+                      <p className="text-sm font-bold text-foreground">
+                        {recordTests.length}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 min-w-[220px]">
+                    <div className="w-10 h-10 rounded-xl bg-primary/5 dark:bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <User size={18} className="rotate-45" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                        Referral
+                      </p>
+                      <p className="text-sm font-bold text-foreground">
+                        {getReferralText()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Two-column dashboard structure */}
+              {resultRows.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                  
+                  {/* Left Column (Sidebar) */}
+                  <div className="lg:col-span-1 bg-card border border-border/60 rounded-2xl p-4 flex flex-col gap-4 h-fit">
+                    <div className="relative">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        type="text"
+                        placeholder="Search tests..."
+                        className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-border/80 bg-background focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all text-foreground"
+                        value={panelSearchQuery}
+                        onChange={e => setPanelSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
+                      {recordTests
+                        .filter(test => 
+                          test.testName.toLowerCase().includes(panelSearchQuery.toLowerCase()) ||
+                          test.department.toLowerCase().includes(panelSearchQuery.toLowerCase())
+                        )
+                        .map(test => {
+                          const isSelected = selectedTestId === test.id;
+                          const panelParams = resultRows.filter(r => r.labRecordTestId === test.id);
+                          const totalCount = panelParams.length;
+                          const enteredCount = panelParams.filter(r => r.result.trim() !== "").length;
+                          const isCompleted = totalCount > 0 && enteredCount === totalCount;
+                          
+                          return (
+                            <button
+                              key={test.id}
+                              onClick={() => setSelectedTestId(test.id)}
+                              className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 flex flex-col gap-2 relative ${
+                                isSelected 
+                                  ? "bg-primary/5 border-primary text-foreground shadow-sm ring-1 ring-primary/20" 
+                                  : "bg-card hover:bg-muted/30 border-border/60 text-foreground"
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="font-bold text-xs leading-tight">{test.testName}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">{test.department}</p>
+                                </div>
+                                {isSelected && (
+                                  <span className="text-primary mt-0.5 shrink-0">
+                                    <ChevronRight size={14} className="animate-pulse" />
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center justify-between mt-1 text-[10px]">
+                                <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-wider text-[9px] border ${
+                                  isCompleted 
+                                    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+                                    : "bg-muted border-border/80 text-muted-foreground"
+                                }`}>
+                                  {isCompleted ? "Completed" : "Pending"}
+                                </span>
+                                <span className="font-mono text-muted-foreground">
+                                  {enteredCount}/{totalCount}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      {recordTests.filter(test => 
+                        test.testName.toLowerCase().includes(panelSearchQuery.toLowerCase()) ||
+                        test.department.toLowerCase().includes(panelSearchQuery.toLowerCase())
+                      ).length === 0 && (
+                        <div className="text-center py-6 text-xs text-muted-foreground">
+                          No test panels match.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column (Parameters list for selected test panel) */}
+                  <div className="lg:col-span-3 space-y-6">
+                    {(() => {
+                      const activeTest = recordTests.find(t => t.id === selectedTestId);
+                      if (!activeTest) {
+                        return (
+                          <div className="bg-card border border-border/60 rounded-2xl p-12 text-center text-muted-foreground">
+                            Please select a test panel from the list.
+                          </div>
+                        );
+                      }
+                      
+                      const activeParams = resultRows
+                        .map((row, globalIdx) => ({ row, globalIdx }))
+                        .filter(item => item.row.labRecordTestId === activeTest.id);
+                      
+                      const totalCount = activeParams.length;
+                      const enteredCount = activeParams.filter(item => item.row.result.trim() !== "").length;
+                      const isCompleted = totalCount > 0 && enteredCount === totalCount;
+                      
+                      return (
+                        <div className="space-y-4">
+                          {/* Active test panel header strip */}
+                          <div className="bg-card border border-border/60 rounded-2xl p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                              <h3 className="font-bold text-base text-foreground tracking-tight">{activeTest.testName}</h3>
+                              <p className="text-xs text-muted-foreground mt-0.5">{activeTest.department}</p>
+                            </div>
+                            
+                            <div className="flex items-center gap-3">
+                              <span className={`px-2.5 py-1 rounded-full font-bold uppercase tracking-wider text-[10px] border ${
+                                isCompleted 
+                                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+                                  : "bg-muted border-border/80 text-muted-foreground"
+                              }`}>
+                                {isCompleted ? "Completed" : "Pending"}
+                              </span>
+                              
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (activeRecordId) setPreviewRecordId(activeRecordId);
+                                }}
+                                className="flex items-center gap-1.5 h-9"
+                                title="Print / Preview results"
+                              >
+                                <Printer size={15} />
+                              </Button>
+
+                              <Button 
+                                variant="default"
+                                size="sm"
+                                onClick={handleSubmit}
+                                disabled={bulkEnterResults.isPending}
+                                className="flex items-center gap-1.5 bg-primary text-primary-foreground h-9 px-4 font-semibold shadow-sm hover:shadow"
+                              >
+                                {bulkEnterResults.isPending ? <Loader2 className="animate-spin mr-1" size={15} /> : <Save size={15} />}
+                                Save Results
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {/* Active parameter card */}
+                          {activeParams.length > 0 ? (
+                            <div className="bg-card border border-border/60 rounded-2xl shadow-sm divide-y divide-border/40 overflow-hidden">
+                              {activeParams.map(({ row, globalIdx }, index) => (
+                                <div 
+                                  key={globalIdx} 
+                                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/10 transition-colors duration-150"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    {/* Index Circle */}
+                                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground shrink-0 border border-border/40">
+                                      {index + 1}
+                                    </div>
+                                    
+                                    {/* Details */}
+                                    <div>
+                                      <p className="font-bold text-sm text-foreground">{row.testName}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">
+                                        {row.referenceRange ? `Reference: ${row.referenceRange}` : "No reference range"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-4 self-end sm:self-auto">
+                                    {/* Inside-unit Input Container */}
+                                    <div className="relative flex items-center w-48">
+                                      <input
+                                        type="text"
+                                        placeholder={row.isSaved ? "Saved" : "Enter value"}
+                                        disabled={row.isSaved}
+                                        className={`w-full pl-3 pr-14 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary font-mono text-foreground font-semibold transition-all ${
+                                          row.isSaved 
+                                            ? "bg-muted/50 border-dashed cursor-not-allowed text-muted-foreground opacity-80" 
+                                            : "border-border/80"
+                                        }`}
+                                        value={row.result}
+                                        onChange={e => updateResultRow(globalIdx, "result", e.target.value)}
+                                      />
+                                      {row.unit && (
+                                        <span className="absolute right-3 text-xs text-muted-foreground font-mono truncate max-w-[44px]" title={row.unit}>
+                                          {row.unit}
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    {/* Badge Select flag selector */}
+                                    <div className="relative shrink-0 w-24">
+                                      <select
+                                        disabled={row.isSaved}
+                                        className={`w-full px-2 py-1.5 border rounded-lg text-xs font-bold uppercase tracking-wider focus:outline-none transition-all text-center ${
+                                          row.isSaved ? "cursor-not-allowed opacity-80" : "cursor-pointer"
+                                        } ${
+                                          row.flag === "Normal" ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400" :
+                                          row.flag === "Abnormal" ? "border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400" :
+                                          "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400"
+                                        }`}
+                                        value={row.flag}
+                                        onChange={e => updateResultRow(globalIdx, "flag", e.target.value as ResultFlag)}
+                                      >
+                                        <option value="Normal" className="bg-background text-foreground font-semibold">Normal</option>
+                                        <option value="Abnormal" className="bg-background text-foreground font-semibold">Abnormal</option>
+                                        <option value="Critical" className="bg-background text-foreground font-semibold">Critical</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-8 text-center text-muted-foreground border border-dashed rounded-xl">
+                              No parameters found for this test.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                </div>
+              )}
+              
+              {(recordLoading || testsLoading) && (
+                <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                  <Loader2 size={32} className="animate-spin mb-4" />
+                  Loading lab record...
+                </div>
+              )}
+              
+              {!recordLoading && !testsLoading && resultRows.length === 0 && (
+                <div className="p-12 text-center text-muted-foreground border border-dashed rounded-xl">
+                  No tests found for this lab record.
+                </div>
+              )}
             </div>
           )}
 

@@ -289,10 +289,9 @@ export function TestRegister() {
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <div className="flex flex-col">
-
-        {/* Tabs Header */}
-        <div className="border-b border-border/50 px-6 pt-2 bg-muted/20">
-          <div className="flex gap-4 overflow-x-auto">
+        {/* Premium pill sub-tabs */}
+        <div className="px-6 py-4 border-b border-border/50 bg-card/45">
+          <div className="border border-border/50 bg-muted/25 rounded-2xl p-1.5 inline-flex gap-1.5 shrink-0 max-w-full overflow-x-auto">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -301,22 +300,14 @@ export function TestRegister() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className="relative flex items-center gap-2 px-2 py-4 text-sm font-semibold transition-colors duration-200 outline-none"
+                  className={`flex items-center gap-2 px-5 py-2.5 text-xs font-bold transition-all duration-200 whitespace-nowrap rounded-xl cursor-pointer outline-none ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm shadow-primary/10"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
                 >
-                  <span className={cn(
-                    "relative z-10 flex items-center gap-2",
-                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )}>
-                    <Icon size={18} />
-                    <span>{tab.label}</span>
-                  </span>
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeTestRegisterTabIndicator"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full"
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                    />
-                  )}
+                  <Icon size={15} className="shrink-0" />
+                  <span>{tab.label}</span>
                 </button>
               );
             })}

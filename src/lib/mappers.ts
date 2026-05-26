@@ -24,6 +24,7 @@ import type {
   TestResult,
   AuditEvent,
   ApiKey,
+  Notification,
 } from './types';
 
 // ── Users & Roles ──────────────────────────────────────────────
@@ -37,6 +38,7 @@ export function mapUserRow(row: any): User {
     phone: row.phone ?? undefined,
     roleId: row.role_id,
     permissionOverrides: (row.permission_overrides as Record<string, boolean>) ?? {},
+    themePreset: row.theme_preset ?? row.permission_overrides?._theme_preset ?? 'default',
     twoFactorEnabled: row.two_factor_enabled ?? false,
     twoFactorMethod: row.two_factor_method ?? undefined,
     status: row.status ?? 'active',
@@ -248,5 +250,19 @@ export function mapApiKeyRow(row: any): ApiKey {
     createdAt: row.created_at,
     lastUsed: row.last_used ?? undefined,
     permissions: (row.permissions as string[]) ?? [],
+  };
+}
+
+// ── Notifications ──────────────────────────────────────────────
+
+export function mapNotificationRow(row: any): Notification {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    message: row.message,
+    isRead: row.is_read ?? false,
+    type: row.type ?? 'info',
+    createdAt: row.created_at,
   };
 }

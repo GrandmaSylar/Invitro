@@ -3,11 +3,22 @@ import { RouterProvider } from "react-router";
 import { ThemeProvider } from "next-themes";
 import { router } from "./routes";
 import { useSettingsStore } from "../stores/useSettingsStore";
+import { useAuthStore } from "../stores/useAuthStore";
 import { toast } from "sonner";
 
 // INVITRO AIDMED DIAGNOSTICS - Laboratory Inventory Management System
 export default function App() {
   const initializeSettings = useSettingsStore(state => state.initialize);
+  const themePreset = useAuthStore(state => state.user?.themePreset);
+
+  // Synchronize user theme preset with DOM attribute
+  useEffect(() => {
+    if (themePreset) {
+      document.documentElement.setAttribute('data-preset', themePreset);
+    } else {
+      document.documentElement.setAttribute('data-preset', 'default');
+    }
+  }, [themePreset]);
 
   useEffect(() => {
     initializeSettings();
