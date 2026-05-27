@@ -2,7 +2,7 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
-## Version 1.0.0
+## Version 1.0.1
 
 ### Major UI & Theming Engine Overhaul
 - **Theme Preset System**: Introduced a new `ThemePresetSection` allowing users to quickly swap between curated color themes and appearances.
