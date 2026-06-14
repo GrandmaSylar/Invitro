@@ -59,6 +59,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     fromEmail: 'noreply@lims.local',
     useTLS: true,
   },
+  receipt: {
+    paperSize: 'A4',
+    scale: 1.0,
+    showLogo: true,
+    showWatermark: true,
+    footerText: 'This is an official receipt. Please retain for your records.',
+  },
   apiKeys: [],
 };
 

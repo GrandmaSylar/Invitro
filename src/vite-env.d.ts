@@ -16,5 +16,7 @@ interface Window {
     closeWindow: () => Promise<void>;
     onMaximizeChange: (callback: (event: any, maximized: boolean) => void) => void;
     offMaximizeChange: (callback: (event: any, maximized: boolean) => void) => void;
+    exportPDF: (options: { title: string; paperSize: string }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+    previewPDF: (options: { title: string; paperSize: string }) => Promise<{ success: boolean; error?: string }>;
   }
 }

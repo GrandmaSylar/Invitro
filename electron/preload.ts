@@ -31,4 +31,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   offMaximizeChange: (callback: (event: any, maximized: boolean) => void) => {
     ipcRenderer.removeListener('maximize-change', callback);
   },
+  exportPDF: (options: { title: string; paperSize: string }) => ipcRenderer.invoke('export-pdf', options),
+  previewPDF: (options: { title: string; paperSize: string }) => ipcRenderer.invoke('preview-pdf', options),
 });

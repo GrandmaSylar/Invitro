@@ -1,6 +1,7 @@
-import { app, BrowserWindow, shell, ipcMain, nativeTheme } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, nativeTheme, dialog } from 'electron';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { writeFile } from 'node:fs/promises';
 import log from 'electron-log/main';
 import { autoUpdater } from 'electron-updater';
 
@@ -120,6 +121,79 @@ app.on('window-all-closed', () => {
 
 // IPC Setup
 ipcMain.handle('get-app-version', () => app.getVersion());
+
+// Helper: generate a PDF buffer from the current page using print media query
+async function generatePDF(paperSize: string): Promise<Buffer> {
+  if (!mainWindow) throw new Error('No main window');
+
+  const pdfBuffer = await mainWindow.webContents.printToPDF({
+    printBackground: true,
+    preferCSSPageSize: true,
+    margins: { marginType: 'none' },
+  });
+
+  return Buffer.from(pdfBuffer);
+}
+
+// Export PDF: generates PDF and opens a save dialog with the default filename
+ipcMain.handle('export-pdf', async (_event, options: { title: string; paperSize: string }) => {
+  try {
+    const pdfBuffer = await generatePDF(options.paperSize);
+
+    const { filePath, canceled } = await dialog.showSaveDialog(mainWindow!, {
+      title: 'Save Receipt PDF',
+      defaultPath: join(app.getPath('downloads'), `${options.title}.pdf`),
+      filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
+    });
+
+    if (canceled || !filePath) {
+      return { success: false, error: 'Cancelled' };
+    }
+
+    await writeFile(filePath, pdfBuffer);
+    log.info(`Receipt PDF saved to: ${filePath}`);
+    return { success: true, filePath };
+  } catch (err: any) {
+    log.error('Failed to export PDF:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Preview PDF: generates PDF, saves to temp, and opens in system default viewer
+ipcMain.handle('preview-pdf', async (_event, options: { title: string; paperSize: string }) => {
+  try {
+    const pdfBuffer = await generatePDF(options.paperSize);
+    const tempPath = join(app.getPath('temp'), `${options.title}.pdf`);
+    await writeFile(tempPath, pdfBuffer);
+    
+    // shell.openPath returns an empty string on success, and a non-empty error message on failure.
+    const openError = await shell.openPath(tempPath);
+    if (openError) {
+      log.warn(`shell.openPath failed with error: "${openError}". Falling back to internal BrowserWindow preview.`);
+      
+      const pdfWindow = new BrowserWindow({
+        width: 850,
+        height: 900,
+        title: options.title || 'Receipt Preview',
+        autoHideMenuBar: true,
+        webPreferences: {
+          plugins: true, // Enable plugins (required for Chromium PDF viewer in some Electron versions)
+          contextIsolation: true,
+          sandbox: true,
+        }
+      });
+      
+      // Load the PDF file directly. Chromium's built-in PDF viewer will render it.
+      await pdfWindow.loadFile(tempPath);
+    } else {
+      log.info(`Receipt PDF preview opened in system viewer: ${tempPath}`);
+    }
+    return { success: true };
+  } catch (err: any) {
+    log.error('Failed to preview PDF:', err);
+    return { success: false, error: err.message };
+  }
+});
 
 // Window Controls
 ipcMain.handle('window-minimize', () => mainWindow?.minimize());

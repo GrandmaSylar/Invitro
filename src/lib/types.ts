@@ -299,6 +299,13 @@ export interface AppSettings {
     fromEmail: string;
     useTLS: boolean;
   };
+  receipt: {
+    paperSize: 'A4' | 'A5' | 'pos80mm' | 'pos50mm';
+    scale: number;
+    showLogo: boolean;
+    showWatermark: boolean;
+    footerText?: string;
+  };
   apiKeys: ApiKey[];
 }
 

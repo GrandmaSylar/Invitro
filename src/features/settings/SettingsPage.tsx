@@ -2,12 +2,13 @@ import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { Card, CardContent } from '../../app/components/ui/card';
 import { Separator } from '../../app/components/ui/separator';
 import { SettingsPlaceholder } from '../../app/components/placeholders';
-import { Settings, Bell, Shield, Users, Mail, Key, Database, FileText, Activity, Server, Info, Palette } from 'lucide-react';
+import { Settings, Bell, Shield, Users, Mail, Key, Database, FileText, Activity, Server, Info, Palette, Receipt } from 'lucide-react';
 import { cn } from '../../app/components/ui/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 const GeneralSection = React.lazy(() => import('./GeneralSection'));
 const ThemePresetSection = React.lazy(() => import('./ThemePresetSection'));
+const ReceiptSection = React.lazy(() => import('./ReceiptSection'));
 const NotificationsSection = React.lazy(() => import('./NotificationsSection'));
 const SecuritySection = React.lazy(() => import('./SecuritySection'));
 const UsersRolesSection = React.lazy(() => import('./UsersRolesSection'));
@@ -20,6 +21,7 @@ const AboutSection = React.lazy(() => import('./AboutSection'));
 const SETTINGS_SECTIONS = [
   { id: 'general', label: 'General', icon: Settings, permissionKey: 'settings.general', group: 'General', isMock: false },
   { id: 'themePreset', label: 'Theme Presets', icon: Palette, permissionKey: 'settings.general', group: 'General', isMock: false },
+  { id: 'receipt', label: 'Receipt Template', icon: Receipt, permissionKey: 'settings.general', group: 'General', isMock: false },
   { id: 'notifications', label: 'Notifications', icon: Bell, permissionKey: 'settings.notifications', group: 'General', isMock: true },
   { id: 'security', label: 'Security', icon: Shield, permissionKey: 'settings.security', group: 'General', isMock: true },
   { id: 'users', label: 'Users & Roles', icon: Users, permissionKey: 'settings.users', group: 'Administration', isMock: false },
@@ -73,6 +75,8 @@ export function SettingsPage() {
         return <GeneralSection />;
       case 'themePreset':
         return <ThemePresetSection />;
+      case 'receipt':
+        return <ReceiptSection />;
       case 'notifications':
         return <NotificationsSection />;
       case 'security':
