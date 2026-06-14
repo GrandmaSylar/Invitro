@@ -41,3 +41,12 @@ dist-ssr/
 .env*.local
 
 fit/
+
+# Database & Secrets
+lims.db*
+*.key
+device.key
+db.key
+
+# PDFs
+*.pdf

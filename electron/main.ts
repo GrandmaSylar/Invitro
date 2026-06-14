@@ -1,12 +1,12 @@
+import './esm-globals.js';
 import { app, BrowserWindow, shell, ipcMain, nativeTheme, dialog } from 'electron';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import log from 'electron-log/main';
 import { autoUpdater } from 'electron-updater';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { initDatabase, cacheUserCredentials, verifyOfflineLogin, encryptDatabase } from './database.js';
+import { setMainProcessSession } from './supabaseNode.js';
+import { dbHandlers } from './dbHandlers.js';
 
 // Initialize logging
 log.initialize();
@@ -96,6 +96,7 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
+  initDatabase();
   createSplashWindow();
   
   // Initialize main window shortly after splash
@@ -117,6 +118,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('before-quit', () => {
+  encryptDatabase();
 });
 
 // IPC Setup
@@ -192,6 +197,53 @@ ipcMain.handle('preview-pdf', async (_event, options: { title: string; paperSize
   } catch (err: any) {
     log.error('Failed to preview PDF:', err);
     return { success: false, error: err.message };
+  }
+});
+
+// Cache User Credentials Offline
+ipcMain.handle('cache-user-credentials', async (_event, options: { userRow: any; roleRow: any }) => {
+  try {
+    cacheUserCredentials(options.userRow, options.roleRow);
+    return { success: true };
+  } catch (err: any) {
+    log.error('Failed to cache user credentials:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Perform Offline Login credential check
+ipcMain.handle('offline-login', async (_event, options: { login: string; password: string }) => {
+  try {
+    const result = await verifyOfflineLogin(options.login, options.password);
+    return { success: true, ...result };
+  } catch (err: any) {
+    log.error('Failed to execute offline login:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Update Supabase session inside the main process Node client
+ipcMain.handle('update-supabase-session', async (_event, session: { access_token: string; refresh_token: string }) => {
+  try {
+    await setMainProcessSession(session);
+    return { success: true };
+  } catch (err: any) {
+    log.error('Failed to update Supabase Node session:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Generic SQLite local database IPC handler
+ipcMain.handle('db:call', async (_event, serviceName: string, methodName: string, ...args: any[]) => {
+  try {
+    const handler = dbHandlers[serviceName]?.[methodName];
+    if (!handler) {
+      throw new Error(`Handler dbHandlers.${serviceName}.${methodName} is not defined`);
+    }
+    return await handler(...args);
+  } catch (err: any) {
+    log.error(`IPC db:call Error in dbHandlers.${serviceName}.${methodName}:`, err.message);
+    throw err;
   }
 });
 

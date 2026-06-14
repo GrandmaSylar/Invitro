@@ -1,58 +1,17 @@
 /**
  * Result Service — Test result entry, flagging, and approval.
+ * Refactored to route queries through the dbAdapter to support offline SQLite capability.
  */
-import { supabase } from '../lib/supabase';
-import { mapTestResultRow } from '../lib/mappers';
+import { dbAdapter } from './dbAdapter';
 import type { TestResult, ResultFlag } from '../lib/types';
-import { labRecordService } from './labRecordService';
-
-async function triggerRecalculate(labRecordTestId: string) {
-  try {
-    const { data } = await supabase
-      .from('lab_record_tests')
-      .select('lab_record_id')
-      .eq('id', labRecordTestId)
-      .single();
-      
-    if (data?.lab_record_id) {
-      await labRecordService.recalculateStatusAndTotals(data.lab_record_id);
-    }
-  } catch (e) {
-    console.error('Failed to trigger record recalculation', e);
-  }
-}
 
 export const resultService = {
   getResultsByLabRecordTest: async (labRecordTestId: string): Promise<TestResult[]> => {
-    const { data, error } = await supabase
-      .from('test_results')
-      .select('*')
-      .eq('lab_record_test_id', labRecordTestId)
-      .order('entered_at', { ascending: true });
-
-    if (error) throw new Error(`Failed to fetch results: ${error.message}`);
-    return (data ?? []).map(mapTestResultRow);
+    return dbAdapter.results.getResultsByLabRecordTest(labRecordTestId);
   },
 
   getResultsByLabRecord: async (labRecordId: string): Promise<TestResult[]> => {
-    // Fetch all lab_record_tests for this record, then get their results
-    const { data: recordTests, error: rtError } = await supabase
-      .from('lab_record_tests')
-      .select('id')
-      .eq('lab_record_id', labRecordId);
-
-    if (rtError) throw new Error(`Failed to fetch record tests: ${rtError.message}`);
-    if (!recordTests || recordTests.length === 0) return [];
-
-    const ids = recordTests.map((rt: any) => rt.id);
-    const { data, error } = await supabase
-      .from('test_results')
-      .select('*')
-      .in('lab_record_test_id', ids)
-      .order('entered_at', { ascending: true });
-
-    if (error) throw new Error(`Failed to fetch results: ${error.message}`);
-    return (data ?? []).map(mapTestResultRow);
+    return dbAdapter.results.getResultsByLabRecord(labRecordId);
   },
 
   enterResult: async (resultData: {
@@ -65,25 +24,7 @@ export const resultService = {
     flag?: ResultFlag;
     enteredById?: string;
   }): Promise<TestResult> => {
-    const { data, error } = await supabase
-      .from('test_results')
-      .insert({
-        lab_record_test_id: resultData.labRecordTestId,
-        test_name: resultData.testName,
-        department: resultData.department,
-        reference_range: resultData.referenceRange ?? null,
-        unit: resultData.unit ?? null,
-        result: resultData.result ?? null,
-        flag: resultData.flag ?? 'Normal',
-        entered_by_id: resultData.enteredById ?? null,
-      })
-      .select()
-      .single();
-
-    if (error) throw new Error(`Failed to enter result: ${error.message}`);
-    
-    await triggerRecalculate(resultData.labRecordTestId);
-    return mapTestResultRow(data);
+    return dbAdapter.results.enterResult(resultData);
   },
 
   updateResult: async (
@@ -95,32 +36,7 @@ export const resultService = {
       unit: string;
     }>
   ): Promise<TestResult> => {
-    // Need to get lab_record_test_id before update to trigger recalculate
-    const { data: existing } = await supabase
-      .from('test_results')
-      .select('lab_record_test_id')
-      .eq('id', id)
-      .single();
-
-    const dbUpdates: Record<string, any> = {};
-    if (updates.result !== undefined) dbUpdates.result = updates.result;
-    if (updates.flag !== undefined) dbUpdates.flag = updates.flag;
-    if (updates.referenceRange !== undefined) dbUpdates.reference_range = updates.referenceRange;
-    if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
-
-    const { data, error } = await supabase
-      .from('test_results')
-      .update(dbUpdates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw new Error(`Failed to update result: ${error.message}`);
-    
-    if (existing?.lab_record_test_id) {
-      await triggerRecalculate(existing.lab_record_test_id);
-    }
-    return mapTestResultRow(data);
+    return dbAdapter.results.updateResult(id, updates);
   },
 
   bulkEnterResults: async (
@@ -135,43 +51,10 @@ export const resultService = {
       enteredById?: string;
     }>
   ): Promise<TestResult[]> => {
-    const rows = results.map((r) => ({
-      lab_record_test_id: r.labRecordTestId,
-      test_name: r.testName,
-      department: r.department,
-      reference_range: r.referenceRange ?? null,
-      unit: r.unit ?? null,
-      result: r.result ?? null,
-      flag: r.flag ?? 'Normal',
-      entered_by_id: r.enteredById ?? null,
-    }));
-
-    const { data, error } = await supabase
-      .from('test_results')
-      .insert(rows)
-      .select();
-
-    if (error) throw new Error(`Failed to bulk enter results: ${error.message}`);
-    
-    if (results.length > 0) {
-      await triggerRecalculate(results[0].labRecordTestId);
-    }
-    
-    return (data ?? []).map(mapTestResultRow);
+    return dbAdapter.results.bulkEnterResults(results);
   },
 
   deleteResult: async (id: string): Promise<void> => {
-    const { data: existing } = await supabase
-      .from('test_results')
-      .select('lab_record_test_id')
-      .eq('id', id)
-      .single();
-
-    const { error } = await supabase.from('test_results').delete().eq('id', id);
-    if (error) throw new Error(`Failed to delete result: ${error.message}`);
-    
-    if (existing?.lab_record_test_id) {
-      await triggerRecalculate(existing.lab_record_test_id);
-    }
+    return dbAdapter.results.deleteResult(id);
   },
 };

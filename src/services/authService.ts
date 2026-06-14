@@ -19,53 +19,98 @@ export const authService = {
     permissions: Record<string, boolean>;
     twoFactorRequired: boolean;
   }> => {
-    // Step 1: Sign in with Supabase Auth (email + password)
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: credentials.login,
-      password: credentials.password,
-    });
+    try {
+      // Step 1: Sign in with Supabase Auth (email + password)
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: credentials.login,
+        password: credentials.password,
+      });
 
-    if (authError || !authData.user) {
-      throw new Error(authError?.message || 'Invalid credentials');
+      if (authError) {
+        // If it's a credentials error, throw immediately. If it's network, let it propagate to catch block.
+        if (authError.status === 400 || authError.message.includes('Invalid') || authError.message.includes('credentials')) {
+          throw new Error(authError.message || 'Invalid credentials');
+        }
+        throw authError;
+      }
+
+      if (!authData.user) {
+        throw new Error('Invalid credentials');
+      }
+
+      // Step 2: Fetch the LIMS user profile from our custom users table
+      const { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .or(`email.eq.${credentials.login},username.eq.${credentials.login}`)
+        .eq('status', 'active')
+        .single();
+
+      if (userError || !userRow) {
+        throw new Error('User profile not found. Contact your administrator.');
+      }
+
+      // Step 3: Fetch role permissions
+      const { data: roleRow } = await supabase
+        .from('roles')
+        .select('*')
+        .eq('id', userRow.role_id)
+        .single();
+
+      // Step 4: Update last login (non-critical, ignore error)
+      try {
+        await supabase
+          .from('users')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', userRow.id);
+      } catch (e) {
+        console.warn('Non-critical: Failed to update last login timestamp', e);
+      }
+
+      // Cache credentials locally in Electron if available
+      if (window.electronAPI?.cacheUserCredentials) {
+        try {
+          await window.electronAPI.cacheUserCredentials(userRow, roleRow);
+        } catch (cacheErr) {
+          console.error('Failed to cache credentials locally:', cacheErr);
+        }
+      }
+
+      const user = mapUserRow(userRow);
+      const rolePermissions = roleRow ? (roleRow.permissions as Record<string, boolean>) : {};
+      const permissions = {
+        ...rolePermissions,
+        ...(user.permissionOverrides || {})
+      };
+
+      return {
+        user,
+        permissions,
+        twoFactorRequired: user.twoFactorEnabled,
+      };
+    } catch (err: any) {
+      // If we are running in Electron and the error looks like a network failure, fall back to offline login:
+      const isNetworkError = err.message?.includes('fetch') || 
+                             err.message?.includes('Network') || 
+                             err.message?.includes('load') ||
+                             !navigator.onLine;
+
+      if (window.electronAPI?.offlineLogin && isNetworkError) {
+        console.warn('Network offline or fetch failed. Attempting offline authentication fallback.');
+        const result = await window.electronAPI.offlineLogin(credentials);
+        if (result.success && result.user) {
+          return {
+            user: result.user,
+            permissions: result.permissions || {},
+            twoFactorRequired: result.user.twoFactorEnabled,
+          };
+        } else {
+          throw new Error(result.error || 'Offline login failed');
+        }
+      }
+
+      throw err;
     }
-
-    // Step 2: Fetch the LIMS user profile from our custom users table
-    const { data: userRow, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .or(`email.eq.${credentials.login},username.eq.${credentials.login}`)
-      .eq('status', 'active')
-      .single();
-
-    if (userError || !userRow) {
-      throw new Error('User profile not found. Contact your administrator.');
-    }
-
-    // Step 3: Fetch role permissions
-    const { data: roleRow } = await supabase
-      .from('roles')
-      .select('*')
-      .eq('id', userRow.role_id)
-      .single();
-
-    // Step 4: Update last login
-    await supabase
-      .from('users')
-      .update({ last_login: new Date().toISOString() })
-      .eq('id', userRow.id);
-
-    const user = mapUserRow(userRow);
-    const rolePermissions = roleRow ? (roleRow.permissions as Record<string, boolean>) : {};
-    const permissions = {
-      ...rolePermissions,
-      ...(user.permissionOverrides || {})
-    };
-
-    return {
-      user,
-      permissions,
-      twoFactorRequired: user.twoFactorEnabled,
-    };
   },
 
   refreshSession: async () => {

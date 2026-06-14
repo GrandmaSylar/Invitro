@@ -5,6 +5,7 @@ import { router } from "./routes";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useAuthStore } from "../stores/useAuthStore";
 import { toast } from "sonner";
+import { supabase } from "../lib/supabase";
 
 // INVITRO AIDMED DIAGNOSTICS - Laboratory Inventory Management System
 export default function App() {
@@ -19,6 +20,28 @@ export default function App() {
       document.documentElement.setAttribute('data-preset', 'default');
     }
   }, [themePreset]);
+
+  // Listen to Supabase auth state changes and sync sessions with Electron main process
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (window.electronAPI?.updateSupabaseSession) {
+        if (session) {
+          try {
+            await window.electronAPI.updateSupabaseSession({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            });
+          } catch (err) {
+            console.error('Failed to sync session with Main process:', err);
+          }
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     initializeSettings();

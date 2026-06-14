@@ -41,6 +41,8 @@
     "@supabase/supabase-js": "^2.105.1",
     "@tanstack/react-query": "^5.96.2",
     "axios": "^1.14.0",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.10.1",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
@@ -69,7 +71,9 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.4",
     "@tailwindcss/vite": "4.1.12",
+    "@types/bcryptjs": "^2.4.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "4.7.0",
