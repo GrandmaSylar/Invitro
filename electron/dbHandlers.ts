@@ -233,6 +233,43 @@ function mapNotification(row: any) {
 
 // ── Helper functions for local ID and sequence generation ──────────────────
 
+function localGenerateLabNumber(): string {
+  const db = getDatabase();
+  const today = new Date();
+  const todayDateStr = today.toISOString().slice(0, 10);
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  const todayStr = `${day}${month}${year}`;
+
+  db.prepare(`
+    INSERT INTO daily_sequences (seq_date, last_value)
+    VALUES (?, 1)
+    ON CONFLICT (seq_date)
+    DO UPDATE SET last_value = daily_sequences.last_value + 1
+  `).run(todayDateStr);
+
+  const row = db.prepare('SELECT last_value FROM daily_sequences WHERE seq_date = ?').get(todayDateStr) as any;
+  const seqVal = row ? row.last_value : 1;
+
+  return `A${todayStr}${String(seqVal).padStart(4, '0')}`;
+}
+
+function localPreviewLabNumber(): string {
+  const db = getDatabase();
+  const today = new Date();
+  const todayDateStr = today.toISOString().slice(0, 10);
+  const day = String(today.getDate()).padStart(2, '0');
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  const todayStr = `${day}${month}${year}`;
+
+  const row = db.prepare('SELECT last_value FROM daily_sequences WHERE seq_date = ?').get(todayDateStr) as any;
+  const seqVal = row ? row.last_value + 1 : 1;
+
+  return `A${todayStr}${String(seqVal).padStart(4, '0')}`;
+}
+
 function localGenerateReceiptNumber(): string {
   const db = getDatabase();
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // "20260614"

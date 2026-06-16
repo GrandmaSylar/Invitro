@@ -30,7 +30,8 @@ function getEncryptionKey(): Buffer {
     if (fs.existsSync(keyPath)) {
       const encrypted = fs.readFileSync(keyPath);
       if (safeStorage.isEncryptionAvailable()) {
-        return safeStorage.decryptBuffer(encrypted);
+        const decryptedStr = safeStorage.decryptString(encrypted);
+        return Buffer.from(decryptedStr, 'hex');
       } else {
         return encrypted;
       }
@@ -42,7 +43,7 @@ function getEncryptionKey(): Buffer {
   const newKey = crypto.randomBytes(32);
   try {
     const encrypted = safeStorage.isEncryptionAvailable()
-      ? safeStorage.encryptBuffer(newKey)
+      ? safeStorage.encryptString(newKey.toString('hex'))
       : newKey;
     if (!fs.existsSync(metaDir)) {
       fs.mkdirSync(metaDir, { recursive: true });
@@ -923,6 +924,7 @@ const SYNC_CONFIGS: TableSyncConfig[] = [
   },
   {
     tableName: 'departments',
+    timestampColumn: 'created_at',
     upsertSql: `
       INSERT INTO departments (id, department_name, is_active, created_at, updated_at)
       VALUES ($id, $department_name, $is_active, $created_at, $updated_at)
@@ -936,11 +938,12 @@ const SYNC_CONFIGS: TableSyncConfig[] = [
       department_name: r.department_name,
       is_active: r.is_active ? 1 : 0,
       created_at: r.created_at,
-      updated_at: r.updated_at
+      updated_at: r.updated_at || r.created_at
     })
   },
   {
     tableName: 'antibiotics',
+    timestampColumn: 'created_at',
     upsertSql: `
       INSERT INTO antibiotics (id, antibiotic_name, is_active, created_at, updated_at)
       VALUES ($id, $antibiotic_name, $is_active, $created_at, $updated_at)
@@ -954,7 +957,7 @@ const SYNC_CONFIGS: TableSyncConfig[] = [
       antibiotic_name: r.antibiotic_name,
       is_active: r.is_active ? 1 : 0,
       created_at: r.created_at,
-      updated_at: r.updated_at
+      updated_at: r.updated_at || r.created_at
     })
   },
   {
