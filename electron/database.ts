@@ -1101,9 +1101,9 @@ const SYNC_CONFIGS: TableSyncConfig[] = [
 
 export async function pullInboundChanges() {
   const { data: { session } } = await supabaseNode.auth.getSession();
-  if (!session) {
-    log.info('Inbound Sync: Skipping pull since user session is not authenticated.');
-    return;
+  const hasSession = !!session;
+  if (!hasSession) {
+    log.warn('Inbound Sync: No authenticated user session in main process. Proceeding to pull public tables anonymously.');
   }
 
   const localDb = getDatabase();
@@ -1123,6 +1123,11 @@ export async function pullInboundChanges() {
     log.info(`Inbound Sync: Pulling remote changes since ${since}...`);
     
     for (const config of SYNC_CONFIGS) {
+      if (config.tableName === 'notifications' && !hasSession) {
+        log.info('Inbound Sync: Skipping notifications pull since user session is not authenticated.');
+        continue;
+      }
+
       const timestampCol = config.timestampColumn || 'updated_at';
       
       const { data: remoteRecords, error } = await supabaseNode

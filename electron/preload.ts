@@ -2,8 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  onUpdateAvailable: (callback: () => void) => {
-    ipcRenderer.on('update-available', callback);
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    ipcRenderer.on('update-available', (_event, info) => callback(info));
     return () => ipcRenderer.removeAllListeners('update-available');
   },
   onUpdateDownloaded: (callback: () => void) => {
@@ -18,7 +18,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-error', (_event, error) => callback(error));
     return () => ipcRenderer.removeAllListeners('update-error');
   },
+  onDownloadProgress: (callback: (progress: any) => void) => {
+    ipcRenderer.on('download-progress', (_event, progress) => callback(progress));
+    return () => ipcRenderer.removeAllListeners('download-progress');
+  },
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
 
   // Window controls

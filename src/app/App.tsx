@@ -23,6 +23,24 @@ export default function App() {
 
   // Listen to Supabase auth state changes and sync sessions with Electron main process
   useEffect(() => {
+    // Explicit session check on startup to sync session with main process
+    const syncSession = async () => {
+      if (window.electronAPI?.updateSupabaseSession) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            await window.electronAPI.updateSupabaseSession({
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            });
+          }
+        } catch (err) {
+          console.error('Failed to sync initial session with Main process:', err);
+        }
+      }
+    };
+    syncSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (window.electronAPI?.updateSupabaseSession) {
         if (session) {
@@ -48,9 +66,9 @@ export default function App() {
 
     // Auto-update listener
     if (window.electronAPI) {
-      const cleanupAvailable = window.electronAPI.onUpdateAvailable(() => {
-        toast.info("Update Downloading", {
-          description: "A new version of Invitro LIMS is being downloaded in the background."
+      const cleanupAvailable = window.electronAPI.onUpdateAvailable((info: any) => {
+        toast.info("Update Available", {
+          description: `Version v${info.version} is available. Go to Settings > About to download and install.`
         });
       });
       

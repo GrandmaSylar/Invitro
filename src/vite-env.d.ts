@@ -3,11 +3,13 @@
 interface Window {
   electronAPI?: {
     getAppVersion: () => Promise<string>;
-    onUpdateAvailable: (callback: () => void) => () => void;
+    onUpdateAvailable: (callback: (info: any) => void) => () => void;
     onUpdateDownloaded: (callback: () => void) => () => void;
     onUpdateNotAvailable: (callback: () => void) => () => void;
     onUpdateError: (callback: (error: string) => void) => () => void;
+    onDownloadProgress: (callback: (progress: any) => void) => () => void;
     installUpdate: () => Promise<void>;
+    downloadUpdate: () => Promise<{ success: boolean; error?: string }>;
     checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
 
     // Window controls

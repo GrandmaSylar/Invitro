@@ -260,13 +260,19 @@ ipcMain.handle('window-close', () => mainWindow?.close());
 
 // Auto Updater Setup
 autoUpdater.logger = log;
-autoUpdater.on('update-available', () => {
-  log.info('Update available.');
-  mainWindow?.webContents.send('update-available');
+autoUpdater.autoDownload = false; // Disable automatic background updates downloading
+
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available:', info);
+  mainWindow?.webContents.send('update-available', info);
 });
 autoUpdater.on('update-not-available', () => {
   log.info('Update not available.');
   mainWindow?.webContents.send('update-not-available');
+});
+autoUpdater.on('download-progress', (progressObj) => {
+  log.info(`Download progress: ${progressObj.percent}%`);
+  mainWindow?.webContents.send('download-progress', progressObj);
 });
 autoUpdater.on('update-downloaded', () => {
   log.info('Update downloaded.');
@@ -279,6 +285,17 @@ autoUpdater.on('error', (err) => {
 
 ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
+});
+
+ipcMain.handle('download-update', async () => {
+  try {
+    log.info('Starting update download...');
+    await autoUpdater.downloadUpdate();
+    return { success: true };
+  } catch (err: any) {
+    log.error('Download update failed:', err);
+    return { success: false, error: err.message };
+  }
 });
 
 ipcMain.handle('check-for-updates', async () => {
