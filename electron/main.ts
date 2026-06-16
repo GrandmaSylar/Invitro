@@ -202,9 +202,9 @@ ipcMain.handle('preview-pdf', async (_event, options: { title: string; paperSize
 });
 
 // Cache User Credentials Offline
-ipcMain.handle('cache-user-credentials', async (_event, options: { userRow: any; roleRow: any }) => {
+ipcMain.handle('cache-user-credentials', async (_event, options: { userRow: any; roleRow: any; plaintextPassword?: string }) => {
   try {
-    cacheUserCredentials(options.userRow, options.roleRow);
+    cacheUserCredentials(options.userRow, options.roleRow, options.plaintextPassword);
     return { success: true };
   } catch (err: any) {
     log.error('Failed to cache user credentials:', err);

@@ -38,7 +38,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   exportPDF: (options: { title: string; paperSize: string }) => ipcRenderer.invoke('export-pdf', options),
   previewPDF: (options: { title: string; paperSize: string }) => ipcRenderer.invoke('preview-pdf', options),
-  cacheUserCredentials: (userRow: any, roleRow: any) => ipcRenderer.invoke('cache-user-credentials', { userRow, roleRow }),
+  cacheUserCredentials: (userRow: any, roleRow: any, plaintextPassword?: string) => ipcRenderer.invoke('cache-user-credentials', { userRow, roleRow, plaintextPassword }),
   offlineLogin: (options: { login: string; password: string }) => ipcRenderer.invoke('offline-login', options),
   updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => ipcRenderer.invoke('update-supabase-session', session),
   getDeviceId: () => ipcRenderer.invoke('get-device-id'),

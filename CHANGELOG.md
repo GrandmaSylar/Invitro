@@ -2,6 +2,17 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.5
+
+### New Features
+- **Online Username-to-Email Login Resolution**: Users can now log in using either their email address or their username. The system dynamically queries the public `users` table anonymously to resolve usernames to registered email addresses before calling Supabase Auth.
+- **Secure Offline Password Hashing**: Plain passwords used during successful online logins are now hashed locally with `bcrypt` in the main process and cached in SQLite. This enables secure offline fallback authentication for all users (previously blocked by placeholder strings).
+
+### Bug Fixes
+- **Outbound Sync RLS Policy Enforcement**: Modified the sync engine to check for an authenticated user session in the main process before running outbound sync. This prevents anonymous synchronizations from triggering Row-Level Security (RLS) violations and exhausting the 5-attempt retry limit.
+- **Insert Payload Column Filtering**: Stopped the sync engine from adding the `device_id` field to tables that do not support it (e.g. `lab_record_tests` and `payments`), resolving schema cache conflicts.
+- **Receipt Configuration Column Migration**: Created database schemas and migrations to support receipt configuration syncing by adding the `receipt` JSONB column to the `app_settings` table.
+
 ## Version 1.1.4
 
 ### Bug Fixes

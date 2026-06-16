@@ -495,7 +495,7 @@ export function getDatabase(): Database.Database {
   return db;
 }
 
-export function cacheUserCredentials(userRow: any, roleRow: any) {
+export function cacheUserCredentials(userRow: any, roleRow: any, plaintextPassword?: string) {
   const localDb = getDatabase();
   
   // 1. Upsert role
@@ -516,6 +516,15 @@ export function cacheUserCredentials(userRow: any, roleRow: any) {
     is_system: roleRow.is_system ? 1 : 0,
     permissions: typeof roleRow.permissions === 'string' ? roleRow.permissions : JSON.stringify(roleRow.permissions)
   });
+
+  let passwordHash = userRow.password_hash;
+  if (plaintextPassword) {
+    try {
+      passwordHash = bcrypt.hashSync(plaintextPassword, 10);
+    } catch (err: any) {
+      log.error('Failed to bcrypt hash user password during cacheUserCredentials:', err);
+    }
+  }
 
   // 2. Upsert user
   localDb.prepare(`
@@ -545,7 +554,7 @@ export function cacheUserCredentials(userRow: any, roleRow: any) {
     full_name: userRow.full_name,
     email: userRow.email,
     username: userRow.username,
-    password_hash: userRow.password_hash,
+    password_hash: passwordHash,
     phone: userRow.phone || null,
     role_id: userRow.role_id,
     permission_overrides: typeof userRow.permission_overrides === 'string' ? userRow.permission_overrides : JSON.stringify(userRow.permission_overrides || {}),
@@ -627,6 +636,17 @@ let isSyncing = false;
 export async function runOutboundSyncInternal() {
   if (isSyncing) return;
   
+  try {
+    const { data: { session } } = await supabaseNode.auth.getSession();
+    if (!session) {
+      log.info('Outbound Sync: Skipping outbound sync because there is no authenticated user session in the main process.');
+      return;
+    }
+  } catch (err: any) {
+    log.error('Outbound Sync: Error checking auth session:', err.message);
+    return;
+  }
+  
   const localDb = getDatabase();
   
   // Clean up failed queue entries older than 30 days to prevent bloat
@@ -693,12 +713,15 @@ export async function runOutboundSyncInternal() {
           localDb.prepare('UPDATE payments SET receipt_number = ? WHERE id = ?').run(officialReceiptNumber, item.record_id);
         }
 
+        const insertPayload: Record<string, any> = { ...finalPayload };
+        const tablesWithDeviceId = ['patients', 'lab_records', 'test_results'];
+        if (tablesWithDeviceId.includes(item.table_name)) {
+          insertPayload.device_id = item.device_id;
+        }
+
         const { error: err } = await supabaseNode
           .from(item.table_name)
-          .insert({
-            ...finalPayload,
-            device_id: item.device_id
-          });
+          .insert(insertPayload);
         error = err;
       } else if (item.operation === 'UPDATE') {
         const { error: err } = await supabaseNode

@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
     notifications   JSONB       NOT NULL DEFAULT '{}',
     security        JSONB       NOT NULL DEFAULT '{}',
     smtp            JSONB       NOT NULL DEFAULT '{}',
+    receipt         JSONB       NOT NULL DEFAULT '{}',
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -237,12 +238,13 @@ ON CONFLICT (id) DO NOTHING;
 -- ============================================================
 -- SEED DATA: Default app settings
 -- ============================================================
-INSERT INTO app_settings (id, general, notifications, security, smtp) VALUES
+INSERT INTO app_settings (id, general, notifications, security, smtp, receipt) VALUES
 (1,
  '{"appName":"Bloo LIMS","theme":"system","language":"en","timezone":"UTC","dateFormat":"YYYY-MM-DD","timeFormat":"HH:mm"}'::jsonb,
  '{"emailEnabled":false,"smsEnabled":false,"inAppEnabled":true}'::jsonb,
  '{"sessionTimeoutMinutes":30,"passwordMinLength":6,"twoFactorGlobal":false,"maxLoginAttempts":5,"ipWhitelist":[]}'::jsonb,
- '{"host":"","port":587,"username":"","fromEmail":"","useTLS":true}'::jsonb
+ '{"host":"","port":587,"username":"","fromEmail":"","useTLS":true}'::jsonb,
+ '{"paperSize":"A4","scale":1.0,"showLogo":true,"showWatermark":false,"footerText":"This is an official receipt. Please retain for your records."}'::jsonb
 )
 ON CONFLICT (id) DO NOTHING;
 

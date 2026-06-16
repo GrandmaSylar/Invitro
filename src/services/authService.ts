@@ -20,9 +20,25 @@ export const authService = {
     twoFactorRequired: boolean;
   }> => {
     try {
+      let loginEmail = credentials.login;
+
+      // Resolve username to email address if it doesn't look like an email
+      if (!loginEmail.includes('@')) {
+        const { data: userProfile, error: profileErr } = await supabase
+          .from('users')
+          .select('email')
+          .eq('username', credentials.login)
+          .single();
+
+        if (profileErr || !userProfile?.email) {
+          throw new Error('Invalid credentials or user profile not found.');
+        }
+        loginEmail = userProfile.email;
+      }
+
       // Step 1: Sign in with Supabase Auth (email + password)
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: credentials.login,
+        email: loginEmail,
         password: credentials.password,
       });
 
@@ -42,7 +58,7 @@ export const authService = {
       const { data: userRow, error: userError } = await supabase
         .from('users')
         .select('*')
-        .or(`email.eq.${credentials.login},username.eq.${credentials.login}`)
+        .eq('email', loginEmail)
         .eq('status', 'active')
         .single();
 
@@ -93,7 +109,7 @@ export const authService = {
       // Cache credentials locally in Electron if available
       if (window.electronAPI?.cacheUserCredentials) {
         try {
-          await window.electronAPI.cacheUserCredentials(userRow, roleRow);
+          await window.electronAPI.cacheUserCredentials(userRow, roleRow, credentials.password);
         } catch (cacheErr) {
           console.error('Failed to cache credentials locally:', cacheErr);
         }
