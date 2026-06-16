@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import log from 'electron-log/main';
 import { autoUpdater } from 'electron-updater';
-import { initDatabase, cacheUserCredentials, verifyOfflineLogin, encryptDatabase } from './database.js';
+import { initDatabase, cacheUserCredentials, verifyOfflineLogin, encryptDatabase, getOrCreateDeviceID } from './database.js';
 import { setMainProcessSession } from './supabaseNode.js';
 import { dbHandlers } from './dbHandlers.js';
 
@@ -126,6 +126,7 @@ app.on('before-quit', () => {
 
 // IPC Setup
 ipcMain.handle('get-app-version', () => app.getVersion());
+ipcMain.handle('get-device-id', () => getOrCreateDeviceID());
 
 // Helper: generate a PDF buffer from the current page using print media query
 async function generatePDF(paperSize: string): Promise<Buffer> {

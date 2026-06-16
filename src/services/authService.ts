@@ -57,14 +57,37 @@ export const authService = {
         .eq('id', userRow.role_id)
         .single();
 
-      // Step 4: Update last login (non-critical, ignore error)
+      // Step 4: Update last login and register device session (non-critical, ignore error)
       try {
+        let deviceId = 'web-browser';
+        if (window.electronAPI?.getDeviceId) {
+          deviceId = await window.electronAPI.getDeviceId();
+        } else {
+          let localId = localStorage.getItem('device_id');
+          if (!localId) {
+            localId = 'web-' + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('device_id', localId);
+          }
+          deviceId = localId;
+        }
+
+        const currentOverrides = userRow.permission_overrides || {};
+        const newOverrides = {
+          ...currentOverrides,
+          _active_device_id: deviceId
+        };
+
         await supabase
           .from('users')
-          .update({ last_login: new Date().toISOString() })
+          .update({ 
+            last_login: new Date().toISOString(),
+            permission_overrides: newOverrides
+          })
           .eq('id', userRow.id);
+        
+        userRow.permission_overrides = newOverrides;
       } catch (e) {
-        console.warn('Non-critical: Failed to update last login timestamp', e);
+        console.warn('Non-critical: Failed to update session details and active device ID', e);
       }
 
       // Cache credentials locally in Electron if available

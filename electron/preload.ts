@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cacheUserCredentials: (userRow: any, roleRow: any) => ipcRenderer.invoke('cache-user-credentials', { userRow, roleRow }),
   offlineLogin: (options: { login: string; password: string }) => ipcRenderer.invoke('offline-login', options),
   updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => ipcRenderer.invoke('update-supabase-session', session),
+  getDeviceId: () => ipcRenderer.invoke('get-device-id'),
 
   db: {
     // Flat methods for dbAdapter compatibility

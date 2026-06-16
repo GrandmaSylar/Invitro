@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import log from 'electron-log/main';
 import { getDatabase, getOrCreateDeviceID } from './database.js';
+import { supabaseNode } from './supabaseNode.js';
 
 // ── Helper Mappers ──────────────────────────────────────────────
 
@@ -241,6 +242,8 @@ function localGenerateLabNumber(): string {
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const year = today.getFullYear();
   const todayStr = `${day}${month}${year}`;
+  const deviceId = getOrCreateDeviceID();
+  const deviceSuffix = deviceId.substring(0, 6).toUpperCase();
 
   db.prepare(`
     INSERT INTO daily_sequences (seq_date, last_value)
@@ -252,7 +255,7 @@ function localGenerateLabNumber(): string {
   const row = db.prepare('SELECT last_value FROM daily_sequences WHERE seq_date = ?').get(todayDateStr) as any;
   const seqVal = row ? row.last_value : 1;
 
-  return `A${todayStr}${String(seqVal).padStart(4, '0')}`;
+  return `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
 }
 
 function localPreviewLabNumber(): string {
@@ -263,33 +266,39 @@ function localPreviewLabNumber(): string {
   const month = String(today.getMonth() + 1).padStart(2, '0');
   const year = today.getFullYear();
   const todayStr = `${day}${month}${year}`;
+  const deviceId = getOrCreateDeviceID();
+  const deviceSuffix = deviceId.substring(0, 6).toUpperCase();
 
   const row = db.prepare('SELECT last_value FROM daily_sequences WHERE seq_date = ?').get(todayDateStr) as any;
   const seqVal = row ? row.last_value + 1 : 1;
 
-  return `A${todayStr}${String(seqVal).padStart(4, '0')}`;
+  return `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
 }
 
 function localGenerateReceiptNumber(): string {
   const db = getDatabase();
   const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, ''); // "20260614"
+  const deviceId = getOrCreateDeviceID();
+  const deviceSuffix = deviceId.substring(0, 6).toUpperCase();
   
   const rows = db.prepare(`
     SELECT receipt_number FROM payments 
     WHERE receipt_number LIKE ?
-  `).all(`RCPT-${dateStr}-%`) as any[];
+  `).all(`TEMP-RCPT-${dateStr}-${deviceSuffix}-%`) as any[];
   
   let maxSeq = 0;
   for (const r of rows) {
     const parts = r.receipt_number.split('-');
-    const seq = parseInt(parts[2], 10);
-    if (!isNaN(seq) && seq > maxSeq) {
-      maxSeq = seq;
+    if (parts.length >= 5) {
+      const seq = parseInt(parts[4], 10);
+      if (!isNaN(seq) && seq > maxSeq) {
+        maxSeq = seq;
+      }
     }
   }
   
   const nextSeq = maxSeq + 1;
-  return `RCPT-${dateStr}-${String(nextSeq).padStart(4, '0')}`;
+  return `TEMP-RCPT-${dateStr}-${deviceSuffix}-${String(nextSeq).padStart(4, '0')}`;
 }
 
 export function localRecalculateRecordTotals(labRecordId: string) {
@@ -568,7 +577,24 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const db = getDatabase();
       const id = crypto.randomUUID();
       const deviceId = getOrCreateDeviceID();
-      const labNumber = recordData.labNumber || localGenerateLabNumber();
+      
+      let labNumber = recordData.labNumber;
+      if (!labNumber) {
+        try {
+          const { data: { session } } = await supabaseNode.auth.getSession();
+          if (session) {
+            const { data, error } = await supabaseNode.rpc('generate_lab_number');
+            if (!error && data) {
+              labNumber = data as string;
+            }
+          }
+        } catch (err: any) {
+          log.warn('createLabRecord: generate_lab_number RPC failed, falling back to local sequence:', err.message);
+        }
+        if (!labNumber) {
+          labNumber = localGenerateLabNumber();
+        }
+      }
       
       db.transaction(() => {
         db.prepare(`
@@ -730,7 +756,22 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const db = getDatabase();
       const id = crypto.randomUUID();
       const deviceId = getOrCreateDeviceID();
-      const receiptNumber = localGenerateReceiptNumber();
+      
+      let receiptNumber;
+      try {
+        const { data: { session } } = await supabaseNode.auth.getSession();
+        if (session) {
+          const { data, error } = await supabaseNode.rpc('generate_receipt_number');
+          if (!error && data) {
+            receiptNumber = data as string;
+          }
+        }
+      } catch (err: any) {
+        log.warn('recordPayment: generate_receipt_number RPC failed, falling back to local sequence:', err.message);
+      }
+      if (!receiptNumber) {
+        receiptNumber = localGenerateReceiptNumber();
+      }
       
       db.transaction(() => {
         db.prepare(`
@@ -762,10 +803,32 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
     },
 
     generateLabNumber: async () => {
+      try {
+        const { data: { session } } = await supabaseNode.auth.getSession();
+        if (session) {
+          const { data, error } = await supabaseNode.rpc('generate_lab_number');
+          if (!error && data) {
+            return data as string;
+          }
+        }
+      } catch (err: any) {
+        log.warn('generateLabNumber: RPC failed, falling back to local sequence:', err.message);
+      }
       return localGenerateLabNumber();
     },
 
     previewLabNumber: async () => {
+      try {
+        const { data: { session } } = await supabaseNode.auth.getSession();
+        if (session) {
+          const { data, error } = await supabaseNode.rpc('preview_lab_number');
+          if (!error && data) {
+            return data as string;
+          }
+        }
+      } catch (err: any) {
+        log.warn('previewLabNumber: RPC failed, falling back to local sequence:', err.message);
+      }
       return localPreviewLabNumber();
     },
   },

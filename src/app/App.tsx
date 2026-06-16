@@ -90,6 +90,62 @@ export default function App() {
     }
   }, [initializeSettings]);
 
+  // Strict Single-Device Login session checking loop
+  useEffect(() => {
+    let intervalId: any;
+
+    const checkActiveSession = async () => {
+      const state = useAuthStore.getState();
+      if (!state.isAuthenticated || !state.user) return;
+
+      try {
+        // Fetch the user's latest overrides from Supabase
+        const { data: userRow, error } = await supabase
+          .from('users')
+          .select('permission_overrides')
+          .eq('id', state.user.id)
+          .single();
+
+        if (error || !userRow) {
+          return;
+        }
+
+        const overrides = userRow.permission_overrides as any;
+        const activeDeviceId = overrides?._active_device_id;
+
+        if (activeDeviceId) {
+          let localDeviceId = 'web-browser';
+          if (window.electronAPI?.getDeviceId) {
+            localDeviceId = await window.electronAPI.getDeviceId();
+          } else {
+            localDeviceId = localStorage.getItem('device_id') || 'web-browser';
+          }
+
+          if (activeDeviceId !== localDeviceId) {
+            // Force logout
+            toast.error("Session Expired", {
+              description: "This account has been logged in on another device. You have been logged out.",
+              duration: 8000
+            });
+            
+            useAuthStore.getState().logout();
+            await supabase.auth.signOut();
+          }
+        }
+      } catch (err) {
+        console.warn('Session check warning:', err);
+      }
+    };
+
+    // Run check on mount and then every 15 seconds
+    checkActiveSession();
+    intervalId = setInterval(checkActiveSession, 15000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
+
   return (
     <ThemeProvider attribute="class" storageKey="lims-theme" defaultTheme="system" enableSystem>
       <RouterProvider router={router} />

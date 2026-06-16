@@ -23,6 +23,7 @@ interface Window {
     cacheUserCredentials: (userRow: any, roleRow: any) => Promise<{ success: boolean; error?: string }>;
     offlineLogin: (options: { login: string; password: string }) => Promise<{ success: boolean; user?: any; permissions?: Record<string, boolean>; error?: string }>;
     updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => Promise<{ success: boolean; error?: string }>;
+    getDeviceId: () => Promise<string>;
     db?: any;
   }
 }

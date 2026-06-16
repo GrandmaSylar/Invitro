@@ -651,10 +651,40 @@ export async function runOutboundSyncInternal() {
       let error;
       
       if (item.operation === 'INSERT') {
+        let finalPayload = { ...payload };
+
+        if (item.table_name === 'lab_records' && payload.lab_number && payload.lab_number.startsWith('TEMP-')) {
+          log.info(`Sync: Generating official lab number for temporary number ${payload.lab_number}`);
+          const { data: officialLabNumber, error: rpcErr } = await supabaseNode.rpc('generate_lab_number');
+          if (rpcErr) {
+            log.error('Sync: Failed to generate official lab number, will retry:', rpcErr.message);
+            throw rpcErr;
+          }
+          log.info(`Sync: Generated official lab number ${officialLabNumber} for record ${item.record_id}`);
+          finalPayload.lab_number = officialLabNumber;
+          
+          // Proactively update local SQLite record
+          localDb.prepare('UPDATE lab_records SET lab_number = ? WHERE id = ?').run(officialLabNumber, item.record_id);
+        }
+
+        if (item.table_name === 'payments' && payload.receipt_number && payload.receipt_number.startsWith('TEMP-')) {
+          log.info(`Sync: Generating official receipt number for temporary number ${payload.receipt_number}`);
+          const { data: officialReceiptNumber, error: rpcErr } = await supabaseNode.rpc('generate_receipt_number');
+          if (rpcErr) {
+            log.error('Sync: Failed to generate official receipt number, will retry:', rpcErr.message);
+            throw rpcErr;
+          }
+          log.info(`Sync: Generated official receipt number ${officialReceiptNumber} for payment ${item.record_id}`);
+          finalPayload.receipt_number = officialReceiptNumber;
+          
+          // Proactively update local SQLite payment record
+          localDb.prepare('UPDATE payments SET receipt_number = ? WHERE id = ?').run(officialReceiptNumber, item.record_id);
+        }
+
         const { error: err } = await supabaseNode
           .from(item.table_name)
           .insert({
-            ...payload,
+            ...finalPayload,
             device_id: item.device_id
           });
         error = err;
@@ -992,6 +1022,7 @@ const SYNC_CONFIGS: TableSyncConfig[] = [
       INSERT INTO lab_records (id, lab_number, patient_id, record_date, status, referral_option, referral_doctor_id, referral_hospital_id, subtotal, total_cost, amount_paid, arrears, created_by_id, created_at, updated_at, device_id)
       VALUES ($id, $lab_number, $patient_id, $record_date, $status, $referral_option, $referral_doctor_id, $referral_hospital_id, $subtotal, $total_cost, $amount_paid, $arrears, $created_by_id, $created_at, $updated_at, $device_id)
       ON CONFLICT(id) DO UPDATE SET
+        lab_number = excluded.lab_number,
         status = excluded.status,
         referral_option = excluded.referral_option,
         referral_doctor_id = excluded.referral_doctor_id,
