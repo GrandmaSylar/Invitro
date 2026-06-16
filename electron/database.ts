@@ -469,6 +469,18 @@ function createLocalSchema() {
       FOREIGN KEY (received_by_id) REFERENCES users(id) ON DELETE SET NULL
     );
 
+    CREATE TABLE IF NOT EXISTS audit_events (
+      id TEXT PRIMARY KEY,
+      timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+      actor_id TEXT NOT NULL,
+      actor_name TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      target_name TEXT NOT NULL,
+      detail TEXT DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS daily_sequences (
       seq_date TEXT PRIMARY KEY,
       last_value INTEGER NOT NULL DEFAULT 0
@@ -1138,20 +1150,11 @@ export async function pullInboundChanges() {
   }
 
   const localDb = getDatabase();
-  const lastSyncRow = localDb.prepare("SELECT value FROM device_meta WHERE key = 'last_inbound_sync'").get() as any;
-  let since = lastSyncRow ? lastSyncRow.value : null;
-
-  if (!since) {
-    const ninetyDaysAgo = new Date();
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-    since = ninetyDaysAgo.toISOString();
-  }
-
-  let latestTimestamp = since;
   let shouldSyncTestParameters = false;
+  let hasAnySucceeded = false;
 
   try {
-    log.info(`Inbound Sync: Pulling remote changes since ${since}...`);
+    log.info(`Inbound Sync: Starting inbound sync cycle...`);
     
     for (const config of SYNC_CONFIGS) {
       if (config.tableName === 'notifications' && !hasSession) {
@@ -1159,85 +1162,108 @@ export async function pullInboundChanges() {
         continue;
       }
 
-      const timestampCol = config.timestampColumn || 'updated_at';
-      
-      const { data: remoteRecords, error } = await supabaseNode
-        .from(config.tableName)
-        .select('*')
-        .gt(timestampCol, since)
-        .order(timestampCol, { ascending: true });
+      try {
+        const metaKey = `last_inbound_sync_${config.tableName}`;
+        const lastSyncRow = localDb.prepare("SELECT value FROM device_meta WHERE key = ?").get(metaKey) as any;
+        let since = lastSyncRow ? lastSyncRow.value : null;
 
-      if (error) {
-        log.error(`Inbound Sync: Failed to fetch table ${config.tableName}:`, error.message);
-        throw error;
-      }
-      
-      if (!remoteRecords || remoteRecords.length === 0) continue;
-
-      log.info(`Inbound Sync: Received ${remoteRecords.length} records for table ${config.tableName}`);
-      
-      const sqliteTable = config.sqliteTableName || config.tableName;
-      const upsertStmt = localDb.prepare(config.upsertSql);
-      const checkPendingOutbound = localDb.prepare(`
-        SELECT 1 FROM sync_queue 
-        WHERE record_id = ? AND status = 'pending' AND table_name = ?
-      `);
-
-      const transaction = localDb.transaction((records) => {
-        for (const record of records) {
-          const hasPending = checkPendingOutbound.get(record.id, sqliteTable);
-          if (!hasPending) {
-            upsertStmt.run(config.sqliteParamMapper(record));
-          }
+        if (!since) {
+          const ninetyDaysAgo = new Date();
+          ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+          since = ninetyDaysAgo.toISOString();
         }
-      });
-      transaction(remoteRecords);
 
-      if ((config.tableName === 'tests' || config.tableName === 'parameters') && remoteRecords.length > 0) {
-        shouldSyncTestParameters = true;
-      }
+        log.info(`Inbound Sync: Pulling remote changes for table ${config.tableName} since ${since}...`);
 
-      if (config.tableName === 'lab_records' && remoteRecords.length > 0) {
-        const recordIds = remoteRecords.map(r => r.id);
-        const { data: remoteTests, error: testsError } = await supabaseNode
-          .from('lab_record_tests')
+        const timestampCol = config.timestampColumn || 'updated_at';
+        
+        const { data: remoteRecords, error } = await supabaseNode
+          .from(config.tableName)
           .select('*')
-          .in('lab_record_id', recordIds);
+          .gt(timestampCol, since)
+          .order(timestampCol, { ascending: true });
 
-        if (!testsError && remoteTests && remoteTests.length > 0) {
-          const upsertLrt = localDb.prepare(`
-            INSERT INTO lab_record_tests (id, lab_record_id, test_id, test_name, department, test_cost, total_cost, amount_paid, arrears)
-            VALUES ($id, $lab_record_id, $test_id, $test_name, $department, $test_cost, $total_cost, $amount_paid, $arrears)
-            ON CONFLICT(id) DO UPDATE SET
-              test_name = excluded.test_name,
-              department = excluded.department,
-              test_cost = excluded.test_cost,
-              total_cost = excluded.total_cost,
-              amount_paid = excluded.amount_paid,
-              arrears = excluded.arrears
-          `);
-          
-          localDb.transaction(() => {
-            for (const rt of remoteTests) {
-              upsertLrt.run({
-                id: rt.id,
-                lab_record_id: rt.lab_record_id,
-                test_id: rt.test_id,
-                test_name: rt.test_name,
-                department: rt.department,
-                test_cost: Number(rt.test_cost),
-                total_cost: Number(rt.total_cost),
-                amount_paid: Number(rt.amount_paid),
-                arrears: Number(rt.arrears)
-              });
-            }
-          })();
+        if (error) {
+          log.error(`Inbound Sync: Failed to fetch table ${config.tableName}:`, error.message);
+          continue; // Resiliently skip this table instead of failing the whole loop
         }
-      }
+        
+        if (remoteRecords && remoteRecords.length > 0) {
+          log.info(`Inbound Sync: Received ${remoteRecords.length} records for table ${config.tableName}`);
+          
+          const sqliteTable = config.sqliteTableName || config.tableName;
+          const upsertStmt = localDb.prepare(config.upsertSql);
+          const checkPendingOutbound = localDb.prepare(`
+            SELECT 1 FROM sync_queue 
+            WHERE record_id = ? AND status = 'pending' AND table_name = ?
+          `);
 
-      const lastRecordTime = remoteRecords[remoteRecords.length - 1][timestampCol];
-      if (new Date(lastRecordTime) > new Date(latestTimestamp)) {
-        latestTimestamp = lastRecordTime;
+          const transaction = localDb.transaction((records) => {
+            for (const record of records) {
+              const hasPending = checkPendingOutbound.get(record.id, sqliteTable);
+              if (!hasPending) {
+                upsertStmt.run(config.sqliteParamMapper(record));
+              }
+            }
+          });
+          transaction(remoteRecords);
+
+          if ((config.tableName === 'tests' || config.tableName === 'parameters') && remoteRecords.length > 0) {
+            shouldSyncTestParameters = true;
+          }
+
+          if (config.tableName === 'lab_records' && remoteRecords.length > 0) {
+            const recordIds = remoteRecords.map(r => r.id);
+            const { data: remoteTests, error: testsError } = await supabaseNode
+              .from('lab_record_tests')
+              .select('*')
+              .in('lab_record_id', recordIds);
+
+            if (!testsError && remoteTests && remoteTests.length > 0) {
+              const upsertLrt = localDb.prepare(`
+                INSERT INTO lab_record_tests (id, lab_record_id, test_id, test_name, department, test_cost, total_cost, amount_paid, arrears)
+                VALUES ($id, $lab_record_id, $test_id, $test_name, $department, $test_cost, $total_cost, $amount_paid, $arrears)
+                ON CONFLICT(id) DO UPDATE SET
+                  test_name = excluded.test_name,
+                  department = excluded.department,
+                  test_cost = excluded.test_cost,
+                  total_cost = excluded.total_cost,
+                  amount_paid = excluded.amount_paid,
+                  arrears = excluded.arrears
+              `);
+              
+              localDb.transaction(() => {
+                for (const rt of remoteTests) {
+                  upsertLrt.run({
+                    id: rt.id,
+                    lab_record_id: rt.lab_record_id,
+                    test_id: rt.test_id,
+                    test_name: rt.test_name,
+                    department: rt.department,
+                    test_cost: Number(rt.test_cost),
+                    total_cost: Number(rt.total_cost),
+                    amount_paid: Number(rt.amount_paid),
+                    arrears: Number(rt.arrears)
+                  });
+                }
+              })();
+            }
+          }
+
+          const lastRecordTime = remoteRecords[remoteRecords.length - 1][timestampCol];
+          localDb.prepare("INSERT INTO device_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+            .run(metaKey, lastRecordTime);
+          log.info(`Inbound Sync: Table ${config.tableName} sync timestamp updated to ${lastRecordTime}`);
+        } else {
+          // If no new remote records, update timestamp to now so we don't query same historical gap endlessly
+          const currentCheckTime = new Date().toISOString();
+          localDb.prepare("INSERT INTO device_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+            .run(metaKey, currentCheckTime);
+        }
+        
+        hasAnySucceeded = true;
+      } catch (tableErr: any) {
+        log.error(`Inbound Sync: Exception during sync loop for table ${config.tableName}:`, tableErr.message);
       }
     }
 
@@ -1260,10 +1286,10 @@ export async function pullInboundChanges() {
       }
     }
 
-    if (latestTimestamp !== since) {
+    if (hasAnySucceeded) {
+      const globalSyncTime = new Date().toISOString();
       localDb.prepare("INSERT INTO device_meta (key, value) VALUES ('last_inbound_sync', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-        .run(latestTimestamp);
-      log.info(`Inbound Sync: Inbound sync timestamp updated to ${latestTimestamp}`);
+        .run(globalSyncTime);
     }
   } catch (err: any) {
     log.error('Inbound Sync: Inbound synchronization failed:', err.message);
