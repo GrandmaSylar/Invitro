@@ -2,6 +2,13 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.2
+
+### Bug Fixes
+- **Inbound Database Synchronization Blocker**: Resolved a critical bug where inbound syncing from Supabase failed and stalled on the `departments` table due to the remote database lacking an `updated_at` column. Configured lookup tables (`departments` and `antibiotics`) to sync on their `created_at` timestamp.
+- **Persistent SafeStorage Key Creation**: Fixed a crash on database key generation (`safeStorage.encryptBuffer is not a function`) by converting the buffer key to a hex string before encrypting and decrypting it with Electron's supported `safeStorage.encryptString`/`safeStorage.decryptString` methods.
+- **Local Lab Number Preview & Generation**: Added missing `localGenerateLabNumber` and `localPreviewLabNumber` helpers in the main process handlers to prevent errors when previewing lab numbers.
+
 ## Version 1.1.1
 
 ### Bug Fixes
