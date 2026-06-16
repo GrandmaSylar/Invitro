@@ -2,6 +2,15 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.0
+
+### Offline-First Architecture & Secure Database Sync
+- **Local SQLite Integration**: Set up local SQLite database storage using `better-sqlite3` to cache all application tables locally, enabling the application to start up and run completely offline without an internet connection.
+- **Double-Shield Database Encryption**: Implemented AES-256 local database encryption using unique cryptographic keys generated per machine, stored securely in Electron's safe storage (DPAPI on Windows), ensuring local clinical data is encrypted at rest.
+- **Dynamic Background Synchronization**: Developed a generic local-to-remote synchronization engine that tracks changes locally with a single-serial queue, handling conflicts and syncing actions asynchronously to Supabase.
+- **Local Receipt & Sequence Generation**: Implemented a local receipt number generator that mimics the remote Supabase trigger to ensure correct receipt formats and unique tracking numbers even when offline.
+- **Customized Receipts & Reports**: Upgraded the receipt and laboratory report system to print/preview with custom layout dimensions, supporting standard roll receipt format, customizable branding/details, and professional margins.
+
 ## Version 1.0.1
 
 ### Major UI & Theming Engine Overhaul
