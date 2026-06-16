@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.1
+
+### Bug Fixes
+- **Electron Database API Call Errors**: Fixed database IPC errors where methods on the frontend (`window.electronAPI.db`) were failing due to missing flat method exports in the Electron preload script. Exposed all database actions as flat functions directly on the db API to resolve compatibility with the existing frontend `dbAdapter` implementation.
+
 ## Version 1.1.0
 
 ### Offline-First Architecture & Secure Database Sync
