@@ -2,6 +2,12 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.6
+
+### Bug Fixes
+- **Inbound Sync RLS Policy & Empty Tables Blocker**: Fixed a critical issue where inbound synchronization of private transactional tables (`patients`, `lab_records`, `payments`, `test_results`) ran during unauthenticated startup states. This caused the remote Supabase API to return empty arrays (due to RLS policies), which incorrectly updated the local sync timestamps, blocking actual data from loading once the user logged in. Private tables are now skipped entirely when unauthenticated.
+- **Inbound Self-Healing**: Added a self-healing routine that automatically clears sync timestamps for any local SQLite tables that are detected to be empty upon authenticated login, triggering a full synchronization of existing data.
+
 ## Version 1.1.5
 
 ### New Features

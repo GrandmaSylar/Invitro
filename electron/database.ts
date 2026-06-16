@@ -1173,6 +1173,25 @@ export async function pullInboundChanges() {
   }
 
   const localDb = getDatabase();
+
+  // Self-Healing: If we have an authenticated session and a private table is empty locally,
+  // clear its sync timestamp to force a full pull of historical records.
+  if (hasSession) {
+    const privateTables = ['patients', 'lab_records', 'payments', 'test_results', 'notifications'];
+    for (const pTable of privateTables) {
+      try {
+        const rowCount = localDb.prepare(`SELECT COUNT(*) as count FROM ${pTable}`).get() as any;
+        if (rowCount && rowCount.count === 0) {
+          const metaKey = `last_inbound_sync_${pTable}`;
+          localDb.prepare("DELETE FROM device_meta WHERE key = ?").run(metaKey);
+          log.info(`Inbound Sync Self-Healing: Cleared sync timestamp for empty table ${pTable} to trigger full pull.`);
+        }
+      } catch (e: any) {
+        log.error(`Inbound Sync Self-Healing: Failed to verify row count for table ${pTable}:`, e.message);
+      }
+    }
+  }
+
   let shouldSyncTestParameters = false;
   let hasAnySucceeded = false;
 
@@ -1180,8 +1199,9 @@ export async function pullInboundChanges() {
     log.info(`Inbound Sync: Starting inbound sync cycle...`);
     
     for (const config of SYNC_CONFIGS) {
-      if (config.tableName === 'notifications' && !hasSession) {
-        log.info('Inbound Sync: Skipping notifications pull since user session is not authenticated.');
+      const isPrivateTable = ['patients', 'lab_records', 'payments', 'test_results', 'notifications'].includes(config.tableName);
+      if (isPrivateTable && !hasSession) {
+        log.info(`Inbound Sync: Skipping private table ${config.tableName} pull since user session is not authenticated.`);
         continue;
       }
 
