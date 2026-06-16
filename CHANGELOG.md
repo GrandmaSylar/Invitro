@@ -2,13 +2,18 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.4
+
+### Bug Fixes
+- **Resilient Inbound Database Sync**: Redesigned the sync engine to track synchronization timestamps independently per table (e.g. `last_inbound_sync_patients`, `last_inbound_sync_payments`). Caught and logged database or permission exceptions (such as the remote `notifications` table RLS restriction) at the table level, enabling the loop to gracefully skip the failing table and successfully sync all other crucial collections (patients, lab records, test parameters, payments) instead of crashing the entire sync cycle.
+- **SQLite Schema Recovery**: Fixed a missing SQLite schema table definition for `audit_events`, resolving database failures during local logging.
+
 ## Version 1.1.3
 
 ### New Features
 - **Local Temporary Sequences ("Fix 2")**: Resolved sequence collisions in multi-device setups by introducing temporary offline sequence numbers (e.g. `TEMP-A[DDMMYYYY]-[DEVICE_SUFFIX]-[SEQ]` and `TEMP-RCPT-[YYYYMMDD]-[DEVICE_SUFFIX]-[SEQ]`). If online, official sequences are retrieved immediately. If offline, the temporary sequences are converted to standard official formats on the cloud and local SQLite database upon online reconnection.
 - **Strict Single-Device Login**: Implemented a security enforcement policy that restricts user accounts to exactly one active device login at a time. Secondary logins register the new device ID in the user's `permission_overrides` on Supabase, prompting a silent session invalidation, session expired notification, and automatic redirection to the login screen on the primary device within 15 seconds.
 - **Manual Auto-Update Controls**: Configured manual update checks and downloads, allowing users to view update notes, click "Download Update" manually, track download progress percentage, and click "Install & Restart" once completed.
-- **Resilient Database Inbound Sync**: Fixed database synchronization blockers under unauthenticated main process sessions by fetching public catalog tables anonymously.
 
 ## Version 1.1.2
 
