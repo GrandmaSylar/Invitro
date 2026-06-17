@@ -1476,12 +1476,12 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
 
     previewParameterCode: async () => {
       const db = getDatabase();
-      const rows = db.prepare("SELECT parameter_code FROM parameters WHERE parameter_code LIKE 'PRM-%' ORDER BY parameter_code DESC LIMIT 1").all() as any[];
-      if (rows.length === 0) return 'PRM-0001';
+      const rows = db.prepare("SELECT parameter_code FROM parameters WHERE parameter_code GLOB 'P[0-9]*' ORDER BY CAST(SUBSTR(parameter_code, 2) AS INTEGER) DESC LIMIT 1").all() as any[];
+      if (rows.length === 0) return 'P001';
       
       const last = rows[0].parameter_code;
-      const num = parseInt(last.split('-')[1], 10);
-      return `PRM-${String(num + 1).padStart(4, '0')}`;
+      const num = parseInt(last.substring(1), 10);
+      return `P${String(num + 1).padStart(3, '0')}`;
     },
 
     getParameters: async () => {
