@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.8
+
+### Improvements & Fixes
+- **Parameter ID Format Standardized**: Changed new parameter codes to use the `P###` sequence (e.g., `P004` or `P330`) instead of `PRM-####`, maintaining complete formatting consistency with the seeded laboratory test catalog.
+
 ## Version 1.1.7
 
 ### New Features & Improvements

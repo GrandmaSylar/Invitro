@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function WelcomeChangelogModal() {
-  const currentVersion = '1.1.7';
+  const currentVersion = '1.1.8';
   const localStorageKey = `lims-changelog-seen-v${currentVersion}`;
   
   const [isOpen, setIsOpen] = useState(false);
@@ -88,9 +88,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Improved Offline Syncing</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Standardized Parameter IDs</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Upgraded the background connection engine to handle offline-to-cloud database updates much more reliably.
+                    Updated newly created parameter codes to follow the clean P### sequence (e.g., P004) instead of PRM-####.
                   </p>
                 </div>
               </div>
