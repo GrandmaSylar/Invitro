@@ -1,7 +1,34 @@
 import crypto from 'node:crypto';
 import log from 'electron-log/main';
-import { getDatabase, getOrCreateDeviceID } from './database.js';
+import { getDatabase, getOrCreateDeviceID, getForcedOffline } from './database.js';
 import { supabaseNode } from './supabaseNode.js';
+
+function mapHospital(row: any) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    hospitalName: row.hospital_name,
+    location: row.location || undefined,
+    phoneNumber: row.phone_number || undefined,
+    address: row.address || undefined,
+    createdAt: row.created_at,
+  };
+}
+
+function mapDoctor(row: any) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    doctorName: row.doctor_name,
+    speciality: row.speciality || undefined,
+    phoneNumber: row.phone_number || undefined,
+    email: row.email || undefined,
+    affiliateHospitalId: row.affiliate_hospital_id || undefined,
+    location: row.location || undefined,
+    address: row.address || undefined,
+    createdAt: row.created_at,
+  };
+}
 
 // ── Helper Mappers ──────────────────────────────────────────────
 
@@ -50,32 +77,6 @@ function mapUser(row: any) {
   };
 }
 
-function mapHospital(row: any) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    hospitalName: row.hospital_name,
-    location: row.location || undefined,
-    phoneNumber: row.phone_number || undefined,
-    address: row.address || undefined,
-    createdAt: row.created_at,
-  };
-}
-
-function mapDoctor(row: any) {
-  if (!row) return null;
-  return {
-    id: row.id,
-    doctorName: row.doctor_name,
-    speciality: row.speciality || undefined,
-    phoneNumber: row.phone_number || undefined,
-    email: row.email || undefined,
-    affiliateHospitalId: row.affiliate_hospital_id || undefined,
-    location: row.location || undefined,
-    address: row.address || undefined,
-    createdAt: row.created_at,
-  };
-}
 
 function mapTest(row: any) {
   if (!row) return null;
@@ -253,9 +254,23 @@ function localGenerateLabNumber(): string {
   `).run(todayDateStr);
 
   const row = db.prepare('SELECT last_value FROM daily_sequences WHERE seq_date = ?').get(todayDateStr) as any;
-  const seqVal = row ? row.last_value : 1;
+  let seqVal = row ? row.last_value : 1;
 
-  return `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
+  let labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
+  while (db.prepare('SELECT id FROM lab_records WHERE lab_number = ?').get(labNumber)) {
+    seqVal++;
+    labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
+  }
+
+  // Update daily_sequences to match the final unique seqVal we used
+  db.prepare(`
+    INSERT INTO daily_sequences (seq_date, last_value)
+    VALUES (?, ?)
+    ON CONFLICT (seq_date)
+    DO UPDATE SET last_value = max(daily_sequences.last_value, excluded.last_value)
+  `).run(todayDateStr, seqVal);
+
+  return labNumber;
 }
 
 function localPreviewLabNumber(): string {
@@ -270,9 +285,15 @@ function localPreviewLabNumber(): string {
   const deviceSuffix = deviceId.substring(0, 6).toUpperCase();
 
   const row = db.prepare('SELECT last_value FROM daily_sequences WHERE seq_date = ?').get(todayDateStr) as any;
-  const seqVal = row ? row.last_value + 1 : 1;
+  let seqVal = row ? row.last_value + 1 : 1;
 
-  return `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
+  let labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
+  while (db.prepare('SELECT id FROM lab_records WHERE lab_number = ?').get(labNumber)) {
+    seqVal++;
+    labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
+  }
+
+  return labNumber;
 }
 
 function localGenerateReceiptNumber(): string {
@@ -580,16 +601,18 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       
       let labNumber = recordData.labNumber;
       if (!labNumber) {
-        try {
-          const { data: { session } } = await supabaseNode.auth.getSession();
-          if (session) {
-            const { data, error } = await supabaseNode.rpc('generate_lab_number');
-            if (!error && data) {
-              labNumber = data as string;
+        if (!getForcedOffline()) {
+          try {
+            const { data: { session } } = await supabaseNode.auth.getSession();
+            if (session) {
+              const { data, error } = await supabaseNode.rpc('generate_lab_number');
+              if (!error && data) {
+                labNumber = data as string;
+              }
             }
+          } catch (err: any) {
+            log.warn('createLabRecord: generate_lab_number RPC failed, falling back to local sequence:', err.message);
           }
-        } catch (err: any) {
-          log.warn('createLabRecord: generate_lab_number RPC failed, falling back to local sequence:', err.message);
         }
         if (!labNumber) {
           labNumber = localGenerateLabNumber();
@@ -818,16 +841,18 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
     },
 
     previewLabNumber: async () => {
-      try {
-        const { data: { session } } = await supabaseNode.auth.getSession();
-        if (session) {
-          const { data, error } = await supabaseNode.rpc('preview_lab_number');
-          if (!error && data) {
-            return data as string;
+      if (!getForcedOffline()) {
+        try {
+          const { data: { session } } = await supabaseNode.auth.getSession();
+          if (session) {
+            const { data, error } = await supabaseNode.rpc('preview_lab_number');
+            if (!error && data) {
+              return data as string;
+            }
           }
+        } catch (err: any) {
+          log.warn('previewLabNumber: RPC failed, falling back to local sequence:', err.message);
         }
-      } catch (err: any) {
-        log.warn('previewLabNumber: RPC failed, falling back to local sequence:', err.message);
       }
       return localPreviewLabNumber();
     },
@@ -1626,5 +1651,189 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
         `).run(crypto.randomUUID(), id, payload, deviceId);
       })();
     },
+  },
+  registry: {
+    getHospitals: async () => {
+      const db = getDatabase();
+      const rows = db.prepare('SELECT * FROM hospitals ORDER BY hospital_name ASC').all() as any[];
+      return rows.map(mapHospital);
+    },
+    createHospital: async (hospitalData: any) => {
+      const db = getDatabase();
+      const id = crypto.randomUUID();
+      const deviceId = getOrCreateDeviceID();
+      db.transaction(() => {
+        db.prepare(`
+          INSERT INTO hospitals (id, hospital_name, location, phone_number, address)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(id, hospitalData.hospitalName, hospitalData.location || null, hospitalData.phoneNumber || null, hospitalData.address || null);
+        
+        const payload = JSON.stringify({
+          id,
+          hospital_name: hospitalData.hospitalName,
+          location: hospitalData.location || null,
+          phone_number: hospitalData.phoneNumber || null,
+          address: hospitalData.address || null
+        });
+        db.prepare(`
+          INSERT INTO sync_queue (id, table_name, record_id, operation, payload, device_id)
+          VALUES (?, 'hospitals', ?, 'INSERT', ?, ?)
+        `).run(crypto.randomUUID(), id, payload, deviceId);
+      })();
+      const row = db.prepare('SELECT * FROM hospitals WHERE id = ?').get(id);
+      return mapHospital(row);
+    },
+    updateHospital: async (id: string, hospitalData: any) => {
+      const db = getDatabase();
+      const deviceId = getOrCreateDeviceID();
+      db.transaction(() => {
+        const sets: string[] = [];
+        const params: any[] = [];
+        const payload: Record<string, any> = {};
+        if (hospitalData.hospitalName !== undefined) {
+          sets.push('hospital_name = ?');
+          params.push(hospitalData.hospitalName);
+          payload.hospital_name = hospitalData.hospitalName;
+        }
+        if (hospitalData.location !== undefined) {
+          sets.push('location = ?');
+          params.push(hospitalData.location);
+          payload.location = hospitalData.location;
+        }
+        if (hospitalData.phoneNumber !== undefined) {
+          sets.push('phone_number = ?');
+          params.push(hospitalData.phoneNumber);
+          payload.phone_number = hospitalData.phoneNumber;
+        }
+        if (hospitalData.address !== undefined) {
+          sets.push('address = ?');
+          params.push(hospitalData.address);
+          payload.address = hospitalData.address;
+        }
+        if (sets.length === 0) return;
+        sets.push("updated_at = datetime('now')");
+        params.push(id);
+        db.prepare(`UPDATE hospitals SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+        db.prepare(`
+          INSERT INTO sync_queue (id, table_name, record_id, operation, payload, device_id)
+          VALUES (?, 'hospitals', ?, 'UPDATE', ?, ?)
+        `).run(crypto.randomUUID(), id, JSON.stringify(payload), deviceId);
+      })();
+      const row = db.prepare('SELECT * FROM hospitals WHERE id = ?').get(id);
+      return mapHospital(row);
+    },
+    deleteHospital: async (id: string) => {
+      const db = getDatabase();
+      const deviceId = getOrCreateDeviceID();
+      db.transaction(() => {
+        db.prepare('DELETE FROM hospitals WHERE id = ?').run(id);
+        db.prepare(`
+          INSERT INTO sync_queue (id, table_name, record_id, operation, payload, device_id)
+          VALUES (?, 'hospitals', ?, 'DELETE', '{}', ?)
+        `).run(crypto.randomUUID(), id, deviceId);
+      })();
+    },
+    getDoctors: async (hospitalId?: string) => {
+      const db = getDatabase();
+      let rows: any[];
+      if (hospitalId) {
+        rows = db.prepare('SELECT * FROM doctors WHERE affiliate_hospital_id = ? ORDER BY doctor_name ASC').all(hospitalId) as any[];
+      } else {
+        rows = db.prepare('SELECT * FROM doctors ORDER BY doctor_name ASC').all() as any[];
+      }
+      return rows.map(mapDoctor);
+    },
+    createDoctor: async (doctorData: any) => {
+      const db = getDatabase();
+      const id = crypto.randomUUID();
+      const deviceId = getOrCreateDeviceID();
+      db.transaction(() => {
+        db.prepare(`
+          INSERT INTO doctors (id, doctor_name, speciality, phone_number, email, affiliate_hospital_id, location, address)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(id, doctorData.doctorName, doctorData.speciality || null, doctorData.phoneNumber || null, doctorData.email || null, doctorData.affiliateHospitalId || null, doctorData.location || null, doctorData.address || null);
+        const payload = JSON.stringify({
+          id,
+          doctor_name: doctorData.doctorName,
+          speciality: doctorData.speciality || null,
+          phone_number: doctorData.phoneNumber || null,
+          email: doctorData.email || null,
+          affiliate_hospital_id: doctorData.affiliateHospitalId || null,
+          location: doctorData.location || null,
+          address: doctorData.address || null
+        });
+        db.prepare(`
+          INSERT INTO sync_queue (id, table_name, record_id, operation, payload, device_id)
+          VALUES (?, 'doctors', ?, 'INSERT', ?, ?)
+        `).run(crypto.randomUUID(), id, payload, deviceId);
+      })();
+      const row = db.prepare('SELECT * FROM doctors WHERE id = ?').get(id);
+      return mapDoctor(row);
+    },
+    updateDoctor: async (id: string, doctorData: any) => {
+      const db = getDatabase();
+      const deviceId = getOrCreateDeviceID();
+      db.transaction(() => {
+        const sets: string[] = [];
+        const params: any[] = [];
+        const payload: Record<string, any> = {};
+        if (doctorData.doctorName !== undefined) {
+          sets.push('doctor_name = ?');
+          params.push(doctorData.doctorName);
+          payload.doctor_name = doctorData.doctorName;
+        }
+        if (doctorData.speciality !== undefined) {
+          sets.push('speciality = ?');
+          params.push(doctorData.speciality);
+          payload.speciality = doctorData.speciality;
+        }
+        if (doctorData.phoneNumber !== undefined) {
+          sets.push('phone_number = ?');
+          params.push(doctorData.phoneNumber);
+          payload.phone_number = doctorData.phoneNumber;
+        }
+        if (doctorData.email !== undefined) {
+          sets.push('email = ?');
+          params.push(doctorData.email);
+          payload.email = doctorData.email;
+        }
+        if (doctorData.affiliateHospitalId !== undefined) {
+          sets.push('affiliate_hospital_id = ?');
+          params.push(doctorData.affiliateHospitalId);
+          payload.affiliate_hospital_id = doctorData.affiliateHospitalId;
+        }
+        if (doctorData.location !== undefined) {
+          sets.push('location = ?');
+          params.push(doctorData.location);
+          payload.location = doctorData.location;
+        }
+        if (doctorData.address !== undefined) {
+          sets.push('address = ?');
+          params.push(doctorData.address);
+          payload.address = doctorData.address;
+        }
+        if (sets.length === 0) return;
+        sets.push("updated_at = datetime('now')");
+        params.push(id);
+        db.prepare(`UPDATE doctors SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+        db.prepare(`
+          INSERT INTO sync_queue (id, table_name, record_id, operation, payload, device_id)
+          VALUES (?, 'doctors', ?, 'UPDATE', ?, ?)
+        `).run(crypto.randomUUID(), id, JSON.stringify(payload), deviceId);
+      })();
+      const row = db.prepare('SELECT * FROM doctors WHERE id = ?').get(id);
+      return mapDoctor(row);
+    },
+    deleteDoctor: async (id: string) => {
+      const db = getDatabase();
+      const deviceId = getOrCreateDeviceID();
+      db.transaction(() => {
+        db.prepare('DELETE FROM doctors WHERE id = ?').run(id);
+        db.prepare(`
+          INSERT INTO sync_queue (id, table_name, record_id, operation, payload, device_id)
+          VALUES (?, 'doctors', ?, 'DELETE', '{}', ?)
+        `).run(crypto.randomUUID(), id, deviceId);
+      })();
+    }
   },
 };

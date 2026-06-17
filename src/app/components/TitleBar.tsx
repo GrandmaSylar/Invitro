@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Minus, Square, X, Copy } from "lucide-react";
 import { showConfirm } from "../../stores/useDialogStore";
 import { dbAdapter } from "../../services/dbAdapter";
+import { useSyncStore } from "../../stores/useSyncStore";
 
 /**
  * Custom title bar that replaces the native Windows chrome.
@@ -13,6 +14,23 @@ export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"synced" | "pending" | "failed">("synced");
   const [syncDetails, setSyncDetails] = useState<string>("All data synced to cloud");
+
+  const isOffline = useSyncStore((s) => s.isOffline);
+  const setOffline = useSyncStore((s) => s.setOffline);
+
+  const handleToggleOffline = async () => {
+    const nextState = !isOffline;
+    await setOffline(nextState);
+    if (!nextState) {
+      if (window.electronAPI?.triggerSync) {
+        try {
+          await window.electronAPI.triggerSync();
+        } catch (err) {
+          console.error("Failed to trigger manual sync:", err);
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     if (!isElectron) return;
@@ -87,19 +105,32 @@ export function TitleBar() {
       {/* Drag region — fills the space between logo and window controls */}
       <div className="flex-1 h-full flex items-center pl-3 gap-2 app-drag-region">
         <span className="text-xs font-semibold tracking-wide opacity-60">Invitro LIMS</span>
-        <div className="flex items-center gap-1.5 ml-2 no-drag" title={syncDetails}>
+        <button
+          onClick={handleToggleOffline}
+          className="flex items-center gap-1.5 ml-2 px-2 py-0.5 rounded bg-white/5 hover:bg-white/10 border border-white/10 transition-colors duration-150 cursor-pointer no-drag select-none outline-none"
+          title={isOffline ? "Currently working offline. Click to go online." : `${syncDetails}. Click to work offline.`}
+        >
           <span className="relative flex h-2 w-2">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-              syncStatus === "failed" ? "bg-red-400" : syncStatus === "pending" ? "bg-amber-400" : "bg-emerald-400"
-            }`}></span>
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${
-              syncStatus === "failed" ? "bg-red-500" : syncStatus === "pending" ? "bg-amber-500" : "bg-emerald-500"
-            }`}></span>
+            {isOffline ? (
+              <>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-amber-400"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+              </>
+            ) : (
+              <>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  syncStatus === "failed" ? "bg-red-400" : syncStatus === "pending" ? "bg-amber-400" : "bg-emerald-400"
+                }`}></span>
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  syncStatus === "failed" ? "bg-red-500" : syncStatus === "pending" ? "bg-amber-500" : "bg-emerald-500"
+                }`}></span>
+              </>
+            )}
           </span>
-          <span className="text-[10px] opacity-40 font-medium">{
-            syncStatus === "failed" ? "Sync Error" : syncStatus === "pending" ? "Syncing..." : "Synced"
+          <span className="text-[10px] font-bold tracking-wide uppercase opacity-70 text-foreground">{
+            isOffline ? "Work Offline" : (syncStatus === "failed" ? "Sync Error" : syncStatus === "pending" ? "Syncing..." : "Online")
           }</span>
-        </div>
+        </button>
       </div>
 
       {/* Window control buttons */}

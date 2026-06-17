@@ -42,6 +42,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   offlineLogin: (options: { login: string; password: string }) => ipcRenderer.invoke('offline-login', options),
   updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => ipcRenderer.invoke('update-supabase-session', session),
   getDeviceId: () => ipcRenderer.invoke('get-device-id'),
+  setForcedOffline: (forced: boolean) => ipcRenderer.invoke('set-forced-offline', forced),
+  isForcedOffline: () => ipcRenderer.invoke('is-forced-offline'),
+  hasCachedUsers: () => ipcRenderer.invoke('has-cached-users'),
+  triggerSync: () => ipcRenderer.invoke('trigger-sync'),
 
   db: {
     // Flat methods for dbAdapter compatibility
@@ -105,6 +109,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     createAntibiotic: (name: string) => ipcRenderer.invoke('db:call', 'catalog', 'createAntibiotic', name),
     updateAntibiotic: (id: string, name: string) => ipcRenderer.invoke('db:call', 'catalog', 'updateAntibiotic', id, name),
     deleteAntibiotic: (id: string) => ipcRenderer.invoke('db:call', 'catalog', 'deleteAntibiotic', id),
+
+    getHospitals: () => ipcRenderer.invoke('db:call', 'registry', 'getHospitals'),
+    createHospital: (hospitalData: any) => ipcRenderer.invoke('db:call', 'registry', 'createHospital', hospitalData),
+    updateHospital: (id: string, hospitalData: any) => ipcRenderer.invoke('db:call', 'registry', 'updateHospital', id, hospitalData),
+    deleteHospital: (id: string) => ipcRenderer.invoke('db:call', 'registry', 'deleteHospital', id),
+    getDoctors: (hospitalId?: string) => ipcRenderer.invoke('db:call', 'registry', 'getDoctors', hospitalId),
+    createDoctor: (doctorData: any) => ipcRenderer.invoke('db:call', 'registry', 'createDoctor', doctorData),
+    updateDoctor: (id: string, doctorData: any) => ipcRenderer.invoke('db:call', 'registry', 'updateDoctor', id, doctorData),
+    deleteDoctor: (id: string) => ipcRenderer.invoke('db:call', 'registry', 'deleteDoctor', id),
 
     // Nested categories for complete backward compatibility
     patients: {
@@ -173,6 +186,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
       createAntibiotic: (name: string) => ipcRenderer.invoke('db:call', 'catalog', 'createAntibiotic', name),
       updateAntibiotic: (id: string, name: string) => ipcRenderer.invoke('db:call', 'catalog', 'updateAntibiotic', id, name),
       deleteAntibiotic: (id: string) => ipcRenderer.invoke('db:call', 'catalog', 'deleteAntibiotic', id),
+    },
+    registry: {
+      getHospitals: () => ipcRenderer.invoke('db:call', 'registry', 'getHospitals'),
+      createHospital: (hospitalData: any) => ipcRenderer.invoke('db:call', 'registry', 'createHospital', hospitalData),
+      updateHospital: (id: string, hospitalData: any) => ipcRenderer.invoke('db:call', 'registry', 'updateHospital', id, hospitalData),
+      deleteHospital: (id: string) => ipcRenderer.invoke('db:call', 'registry', 'deleteHospital', id),
+      getDoctors: (hospitalId?: string) => ipcRenderer.invoke('db:call', 'registry', 'getDoctors', hospitalId),
+      createDoctor: (doctorData: any) => ipcRenderer.invoke('db:call', 'registry', 'createDoctor', doctorData),
+      updateDoctor: (id: string, doctorData: any) => ipcRenderer.invoke('db:call', 'registry', 'updateDoctor', id, doctorData),
+      deleteDoctor: (id: string) => ipcRenderer.invoke('db:call', 'registry', 'deleteDoctor', id),
     }
   }
 });

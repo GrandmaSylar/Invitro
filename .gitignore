@@ -50,3 +50,7 @@ db.key
 
 # PDFs
 *.pdf
+
+# Excel and Temporary files
+~$*
+scratch_output.txt

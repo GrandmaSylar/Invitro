@@ -24,6 +24,18 @@ interface Window {
     offlineLogin: (options: { login: string; password: string }) => Promise<{ success: boolean; user?: any; permissions?: Record<string, boolean>; error?: string }>;
     updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => Promise<{ success: boolean; error?: string }>;
     getDeviceId: () => Promise<string>;
+    setForcedOffline: (forced: boolean) => Promise<void>;
+    isForcedOffline: () => Promise<boolean>;
+    hasCachedUsers: () => Promise<boolean>;
+    triggerSync: () => Promise<{ success: boolean; error?: string }>;
+    getHospitals: () => Promise<any[]>;
+    createHospital: (hospitalData: any) => Promise<any>;
+    updateHospital: (id: string, hospitalData: any) => Promise<any>;
+    deleteHospital: (id: string) => Promise<void>;
+    getDoctors: (hospitalId?: string) => Promise<any[]>;
+    createDoctor: (doctorData: any) => Promise<any>;
+    updateDoctor: (id: string, doctorData: any) => Promise<any>;
+    deleteDoctor: (id: string) => Promise<void>;
     db?: any;
   }
 }

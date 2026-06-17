@@ -10,7 +10,9 @@ import {
   mapTestRow,
   mapParameterRow,
   mapAntibioticRow,
-  mapDepartmentRow
+  mapDepartmentRow,
+  mapHospitalRow,
+  mapDoctorRow
 } from '../lib/mappers';
 import { useSettingsStore } from '../stores/useSettingsStore';
 import type { 
@@ -30,7 +32,9 @@ import type {
   Parameter,
   Antibiotic,
   Department,
-  TestFilters
+  TestFilters,
+  Hospital,
+  Doctor
 } from '../lib/types';
 
 export interface IDatabaseAdapter {
@@ -147,6 +151,16 @@ export interface IDatabaseAdapter {
     createAntibiotic: (name: string) => Promise<Antibiotic>;
     updateAntibiotic: (id: string, name: string) => Promise<Antibiotic>;
     deleteAntibiotic: (id: string) => Promise<void>;
+  };
+  registry: {
+    getHospitals: () => Promise<Hospital[]>;
+    createHospital: (hospitalData: Omit<Hospital, 'id' | 'createdAt'>) => Promise<Hospital>;
+    updateHospital: (id: string, hospitalData: Partial<Omit<Hospital, 'id' | 'createdAt'>>) => Promise<Hospital>;
+    deleteHospital: (id: string) => Promise<void>;
+    getDoctors: (hospitalId?: string) => Promise<Doctor[]>;
+    createDoctor: (doctorData: Omit<Doctor, 'id' | 'createdAt'>) => Promise<Doctor>;
+    updateDoctor: (id: string, doctorData: Partial<Omit<Doctor, 'id' | 'createdAt'>>) => Promise<Doctor>;
+    deleteDoctor: (id: string) => Promise<void>;
   };
 }
 
@@ -1261,6 +1275,158 @@ export const dbAdapter: IDatabaseAdapter = {
 
       const { error } = await supabase.from('antibiotics').update({ is_active: false }).eq('id', id);
       if (error) throw new Error(`Failed to delete antibiotic: ${error.message}`);
+    },
+  },
+  registry: {
+    getHospitals: async () => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.getHospitals();
+      }
+
+      const { data, error } = await supabase
+        .from('hospitals')
+        .select('*')
+        .order('hospital_name', { ascending: true });
+
+      if (error) throw new Error(`Failed to fetch hospitals: ${error.message}`);
+      return (data ?? []).map(mapHospitalRow);
+    },
+
+    createHospital: async (hospitalData) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.createHospital(hospitalData);
+      }
+
+      const { data, error } = await supabase
+        .from('hospitals')
+        .insert({
+          hospital_name: hospitalData.hospitalName,
+          location: hospitalData.location ?? null,
+          phone_number: hospitalData.phoneNumber ?? null,
+          address: hospitalData.address ?? null,
+        })
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to create hospital: ${error.message}`);
+      return mapHospitalRow(data);
+    },
+
+    updateHospital: async (id, hospitalData) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.updateHospital(id, hospitalData);
+      }
+
+      const updates: Record<string, any> = {};
+      if (hospitalData.hospitalName !== undefined) updates.hospital_name = hospitalData.hospitalName;
+      if (hospitalData.location !== undefined) updates.location = hospitalData.location;
+      if (hospitalData.phoneNumber !== undefined) updates.phone_number = hospitalData.phoneNumber;
+      if (hospitalData.address !== undefined) updates.address = hospitalData.address;
+
+      const { data, error } = await supabase
+        .from('hospitals')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to update hospital: ${error.message}`);
+      return mapHospitalRow(data);
+    },
+
+    deleteHospital: async (id) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.deleteHospital(id);
+      }
+
+      const { error } = await supabase.from('hospitals').delete().eq('id', id);
+      if (error) {
+        if (error.code === '23503') {
+          throw new Error('Cannot delete hospital because it is currently assigned to one or more doctors or patients.');
+        }
+        throw new Error(`Failed to delete hospital: ${error.message}`);
+      }
+    },
+
+    getDoctors: async (hospitalId) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.getDoctors(hospitalId);
+      }
+
+      let query = supabase
+        .from('doctors')
+        .select('*')
+        .order('doctor_name', { ascending: true });
+
+      if (hospitalId) {
+        query = query.eq('affiliate_hospital_id', hospitalId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw new Error(`Failed to fetch doctors: ${error.message}`);
+      return (data ?? []).map(mapDoctorRow);
+    },
+
+    createDoctor: async (doctorData) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.createDoctor(doctorData);
+      }
+
+      const { data, error } = await supabase
+        .from('doctors')
+        .insert({
+          doctor_name: doctorData.doctorName,
+          speciality: doctorData.speciality ?? null,
+          phone_number: doctorData.phoneNumber ?? null,
+          email: doctorData.email ?? null,
+          affiliate_hospital_id: doctorData.affiliateHospitalId ?? null,
+          location: doctorData.location ?? null,
+          address: doctorData.address ?? null,
+        })
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to create doctor: ${error.message}`);
+      return mapDoctorRow(data);
+    },
+
+    updateDoctor: async (id, doctorData) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.updateDoctor(id, doctorData);
+      }
+
+      const updates: Record<string, any> = {};
+      if (doctorData.doctorName !== undefined) updates.doctor_name = doctorData.doctorName;
+      if (doctorData.speciality !== undefined) updates.speciality = doctorData.speciality;
+      if (doctorData.phoneNumber !== undefined) updates.phone_number = doctorData.phoneNumber;
+      if (doctorData.email !== undefined) updates.email = doctorData.email;
+      if (doctorData.affiliateHospitalId !== undefined) updates.affiliate_hospital_id = doctorData.affiliateHospitalId;
+      if (doctorData.location !== undefined) updates.location = doctorData.location;
+      if (doctorData.address !== undefined) updates.address = doctorData.address;
+
+      const { data, error } = await supabase
+        .from('doctors')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw new Error(`Failed to update doctor: ${error.message}`);
+      return mapDoctorRow(data);
+    },
+
+    deleteDoctor: async (id) => {
+      if (window.electronAPI && (window.electronAPI as any).db) {
+        return (window.electronAPI as any).db.deleteDoctor(id);
+      }
+
+      const { error } = await supabase.from('doctors').delete().eq('id', id);
+      if (error) {
+        if (error.code === '23503') {
+          throw new Error('Cannot delete doctor because they are currently assigned to one or more patients or tests.');
+        }
+        throw new Error(`Failed to delete doctor: ${error.message}`);
+      }
     },
   },
 };

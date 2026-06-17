@@ -807,7 +807,7 @@ const SYNC_CONFIGS: TableSyncConfig[] = [
         full_name = excluded.full_name,
         email = excluded.email,
         username = excluded.username,
-        password_hash = excluded.password_hash,
+        password_hash = COALESCE(NULLIF(users.password_hash, ''), excluded.password_hash),
         phone = excluded.phone,
         role_id = excluded.role_id,
         permission_overrides = excluded.permission_overrides,
@@ -1344,6 +1344,11 @@ let isSyncingFull = false;
 export async function runFullSyncCycle() {
   if (isSyncingFull) return;
   
+  if (getForcedOffline()) {
+    log.info('Sync: Skipping Full Sync Cycle because Forced Offline Mode is enabled.');
+    return;
+  }
+  
   // Verify actual internet connection
   const online = await checkInternetConnection();
   if (!online) {
@@ -1360,6 +1365,28 @@ export async function runFullSyncCycle() {
     log.error('Full Sync Cycle failed:', err.message);
   } finally {
     isSyncingFull = false;
+  }
+}
+
+let isForcedOffline = false;
+
+export function setForcedOffline(value: boolean) {
+  isForcedOffline = value;
+  log.info(`Sync: Forced offline mode set to ${isForcedOffline}`);
+}
+
+export function getForcedOffline(): boolean {
+  return isForcedOffline;
+}
+
+export function hasCachedUsers(): boolean {
+  const localDb = getDatabase();
+  try {
+    const row = localDb.prepare('SELECT COUNT(*) as count FROM users').get() as any;
+    return row && row.count > 0;
+  } catch (err: any) {
+    log.error('Failed to check for cached users in local SQLite:', err.message);
+    return false;
   }
 }
 

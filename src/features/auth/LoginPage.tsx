@@ -6,6 +6,7 @@ import { Checkbox } from '../../app/components/ui/checkbox';
 import { Eye, EyeOff, Loader2, Mail, User, Lock, Power, ShieldCheck, Zap, RefreshCw, FlaskConical, Layers } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useSyncStore } from '../../stores/useSyncStore';
 import { showConfirm } from '../../stores/useDialogStore';
 import { GlobalDialogs } from '../../app/components/GlobalDialogs';
 
@@ -38,6 +39,35 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+
+  // Sync / Offline states
+  const isOffline = useSyncStore((s) => s.isOffline);
+  const setOffline = useSyncStore((s) => s.setOffline);
+
+  const [canWorkOffline, setCanWorkOffline] = useState(false);
+  const [workOffline, setWorkOffline] = useState(false);
+
+  useEffect(() => {
+    const checkCachedUsers = async () => {
+      if (window.electronAPI?.hasCachedUsers) {
+        try {
+          const hasCached = await window.electronAPI.hasCachedUsers();
+          setCanWorkOffline(hasCached);
+          if (hasCached) {
+            setWorkOffline(isOffline);
+          } else {
+            setWorkOffline(false);
+            if (isOffline) {
+              await setOffline(false);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to check for cached users:', err);
+        }
+      }
+    };
+    checkCachedUsers();
+  }, [isOffline, setOffline]);
 
   // Loading & errors
   const [loading, setLoading] = useState(false);
@@ -76,7 +106,10 @@ export function LoginPage() {
         : { login: username, password };
 
     try {
-      const { user, permissions } = await authService.authenticate(credentials);
+      const { user, permissions } = await authService.authenticate(credentials, workOffline);
+      
+      // If offline login succeeded, ensure the sync store knows they chose to work offline
+      await setOffline(workOffline);
       
       // Merge base role permissions with any user-specific overrides
       const finalPerms = { ...permissions, ...(user.permissionOverrides || {}) };
@@ -202,6 +235,37 @@ export function LoginPage() {
               <p className="text-xs text-gray-500 mt-1.5">
                 Sign in to access your laboratory system
               </p>
+            </div>
+ 
+            {/* Work Offline Toggle */}
+            <div className="mb-5 p-3 rounded-lg bg-gray-50 border border-gray-100 flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="work-offline"
+                    checked={workOffline}
+                    disabled={!canWorkOffline}
+                    onCheckedChange={(c) => setWorkOffline(c === true)}
+                    className="border-[#ccd3dc] data-[state=checked]:bg-[#0c2e5a] data-[state=checked]:border-[#0c2e5a] disabled:opacity-50"
+                  />
+                  <label 
+                    htmlFor="work-offline" 
+                    className={`text-xs font-bold select-none cursor-pointer ${
+                      !canWorkOffline ? 'text-[#8c9ba5] cursor-not-allowed' : 'text-gray-900'
+                    }`}
+                  >
+                    Work Offline
+                  </label>
+                </div>
+                {canWorkOffline && (
+                  <span className={`h-2 w-2 rounded-full ${workOffline ? 'bg-amber-500 animate-pulse' : 'bg-green-500'}`} />
+                )}
+              </div>
+              {!canWorkOffline && (
+                <p className="text-[10px] text-amber-600 font-medium leading-tight mt-0.5">
+                  Online login required for first-time setup on this device.
+                </p>
+              )}
             </div>
 
             {/* Custom Sleek Tab Selector */}

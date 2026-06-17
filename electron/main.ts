@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { writeFile } from 'node:fs/promises';
 import log from 'electron-log/main';
 import { autoUpdater } from 'electron-updater';
-import { initDatabase, cacheUserCredentials, verifyOfflineLogin, encryptDatabase, getOrCreateDeviceID } from './database.js';
+import { initDatabase, cacheUserCredentials, verifyOfflineLogin, encryptDatabase, getOrCreateDeviceID, setForcedOffline, getForcedOffline, hasCachedUsers, runFullSyncCycle } from './database.js';
 import { setMainProcessSession } from './supabaseNode.js';
 import { dbHandlers } from './dbHandlers.js';
 
@@ -230,6 +230,30 @@ ipcMain.handle('update-supabase-session', async (_event, session: { access_token
     return { success: true };
   } catch (err: any) {
     log.error('Failed to update Supabase Node session:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Forced offline mode configuration handlers
+ipcMain.handle('set-forced-offline', async (_event, forced: boolean) => {
+  setForcedOffline(forced);
+});
+
+ipcMain.handle('is-forced-offline', async () => {
+  return getForcedOffline();
+});
+
+ipcMain.handle('has-cached-users', async () => {
+  return hasCachedUsers();
+});
+
+// Trigger a database sync cycle manually
+ipcMain.handle('trigger-sync', async () => {
+  try {
+    await runFullSyncCycle();
+    return { success: true };
+  } catch (err: any) {
+    log.error('Manual sync trigger failed:', err);
     return { success: false, error: err.message };
   }
 });

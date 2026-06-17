@@ -14,11 +14,25 @@ export const authService = {
    * use Supabase's built-in auth for session management but
    * resolve the LIMS user profile + role from our custom tables.
    */
-  authenticate: async (credentials: { login: string; password: string }): Promise<{
+  authenticate: async (credentials: { login: string; password: string }, forceOffline?: boolean): Promise<{
     user: User;
     permissions: Record<string, boolean>;
     twoFactorRequired: boolean;
   }> => {
+    if (forceOffline && window.electronAPI?.offlineLogin) {
+      console.info('Forced offline login requested. Skipping online authentication.');
+      const result = await window.electronAPI.offlineLogin(credentials);
+      if (result.success && result.user) {
+        return {
+          user: result.user,
+          permissions: result.permissions || {},
+          twoFactorRequired: result.user.twoFactorEnabled,
+        };
+      } else {
+        throw new Error(result.error || 'Offline login failed');
+      }
+    }
+
     try {
       let loginEmail = credentials.login;
 

@@ -2,56 +2,64 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.7
+
+### New Features & Improvements
+- **New Help & Guided Tutorials Center**: Added step-by-step user guides tailored to clinical roles (Receptionists, Lab Technicians, and Administrators) including a guided tour of the main features.
+- **Official Laboratory Catalog Loaded**: Set up the official system test library with 223 standard tests and 329 diagnostic parameters.
+- **One-Click Installer**: Upgraded the setup package to install silently with a single click, create desktop shortcuts, and launch automatically.
+- **First-Run Welcome Screen**: Added a clean, modern welcome modal that displays what is new in the latest version when the application first starts up.
+
 ## Version 1.1.6
 
-### Bug Fixes
-- **Inbound Sync RLS Policy & Empty Tables Blocker**: Fixed a critical issue where inbound synchronization of private transactional tables (`patients`, `lab_records`, `payments`, `test_results`) ran during unauthenticated startup states. This caused the remote Supabase API to return empty arrays (due to RLS policies), which incorrectly updated the local sync timestamps, blocking actual data from loading once the user logged in. Private tables are now skipped entirely when unauthenticated.
-- **Inbound Self-Healing**: Added a self-healing routine that automatically clears sync timestamps for any local SQLite tables that are detected to be empty upon authenticated login, triggering a full synchronization of existing data.
+### Improvements & Fixes
+- **Reliable Data Syncing**: Fixed an issue where logging in while offline could temporarily prevent patient and payment history from syncing. The application now syncs database changes more smoothly in the background.
+- **Automatic Data Healing**: The application now automatically detects if any local data tables are empty on login and fetches the missing cloud records automatically.
 
 ## Version 1.1.5
 
 ### New Features
-- **Online Username-to-Email Login Resolution**: Users can now log in using either their email address or their username. The system dynamically queries the public `users` table anonymously to resolve usernames to registered email addresses before calling Supabase Auth.
-- **Secure Offline Password Hashing**: Plain passwords used during successful online logins are now hashed locally with `bcrypt` in the main process and cached in SQLite. This enables secure offline fallback authentication for all users (previously blocked by placeholder strings).
+- **Username Login Support**: You can now log in using either your username or your email address.
+- **Secure Offline Login**: Your login credentials are now securely encrypted and saved on your device, allowing you to log in even when you have no internet connection.
 
-### Bug Fixes
-- **Outbound Sync RLS Policy Enforcement**: Modified the sync engine to check for an authenticated user session in the main process before running outbound sync. This prevents anonymous synchronizations from triggering Row-Level Security (RLS) violations and exhausting the 5-attempt retry limit.
-- **Insert Payload Column Filtering**: Stopped the sync engine from adding the `device_id` field to tables that do not support it (e.g. `lab_record_tests` and `payments`), resolving schema cache conflicts.
-- **Receipt Configuration Column Migration**: Created database schemas and migrations to support receipt configuration syncing by adding the `receipt` JSONB column to the `app_settings` table.
+### Improvements & Fixes
+- **Smarter Background Syncing**: Improved security checks during data synchronization to prevent sync errors and avoid hitting server rate limits.
+- **Receipt Customization Syncing**: Enabled synchronization for receipt layouts, ensuring that custom receipt setups are automatically shared across all your computers.
+- **Data Save Corrections**: Fixed an internal schema issue that was causing save errors on certain test selections and payments.
 
 ## Version 1.1.4
 
-### Bug Fixes
-- **Resilient Inbound Database Sync**: Redesigned the sync engine to track synchronization timestamps independently per table (e.g. `last_inbound_sync_patients`, `last_inbound_sync_payments`). Caught and logged database or permission exceptions (such as the remote `notifications` table RLS restriction) at the table level, enabling the loop to gracefully skip the failing table and successfully sync all other crucial collections (patients, lab records, test parameters, payments) instead of crashing the entire sync cycle.
-- **SQLite Schema Recovery**: Fixed a missing SQLite schema table definition for `audit_events`, resolving database failures during local logging.
+### Improvements & Fixes
+- **Resilient Synchronization**: Improved the background sync engine so that if one type of data fails to sync due to network or permission issues, other data (like patients, payments, and test lists) will continue syncing successfully instead of halting the entire process.
+- **Audit Logs Stability**: Fixed a background database error to ensure user activity logs are recorded reliably without interrupting the user experience.
 
 ## Version 1.1.3
 
 ### New Features
-- **Local Temporary Sequences ("Fix 2")**: Resolved sequence collisions in multi-device setups by introducing temporary offline sequence numbers (e.g. `TEMP-A[DDMMYYYY]-[DEVICE_SUFFIX]-[SEQ]` and `TEMP-RCPT-[YYYYMMDD]-[DEVICE_SUFFIX]-[SEQ]`). If online, official sequences are retrieved immediately. If offline, the temporary sequences are converted to standard official formats on the cloud and local SQLite database upon online reconnection.
-- **Strict Single-Device Login**: Implemented a security enforcement policy that restricts user accounts to exactly one active device login at a time. Secondary logins register the new device ID in the user's `permission_overrides` on Supabase, prompting a silent session invalidation, session expired notification, and automatic redirection to the login screen on the primary device within 15 seconds.
-- **Manual Auto-Update Controls**: Configured manual update checks and downloads, allowing users to view update notes, click "Download Update" manually, track download progress percentage, and click "Install & Restart" once completed.
+- **Smart Offline Numbering**: Introduced temporary sequence numbers for receipts and patient registers while offline. The system automatically converts these into official formats on the cloud as soon as you reconnect, preventing conflicts when multiple devices are used offline.
+- **Single-Session Security**: Restricted user accounts to one active device login at a time. Logging in on a new device will securely log you out of your previous session to prevent unauthorized access.
+- **Manual Update Control**: Added manual update options in Settings, allowing you to check for updates, view release notes, see download progress, and restart the app to apply the update.
 
 ## Version 1.1.2
 
-### Bug Fixes
-- **Inbound Database Synchronization Blocker**: Resolved a critical bug where inbound syncing from Supabase failed and stalled on the `departments` table due to the remote database lacking an `updated_at` column. Configured lookup tables (`departments` and `antibiotics`) to sync on their `created_at` timestamp.
-- **Persistent SafeStorage Key Creation**: Fixed a crash on database key generation (`safeStorage.encryptBuffer is not a function`) by converting the buffer key to a hex string before encrypting and decrypting it with Electron's supported `safeStorage.encryptString`/`safeStorage.decryptString` methods.
-- **Local Lab Number Preview & Generation**: Added missing `localGenerateLabNumber` and `localPreviewLabNumber` helpers in the main process handlers to prevent errors when previewing lab numbers.
+### Improvements & Fixes
+- **Sync Catalog Blocker Fix**: Fixed a bug where data updates would get stuck when syncing departments or antibiotics from the cloud.
+- **Security Storage Fix**: Fixed a startup crash related to how data encryption keys were created and stored securely on Windows.
+- **Lab Number Preview**: Added missing internal helpers so you can correctly preview laboratory numbers on the screen.
 
 ## Version 1.1.1
 
-### Bug Fixes
-- **Electron Database API Call Errors**: Fixed database IPC errors where methods on the frontend (`window.electronAPI.db`) were failing due to missing flat method exports in the Electron preload script. Exposed all database actions as flat functions directly on the db API to resolve compatibility with the existing frontend `dbAdapter` implementation.
+### Improvements & Fixes
+- **Database Connection Stability**: Resolved internal communication errors between the frontend interface and the local database system.
 
 ## Version 1.1.0
 
 ### Offline-First Architecture & Secure Database Sync
-- **Local SQLite Integration**: Set up local SQLite database storage using `better-sqlite3` to cache all application tables locally, enabling the application to start up and run completely offline without an internet connection.
-- **Double-Shield Database Encryption**: Implemented AES-256 local database encryption using unique cryptographic keys generated per machine, stored securely in Electron's safe storage (DPAPI on Windows), ensuring local clinical data is encrypted at rest.
-- **Dynamic Background Synchronization**: Developed a generic local-to-remote synchronization engine that tracks changes locally with a single-serial queue, handling conflicts and syncing actions asynchronously to Supabase.
-- **Local Receipt & Sequence Generation**: Implemented a local receipt number generator that mimics the remote Supabase trigger to ensure correct receipt formats and unique tracking numbers even when offline.
-- **Customized Receipts & Reports**: Upgraded the receipt and laboratory report system to print/preview with custom layout dimensions, supporting standard roll receipt format, customizable branding/details, and professional margins.
+- **Full Offline Capabilities**: Added support for running the app entirely offline. You can now register patients, save results, and generate receipts without an active internet connection.
+- **Secure Data Encryption**: Implemented banking-grade encryption for local database storage on your computer, ensuring all patient and clinical records are fully protected at rest.
+- **Automatic Cloud Sync**: Created a background sync system that automatically updates and uploads offline changes to the cloud once an internet connection is established.
+- **Offline Receipt Generation**: Receipts and invoice sequences are now generated correctly offline, matching the standard layout and format of online invoices.
+- **Enhanced Receipt Customization**: Upgraded the print/preview system to support standard roll receipts and custom formatting options (margins, logos, and custom headings).
 
 ## Version 1.0.1
 

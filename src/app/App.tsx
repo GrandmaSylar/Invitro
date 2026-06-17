@@ -4,12 +4,15 @@ import { ThemeProvider } from "next-themes";
 import { router } from "./routes";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useAuthStore } from "../stores/useAuthStore";
+import { useSyncStore } from "../stores/useSyncStore";
 import { toast } from "sonner";
 import { supabase } from "../lib/supabase";
+import { WelcomeChangelogModal } from "./components/WelcomeChangelogModal";
 
 // INVITRO AIDMED DIAGNOSTICS - Laboratory Inventory Management System
 export default function App() {
   const initializeSettings = useSettingsStore(state => state.initialize);
+  const initializeOfflineState = useSyncStore(state => state.initializeOfflineState);
   const themePreset = useAuthStore(state => state.user?.themePreset);
 
   // Synchronize user theme preset with DOM attribute
@@ -63,6 +66,7 @@ export default function App() {
 
   useEffect(() => {
     initializeSettings();
+    initializeOfflineState();
 
     // Auto-update listener
     if (window.electronAPI) {
@@ -88,7 +92,7 @@ export default function App() {
         cleanupDownloaded();
       };
     }
-  }, [initializeSettings]);
+  }, [initializeSettings, initializeOfflineState]);
 
   // Strict Single-Device Login session checking loop
   useEffect(() => {
@@ -149,6 +153,7 @@ export default function App() {
   return (
     <ThemeProvider attribute="class" storageKey="lims-theme" defaultTheme="system" enableSystem>
       <RouterProvider router={router} />
+      <WelcomeChangelogModal />
     </ThemeProvider>
   );
 }
