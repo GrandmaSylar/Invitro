@@ -190,6 +190,7 @@ function mapTestResult(row: any) {
     flag: row.flag || 'Normal',
     enteredById: row.entered_by_id || undefined,
     enteredAt: row.entered_at,
+    parentTestName: row.parent_test_name || undefined,
   };
 }
 
@@ -861,7 +862,13 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
   results: {
     getResultsByLabRecordTest: async (labRecordTestId: string) => {
       const db = getDatabase();
-      const rows = db.prepare('SELECT * FROM test_results WHERE lab_record_test_id = ? ORDER BY entered_at ASC').all(labRecordTestId) as any[];
+      const rows = db.prepare(`
+        SELECT tr.*, lrt.test_name as parent_test_name
+        FROM test_results tr
+        JOIN lab_record_tests lrt ON tr.lab_record_test_id = lrt.id
+        WHERE tr.lab_record_test_id = ?
+        ORDER BY tr.entered_at ASC
+      `).all(labRecordTestId) as any[];
       return rows.map(mapTestResult);
     },
 
@@ -873,9 +880,11 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const ids = recordTests.map(rt => rt.id);
       const placeholders = ids.map(() => '?').join(',');
       const rows = db.prepare(`
-        SELECT * FROM test_results 
-        WHERE lab_record_test_id IN (${placeholders}) 
-        ORDER BY entered_at ASC
+        SELECT tr.*, lrt.test_name as parent_test_name
+        FROM test_results tr
+        JOIN lab_record_tests lrt ON tr.lab_record_test_id = lrt.id
+        WHERE tr.lab_record_test_id IN (${placeholders}) 
+        ORDER BY tr.entered_at ASC
       `).all(...ids) as any[];
       return rows.map(mapTestResult);
     },

@@ -221,6 +221,7 @@ export function mapTestResultRow(row: any): TestResult {
     flag: row.flag ?? 'Normal',
     enteredById: row.entered_by_id ?? undefined,
     enteredAt: row.entered_at,
+    parentTestName: row.parent_test_name ?? row.lab_record_tests?.test_name ?? undefined,
   };
 }
 

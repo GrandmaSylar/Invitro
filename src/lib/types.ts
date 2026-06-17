@@ -214,6 +214,7 @@ export interface TestResult {
   flag: ResultFlag;
   enteredById?: string;
   enteredAt: string;
+  parentTestName?: string;
 }
 
 // ── Audit ──────────────────────────────────────────────────────

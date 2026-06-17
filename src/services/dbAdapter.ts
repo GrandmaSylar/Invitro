@@ -632,7 +632,7 @@ export const dbAdapter: IDatabaseAdapter = {
 
       const { data, error } = await supabase
         .from('test_results')
-        .select('*')
+        .select('*, lab_record_tests(test_name)')
         .eq('lab_record_test_id', labRecordTestId)
         .order('entered_at', { ascending: true });
 
@@ -656,7 +656,7 @@ export const dbAdapter: IDatabaseAdapter = {
       const ids = recordTests.map((rt: any) => rt.id);
       const { data, error } = await supabase
         .from('test_results')
-        .select('*')
+        .select('*, lab_record_tests(test_name)')
         .in('lab_record_test_id', ids)
         .order('entered_at', { ascending: true });
 
