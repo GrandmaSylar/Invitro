@@ -163,6 +163,22 @@ function ChartEmptyState({ message }: { message: string }) {
   );
 }
 
+function getStatTrend(today: number, yesterday: number) {
+  if (yesterday === 0) {
+    if (today === 0) {
+      return { trendText: "0% vs yesterday", trendType: "up" as const };
+    }
+    return { trendText: `+100% vs yesterday`, trendType: "up" as const };
+  }
+  const diff = ((today - yesterday) / yesterday) * 100;
+  const rounded = Math.round(diff);
+  const sign = rounded >= 0 ? "+" : "";
+  return {
+    trendText: `${sign}${rounded}% vs yesterday`,
+    trendType: rounded >= 0 ? ("up" as const) : ("down" as const),
+  };
+}
+
 // ── Main Dashboard ─────────────────────────────────────────────
 
 export function MainDashboard() {
@@ -176,6 +192,11 @@ export function MainDashboard() {
   const canViewTests = usePermission("dashboard.view_tests_today");
   const canViewPending = usePermission("dashboard.view_pending_results");
   const canViewRevenue = usePermission("dashboard.view_revenue_month");
+
+  const patientTrend = getStatTrend(stats?.patientsToday ?? 0, stats?.patientsYesterday ?? 0);
+  const testTrend = getStatTrend(stats?.testsToday ?? 0, stats?.testsYesterday ?? 0);
+  const pendingTrend = getStatTrend(stats?.pendingResults ?? 0, stats?.pendingResultsYesterday ?? 0);
+  const revenueTrend = getStatTrend(stats?.revenueToday ?? 0, stats?.revenueYesterday ?? 0);
 
   const handleInteract = () => {
     if (typeof navigator.vibrate === 'function') {
@@ -253,8 +274,8 @@ export function MainDashboard() {
           title="Patients Today"
           value={stats?.patientsToday ?? 42}
           icon={Users}
-          trendText="+12% vs yesterday"
-          trendType="up"
+          trendText={patientTrend.trendText}
+          trendType={patientTrend.trendType}
           iconBg="bg-primary/5 dark:bg-primary/10 text-primary"
           isLoading={statsLoading}
           onClick={canViewPatients ? () => navigate("/dashboard/drilldown?metric=patients") : undefined}
@@ -263,8 +284,8 @@ export function MainDashboard() {
           title="Tests Ordered Today"
           value={stats?.testsToday ?? 118}
           icon={FlaskConical}
-          trendText="+8% vs yesterday"
-          trendType="up"
+          trendText={testTrend.trendText}
+          trendType={testTrend.trendType}
           iconBg="bg-purple-500/5 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
           isLoading={statsLoading}
           onClick={canViewTests ? () => navigate("/dashboard/drilldown?metric=tests") : undefined}
@@ -273,8 +294,8 @@ export function MainDashboard() {
           title="Pending Results"
           value={stats?.pendingResults ?? 9}
           icon={Clock}
-          trendText="-3% vs yesterday"
-          trendType="down"
+          trendText={pendingTrend.trendText}
+          trendType={pendingTrend.trendType}
           iconBg="bg-amber-500/5 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
           isLoading={statsLoading}
           onClick={canViewPending ? () => navigate("/dashboard/drilldown?metric=pending") : undefined}
@@ -283,8 +304,8 @@ export function MainDashboard() {
           title="Revenue (Month)"
           value={stats?.revenueThisMonth ? `₵${stats.revenueThisMonth.toLocaleString()}` : "₵12,840"}
           icon={TrendingUp}
-          trendText="+18% vs yesterday"
-          trendType="up"
+          trendText={revenueTrend.trendText}
+          trendType={revenueTrend.trendType}
           iconBg="bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           isLoading={statsLoading}
           onClick={canViewRevenue ? () => navigate("/dashboard/drilldown?metric=revenue") : undefined}

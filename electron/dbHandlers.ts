@@ -2091,11 +2091,16 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       todayStart.setHours(0, 0, 0, 0);
       const todayISO = todayStart.toISOString();
 
+      const yesterdayStart = new Date(todayStart);
+      yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+      const yesterdayISO = yesterdayStart.toISOString();
+
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
       const monthISO = monthStart.toISOString();
 
+      // Today stats
       const patientsToday = (db.prepare("SELECT COUNT(*) as count FROM patients WHERE datetime(created_at) >= datetime(?)").get(todayISO) as any).count;
 
       const testsToday = (db.prepare(`
@@ -2117,11 +2122,55 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const revenueRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE datetime(payment_date) >= datetime(?)").get(monthISO) as any;
       const revenueThisMonth = revenueRow ? (revenueRow.total || 0) : 0;
 
+      // Yesterday stats
+      const patientsYesterday = (db.prepare(`
+        SELECT COUNT(*) as count 
+        FROM patients 
+        WHERE datetime(created_at) >= datetime(?) 
+          AND datetime(created_at) < datetime(?)
+      `).get(yesterdayISO, todayISO) as any).count;
+
+      const testsYesterday = (db.prepare(`
+        SELECT COUNT(lrt.id) as count 
+        FROM lab_record_tests lrt
+        JOIN lab_records lr ON lrt.lab_record_id = lr.id
+        WHERE datetime(lr.record_date) >= datetime(?) 
+          AND datetime(lr.record_date) < datetime(?)
+      `).get(yesterdayISO, todayISO) as any).count;
+
+      const pendingResultsYesterday = (db.prepare(`
+        SELECT COUNT(*) as count
+        FROM lab_record_tests lrt
+        JOIN lab_records lr ON lrt.lab_record_id = lr.id
+        WHERE datetime(lr.record_date) < datetime(?)
+          AND NOT EXISTS (
+            SELECT 1 FROM test_results tr
+            WHERE tr.lab_record_test_id = lrt.id
+              AND datetime(tr.entered_at) < datetime(?)
+          )
+      `).get(todayISO, todayISO) as any).count;
+
+      const revenueTodayRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE datetime(payment_date) >= datetime(?)").get(todayISO) as any;
+      const revenueToday = revenueTodayRow ? (revenueTodayRow.total || 0) : 0;
+
+      const revenueYesterdayRow = db.prepare(`
+        SELECT SUM(amount) as total 
+        FROM payments 
+        WHERE datetime(payment_date) >= datetime(?) 
+          AND datetime(payment_date) < datetime(?)
+      `).get(yesterdayISO, todayISO) as any;
+      const revenueYesterday = revenueYesterdayRow ? (revenueYesterdayRow.total || 0) : 0;
+
       return {
         patientsToday,
+        patientsYesterday,
         testsToday,
+        testsYesterday,
         pendingResults,
+        pendingResultsYesterday,
         revenueThisMonth,
+        revenueToday,
+        revenueYesterday,
       };
     },
 

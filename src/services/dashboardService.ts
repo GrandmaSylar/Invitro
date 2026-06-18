@@ -39,18 +39,39 @@ export const dashboardService = {
     const todayStart = startOfDay(new Date());
     const todayISO = todayStart.toISOString();
 
+    const yesterdayStart = new Date(todayStart);
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    const yesterdayISO = yesterdayStart.toISOString();
+
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     const monthISO = monthStart.toISOString();
 
     // Run all queries in parallel
-    const [patientsRes, testsRes, pendingRes, revenueRes] = await Promise.all([
+    const [
+      patientsRes,
+      patientsYesterdayRes,
+      testsRes,
+      testsYesterdayRes,
+      pendingRes,
+      pendingYesterdayRawRes,
+      revenueRes,
+      revenueTodayRes,
+      revenueYesterdayRes
+    ] = await Promise.all([
       // Patients registered today
       supabase
         .from('patients')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', todayISO),
+
+      // Patients registered yesterday
+      supabase
+        .from('patients')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', yesterdayISO)
+        .lt('created_at', todayISO),
 
       // Tests ordered today (via lab records created today)
       supabase
@@ -58,24 +79,67 @@ export const dashboardService = {
         .select('id, lab_records!inner(record_date)', { count: 'exact', head: true })
         .gte('lab_records.record_date', todayISO),
 
+      // Tests ordered yesterday
+      supabase
+        .from('lab_record_tests')
+        .select('id, lab_records!inner(record_date)', { count: 'exact', head: true })
+        .gte('lab_records.record_date', yesterdayISO)
+        .lt('lab_records.record_date', todayISO),
+
       // Pending results: lab_record_tests that have zero test_results
       supabase.rpc('count_pending_results'),
+
+      // Pending results yesterday (fetch tests created before today and their test results to count in memory)
+      supabase
+        .from('lab_record_tests')
+        .select('id, lab_records!inner(record_date), test_results(entered_at)')
+        .lt('lab_records.record_date', todayISO),
 
       // Revenue this month (using actual payment dates!)
       supabase
         .from('payments')
         .select('amount')
         .gte('payment_date', monthISO),
+
+      // Revenue today
+      supabase
+        .from('payments')
+        .select('amount')
+        .gte('payment_date', todayISO),
+
+      // Revenue yesterday
+      supabase
+        .from('payments')
+        .select('amount')
+        .gte('payment_date', yesterdayISO)
+        .lt('payment_date', todayISO),
     ]);
 
     const revenueThisMonth = (revenueRes.data ?? [])
       .reduce((sum: number, row: any) => sum + Number(row.amount), 0);
 
+    const revenueToday = (revenueTodayRes.data ?? [])
+      .reduce((sum: number, row: any) => sum + Number(row.amount), 0);
+
+    const revenueYesterday = (revenueYesterdayRes.data ?? [])
+      .reduce((sum: number, row: any) => sum + Number(row.amount), 0);
+
+    const pendingResultsYesterday = (pendingYesterdayRawRes.data ?? []).filter((lrt: any) => {
+      if (!lrt.test_results || lrt.test_results.length === 0) return true;
+      const enteredAt = lrt.test_results[0].entered_at;
+      return new Date(enteredAt) >= todayStart;
+    }).length;
+
     return {
       patientsToday: patientsRes.count ?? 0,
+      patientsYesterday: patientsYesterdayRes.count ?? 0,
       testsToday: testsRes.count ?? 0,
+      testsYesterday: testsYesterdayRes.count ?? 0,
       pendingResults: typeof pendingRes.data === 'number' ? pendingRes.data : 0,
+      pendingResultsYesterday,
       revenueThisMonth,
+      revenueToday,
+      revenueYesterday,
     };
   },
 

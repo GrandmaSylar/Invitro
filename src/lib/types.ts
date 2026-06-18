@@ -323,9 +323,14 @@ export interface ApiKey {
 
 export interface DashboardStats {
   patientsToday: number;
+  patientsYesterday: number;
   testsToday: number;
+  testsYesterday: number;
   pendingResults: number;
+  pendingResultsYesterday: number;
   revenueThisMonth: number;
+  revenueToday: number;
+  revenueYesterday: number;
 }
 
 // ── Dashboard Charts ───────────────────────────────────────────
