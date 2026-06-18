@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { useRbacStore } from '../../stores/useRbacStore';
 import { rbacService } from '../../services/rbacService';
 import { showConfirm, showSuccess } from '../../stores/useDialogStore';
@@ -26,6 +27,7 @@ import { toast } from 'sonner';
 import { Edit, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 
 export function PermissionMatrix() {
+  const navigate = useNavigate();
   const { roles, users, setRoles } = useRbacStore();
   const [isLoading, setIsLoading] = useState(false);
   
@@ -245,6 +247,13 @@ export function PermissionMatrix() {
                   </p>
                 </div>
                 <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="border-border text-foreground hover:bg-muted"
+                    onClick={() => navigate('/rbac/help')}
+                  >
+                    View RBAC Guide
+                  </Button>
                   <Button
                     variant="outline"
                     className="text-destructive border-border hover:bg-destructive/10 hover:text-destructive"

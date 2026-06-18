@@ -2,6 +2,10 @@ import { LucideIcon, BarChart3, Stethoscope, TestTubes, Hospital, ClipboardPen, 
 
 export const PERMISSIONS = {
   'dashboard.view': 'dashboard.view',
+  'dashboard.view_patients_today': 'dashboard.view_patients_today',
+  'dashboard.view_tests_today': 'dashboard.view_tests_today',
+  'dashboard.view_pending_results': 'dashboard.view_pending_results',
+  'dashboard.view_revenue_month': 'dashboard.view_revenue_month',
   'patients.view': 'patients.view',
   'patients.create': 'patients.create',
   'patients.edit': 'patients.edit',
@@ -44,6 +48,10 @@ export const PERMISSION_MODULES: PermissionModule[] = [
     icon: BarChart3,
     permissions: [
       { key: 'dashboard.view', label: 'View Dashboard', description: 'Access the main dashboard' },
+      { key: 'dashboard.view_patients_today', label: 'View Patients Today Analytics', description: "Access today's registered patients analytics page" },
+      { key: 'dashboard.view_tests_today', label: 'View Tests Today Analytics', description: "Access today's ordered tests analytics page" },
+      { key: 'dashboard.view_pending_results', label: 'View Pending Results Analytics', description: 'Access pending test results analytics page' },
+      { key: 'dashboard.view_revenue_month', label: 'View Revenue (Month) Analytics', description: 'Access monthly revenue collections ledger and analytics' },
     ]
   },
   {

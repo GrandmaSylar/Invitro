@@ -258,7 +258,7 @@ function localGenerateLabNumber(): string {
   let seqVal = row ? row.last_value : 1;
 
   let labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
-  while (db.prepare('SELECT id FROM lab_records WHERE lab_number = ?').get(labNumber)) {
+  while (db.prepare('SELECT id FROM lab_records WHERE LOWER(lab_number) = LOWER(?)').get(labNumber)) {
     seqVal++;
     labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
   }
@@ -289,7 +289,7 @@ function localPreviewLabNumber(): string {
   let seqVal = row ? row.last_value + 1 : 1;
 
   let labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
-  while (db.prepare('SELECT id FROM lab_records WHERE lab_number = ?').get(labNumber)) {
+  while (db.prepare('SELECT id FROM lab_records WHERE LOWER(lab_number) = LOWER(?)').get(labNumber)) {
     seqVal++;
     labNumber = `TEMP-A${todayStr}-${deviceSuffix}-${String(seqVal).padStart(4, '0')}`;
   }
@@ -319,8 +319,14 @@ function localGenerateReceiptNumber(): string {
     }
   }
   
-  const nextSeq = maxSeq + 1;
-  return `TEMP-RCPT-${dateStr}-${deviceSuffix}-${String(nextSeq).padStart(4, '0')}`;
+  let nextSeq = maxSeq + 1;
+  let receiptNumber = `TEMP-RCPT-${dateStr}-${deviceSuffix}-${String(nextSeq).padStart(4, '0')}`;
+  while (db.prepare('SELECT id FROM payments WHERE LOWER(receipt_number) = LOWER(?)').get(receiptNumber)) {
+    nextSeq++;
+    receiptNumber = `TEMP-RCPT-${dateStr}-${deviceSuffix}-${String(nextSeq).padStart(4, '0')}`;
+  }
+  
+  return receiptNumber;
 }
 
 export function localRecalculateRecordTotals(labRecordId: string) {
@@ -782,16 +788,18 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const deviceId = getOrCreateDeviceID();
       
       let receiptNumber;
-      try {
-        const { data: { session } } = await supabaseNode.auth.getSession();
-        if (session) {
-          const { data, error } = await supabaseNode.rpc('generate_receipt_number');
-          if (!error && data) {
-            receiptNumber = data as string;
+      if (!getForcedOffline()) {
+        try {
+          const { data: { session } } = await supabaseNode.auth.getSession();
+          if (session) {
+            const { data, error } = await supabaseNode.rpc('generate_receipt_number');
+            if (!error && data) {
+              receiptNumber = data as string;
+            }
           }
+        } catch (err: any) {
+          log.warn('recordPayment: generate_receipt_number RPC failed, falling back to local sequence:', err.message);
         }
-      } catch (err: any) {
-        log.warn('recordPayment: generate_receipt_number RPC failed, falling back to local sequence:', err.message);
       }
       if (!receiptNumber) {
         receiptNumber = localGenerateReceiptNumber();
@@ -827,16 +835,18 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
     },
 
     generateLabNumber: async () => {
-      try {
-        const { data: { session } } = await supabaseNode.auth.getSession();
-        if (session) {
-          const { data, error } = await supabaseNode.rpc('generate_lab_number');
-          if (!error && data) {
-            return data as string;
+      if (!getForcedOffline()) {
+        try {
+          const { data: { session } } = await supabaseNode.auth.getSession();
+          if (session) {
+            const { data, error } = await supabaseNode.rpc('generate_lab_number');
+            if (!error && data) {
+              return data as string;
+            }
           }
+        } catch (err: any) {
+          log.warn('generateLabNumber: RPC failed, falling back to local sequence:', err.message);
         }
-      } catch (err: any) {
-        log.warn('generateLabNumber: RPC failed, falling back to local sequence:', err.message);
       }
       return localGenerateLabNumber();
     },
@@ -1845,4 +1855,386 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       })();
     }
   },
+
+  dashboard: {
+    getPatientsToday: async (startDate?: string, endDate?: string) => {
+      const db = getDatabase();
+      let startISO: string;
+      let endISO: string;
+
+      if (startDate) {
+        startISO = new Date(`${startDate}T00:00:00`).toISOString();
+      } else {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        startISO = d.toISOString();
+      }
+
+      if (endDate) {
+        endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+      } else {
+        const d = new Date();
+        d.setHours(23, 59, 59, 999);
+        endISO = d.toISOString();
+      }
+
+      const rows = db.prepare("SELECT * FROM patients WHERE datetime(created_at) >= datetime(?) AND datetime(created_at) <= datetime(?) ORDER BY created_at DESC").all(startISO, endISO) as any[];
+      return rows.map(mapPatient);
+    },
+
+    getTestsToday: async (startDate?: string, endDate?: string) => {
+      const db = getDatabase();
+      let startISO: string;
+      let endISO: string;
+
+      if (startDate) {
+        startISO = new Date(`${startDate}T00:00:00`).toISOString();
+      } else {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        startISO = d.toISOString();
+      }
+
+      if (endDate) {
+        endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+      } else {
+        const d = new Date();
+        d.setHours(23, 59, 59, 999);
+        endISO = d.toISOString();
+      }
+      
+      const rows = db.prepare(`
+        SELECT 
+          lrt.id, 
+          lrt.lab_record_id, 
+          lrt.test_id, 
+          lrt.test_name, 
+          lrt.department, 
+          lrt.test_cost, 
+          lr.lab_number, 
+          lr.record_date, 
+          p.patient_name
+        FROM lab_record_tests lrt
+        JOIN lab_records lr ON lrt.lab_record_id = lr.id
+        JOIN patients p ON lr.patient_id = p.id
+        WHERE datetime(lr.record_date) >= datetime(?) AND datetime(lr.record_date) <= datetime(?)
+        ORDER BY lr.record_date DESC
+      `).all(startISO, endISO) as any[];
+
+      return rows.map(r => ({
+        id: r.id,
+        labRecordId: r.lab_record_id,
+        testId: r.test_id,
+        testName: r.test_name,
+        department: r.department,
+        testCost: Number(r.test_cost),
+        labNumber: r.lab_number,
+        recordDate: r.record_date,
+        patientName: r.patient_name
+      }));
+    },
+
+    getPendingResults: async (startDate?: string, endDate?: string) => {
+      const db = getDatabase();
+      let startISO = '1970-01-01T00:00:00.000Z';
+      let endISO = '9999-12-31T23:59:59.999Z';
+
+      if (startDate) {
+        startISO = new Date(`${startDate}T00:00:00`).toISOString();
+      }
+      if (endDate) {
+        endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+      }
+
+      const rows = db.prepare(`
+        SELECT 
+          lrt.id, 
+          lrt.lab_record_id, 
+          lrt.test_id, 
+          lrt.test_name, 
+          lrt.department, 
+          lrt.test_cost, 
+          lr.lab_number, 
+          lr.record_date, 
+          p.patient_name
+        FROM lab_record_tests lrt
+        JOIN lab_records lr ON lrt.lab_record_id = lr.id
+        JOIN patients p ON lr.patient_id = p.id
+        WHERE datetime(lr.record_date) >= datetime(?) AND datetime(lr.record_date) <= datetime(?)
+          AND NOT EXISTS (
+            SELECT 1 FROM test_results tr
+            WHERE tr.lab_record_test_id = lrt.id
+          )
+        ORDER BY lr.record_date DESC
+      `).all(startISO, endISO) as any[];
+
+      return rows.map(r => ({
+        id: r.id,
+        labRecordId: r.lab_record_id,
+        testId: r.test_id,
+        testName: r.test_name,
+        department: r.department,
+        testCost: Number(r.test_cost),
+        labNumber: r.lab_number,
+        recordDate: r.record_date,
+        patientName: r.patient_name
+      }));
+    },
+
+    getRevenueThisMonth: async (startDate?: string, endDate?: string) => {
+      const db = getDatabase();
+      let startISO: string;
+      let endISO: string;
+
+      if (startDate) {
+        startISO = new Date(`${startDate}T00:00:00`).toISOString();
+      } else {
+        const d = new Date();
+        d.setDate(1);
+        d.setHours(0, 0, 0, 0);
+        startISO = d.toISOString();
+      }
+
+      if (endDate) {
+        endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+      } else {
+        const d = new Date();
+        d.setHours(23, 59, 59, 999);
+        endISO = d.toISOString();
+      }
+
+      const rows = db.prepare(`
+        SELECT 
+          pay.id, 
+          pay.lab_record_id, 
+          pay.amount, 
+          pay.payment_date, 
+          pay.receipt_number, 
+          lr.lab_number, 
+          p.patient_name,
+          u.full_name as received_by_name
+        FROM payments pay
+        JOIN lab_records lr ON pay.lab_record_id = lr.id
+        JOIN patients p ON lr.patient_id = p.id
+        LEFT JOIN users u ON pay.received_by_id = u.id
+        WHERE datetime(pay.payment_date) >= datetime(?) AND datetime(pay.payment_date) <= datetime(?)
+        ORDER BY pay.payment_date DESC
+      `).all(startISO, endISO) as any[];
+
+      return rows.map(r => ({
+        id: r.id,
+        labRecordId: r.lab_record_id,
+        amount: Number(r.amount),
+        paymentDate: r.payment_date,
+        receiptNumber: r.receipt_number,
+        labNumber: r.lab_number,
+        patientName: r.patient_name,
+        receivedByName: ((r.received_by_name || '').trim() || 'System').split(' ')[0]
+      }));
+    },
+
+    getArrearsBreakdown: async (startDate?: string, endDate?: string) => {
+      const db = getDatabase();
+      let startISO: string;
+      let endISO: string;
+
+      if (startDate) {
+        startISO = new Date(`${startDate}T00:00:00`).toISOString();
+      } else {
+        const d = new Date();
+        d.setDate(1);
+        d.setHours(0, 0, 0, 0);
+        startISO = d.toISOString();
+      }
+
+      if (endDate) {
+        endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+      } else {
+        const d = new Date();
+        d.setHours(23, 59, 59, 999);
+        endISO = d.toISOString();
+      }
+
+      const rows = db.prepare(`
+        SELECT 
+          lr.id,
+          lr.lab_number,
+          lr.record_date,
+          lr.total_cost,
+          lr.amount_paid,
+          lr.arrears,
+          p.patient_name,
+          p.telephone
+        FROM lab_records lr
+        JOIN patients p ON lr.patient_id = p.id
+        WHERE lr.arrears > 0 
+          AND datetime(lr.record_date) >= datetime(?) 
+          AND datetime(lr.record_date) <= datetime(?)
+        ORDER BY lr.arrears DESC
+      `).all(startISO, endISO) as any[];
+
+      return rows.map(r => ({
+        id: r.id,
+        labNumber: r.lab_number,
+        recordDate: r.record_date,
+        totalCost: Number(r.total_cost),
+        amountPaid: Number(r.amount_paid),
+        arrears: Number(r.arrears),
+        patientName: r.patient_name,
+        telephone: r.telephone || '—'
+      }));
+    },
+
+    getStats: async () => {
+      const db = getDatabase();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayISO = todayStart.toISOString();
+
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const monthISO = monthStart.toISOString();
+
+      const patientsToday = (db.prepare("SELECT COUNT(*) as count FROM patients WHERE datetime(created_at) >= datetime(?)").get(todayISO) as any).count;
+
+      const testsToday = (db.prepare(`
+        SELECT COUNT(lrt.id) as count 
+        FROM lab_record_tests lrt
+        JOIN lab_records lr ON lrt.lab_record_id = lr.id
+        WHERE datetime(lr.record_date) >= datetime(?)
+      `).get(todayISO) as any).count;
+
+      const pendingResults = (db.prepare(`
+        SELECT COUNT(*) as count
+        FROM lab_record_tests lrt
+        WHERE NOT EXISTS (
+          SELECT 1 FROM test_results tr
+          WHERE tr.lab_record_test_id = lrt.id
+        )
+      `).get() as any).count;
+
+      const revenueRow = db.prepare("SELECT SUM(amount) as total FROM payments WHERE datetime(payment_date) >= datetime(?)").get(monthISO) as any;
+      const revenueThisMonth = revenueRow ? (revenueRow.total || 0) : 0;
+
+      return {
+        patientsToday,
+        testsToday,
+        pendingResults,
+        revenueThisMonth,
+      };
+    },
+
+    getChartData: async () => {
+      const db = getDatabase();
+      const now = new Date();
+
+      const sevenDaysAgo = new Date(now.getTime() - 6 * 86400000);
+      sevenDaysAgo.setHours(0, 0, 0, 0);
+      const sevenDaysAgoISO = sevenDaysAgo.toISOString();
+
+      const thirtyDaysAgo = new Date(now.getTime() - 29 * 86400000);
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+      const thirtyDaysAgoISO = thirtyDaysAgo.toISOString();
+
+      const patients = db.prepare("SELECT created_at FROM patients WHERE datetime(created_at) >= datetime(?) ORDER BY created_at ASC").all(sevenDaysAgoISO) as any[];
+
+      const tests = db.prepare(`
+        SELECT lr.record_date 
+        FROM lab_record_tests lrt
+        JOIN lab_records lr ON lrt.lab_record_id = lr.id
+        WHERE datetime(lr.record_date) >= datetime(?)
+      `).all(sevenDaysAgoISO) as any[];
+
+      const departments = db.prepare("SELECT department FROM lab_record_tests").all() as any[];
+
+      const payments = db.prepare(`
+        SELECT payment_date, amount FROM payments
+        WHERE datetime(payment_date) >= datetime(?)
+        ORDER BY payment_date ASC
+      `).all(thirtyDaysAgoISO) as any[];
+
+      const flags = db.prepare("SELECT flag FROM test_results").all() as any[];
+
+      // Daily Trend formatting
+      const dailyMap = new Map<string, { patients: number; tests: number }>();
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(sevenDaysAgo.getTime() + i * 86400000);
+        const key = d.toISOString().slice(0, 10);
+        dailyMap.set(key, { patients: 0, tests: 0 });
+      }
+
+      for (const row of patients) {
+        const key = row.created_at.slice(0, 10);
+        const entry = dailyMap.get(key);
+        if (entry) entry.patients++;
+      }
+
+      for (const row of tests) {
+        const key = row.record_date.slice(0, 10);
+        const entry = dailyMap.get(key);
+        if (entry) entry.tests++;
+      }
+
+      const formatShortDate = (date: Date): string => {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      };
+
+      const dailyTrend: any[] = [];
+      dailyMap.forEach((val, key) => {
+        dailyTrend.push({
+          date: formatShortDate(new Date(key + 'T00:00:00')),
+          patients: val.patients,
+          tests: val.tests,
+        });
+      });
+
+      // Department breakdown formatting
+      const deptCount = new Map<string, number>();
+      for (const row of departments) {
+        const dept = row.department || 'Unknown';
+        deptCount.set(dept, (deptCount.get(dept) ?? 0) + 1);
+      }
+      const departmentBreakdown: any[] = [];
+      deptCount.forEach((count, department) => {
+        departmentBreakdown.push({ department, count });
+      });
+      departmentBreakdown.sort((a, b) => b.count - a.count);
+
+      // Revenue trend formatting
+      const revenueMap = new Map<string, number>();
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(thirtyDaysAgo.getTime() + i * 86400000);
+        revenueMap.set(d.toISOString().slice(0, 10), 0);
+      }
+
+      for (const row of payments) {
+        const key = row.payment_date.slice(0, 10);
+        if (revenueMap.has(key)) {
+          revenueMap.set(key, (revenueMap.get(key) ?? 0) + Number(row.amount));
+        }
+      }
+
+      const revenueTrend: any[] = [];
+      revenueMap.forEach((revenue, key) => {
+        revenueTrend.push({
+          date: formatShortDate(new Date(key + 'T00:00:00')),
+          revenue,
+        });
+      });
+
+      // Flags formatting
+      const flagCount = new Map<string, number>();
+      for (const row of flags) {
+        const flag = row.flag || 'Unknown';
+        flagCount.set(flag, (flagCount.get(flag) ?? 0) + 1);
+      }
+      const resultFlags: any[] = [];
+      flagCount.forEach((count, flag) => {
+        resultFlags.push({ flag, count });
+      });
+
+      return { dailyTrend, departmentBreakdown, revenueTrend, resultFlags };
+    }
+  }
 };

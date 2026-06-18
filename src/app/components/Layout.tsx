@@ -69,6 +69,7 @@ const navigationGroups = [
     category: "ADMINISTRATION",
     items: [
       { name: "Users & Roles", icon: UserCog, path: "/rbac/users", permissionKey: PERMISSIONS['rbac.manage_users'] },
+      { name: "RBAC Guide & Simulator", icon: Shield, path: "/rbac/help", permissionKey: PERMISSIONS['profile.view'] },
       { name: "Settings", icon: Settings, path: "/settings", permissionKey: "settings.view" },
     ]
   }
@@ -225,21 +226,12 @@ export function Layout() {
             })}
           </nav>
 
-          {/* Glowing Status Footer Card */}
+          {/* Subtle Developer Attribution */}
           {isExpanded && (
-            <div className="p-3 border-t border-sidebar-border shrink-0 animate-in fade-in duration-300">
-              <div className="bg-sidebar-accent/30 border border-sidebar-border/80 rounded-xl p-3 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[11px] font-bold text-sidebar-foreground">System online</span>
-                </div>
-                <p className="text-[9px] text-sidebar-foreground/60 leading-tight">
-                  All instruments responding · v2.4.1
-                </p>
-              </div>
+            <div className="p-4 border-t border-sidebar-border/35 text-center shrink-0 animate-in fade-in duration-300">
+              <span className="text-[9px] text-sidebar-foreground/35 font-bold tracking-widest uppercase">
+                Software by PhiNova
+              </span>
             </div>
           )}
         </aside>

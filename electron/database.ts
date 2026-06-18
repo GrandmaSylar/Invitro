@@ -213,6 +213,20 @@ export function initDatabase() {
     createLocalSchema();
     log.info('Local SQLite database schema initialized successfully');
 
+    // Ensure all existing payments with null received_by_id are mapped to a fallback user
+    // (e.g. the first user in the database) to avoid showing 'System' for older transactions
+    try {
+      const fallbackUser = db.prepare("SELECT id FROM users LIMIT 1").get() as any;
+      if (fallbackUser && fallbackUser.id) {
+        const result = db.prepare("UPDATE payments SET received_by_id = ? WHERE received_by_id IS NULL").run(fallbackUser.id);
+        if (result.changes > 0) {
+          log.info(`Migration: Associated ${result.changes} orphaned payments with fallback user ID ${fallbackUser.id}`);
+        }
+      }
+    } catch (migErr: any) {
+      log.error('Failed to run payments received_by_id fallback migration:', migErr.message);
+    }
+
     // Start background full sync cycle interval (runs every 30 seconds)
     setInterval(() => {
       runFullSyncCycle().catch((err) => log.error('Background full sync error:', err));

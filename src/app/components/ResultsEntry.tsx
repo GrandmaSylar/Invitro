@@ -21,12 +21,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useLabRecord, useLabRecordTests } from "../../hooks/useLabRecords";
 import { usePatientsList } from "../../hooks/usePatients";
 import { PatientSearchBar, PatientResultsList } from "../../features/patients/ExistingPatientTab";
-import { useBulkEnterResults, useResultsByRecord } from "../../hooks/useResults";
+import { useBulkEnterResults, useResultsByRecord, useUpdateResult } from "../../hooks/useResults";
 import { ResultPreview } from "../../features/patients/ResultPreview";
 import { useDoctors, useHospitals } from "../../hooks/useRegistry";
 import type { ResultFlag, LabRecord } from "../../lib/types";
 
 interface ResultRow {
+  id?: string;
   labRecordTestId: string;
   parentTestName: string;
   testName: string;
@@ -102,6 +103,7 @@ export function ResultsEntry() {
 
   // Mutations
   const bulkEnterResults = useBulkEnterResults();
+  const updateResult = useUpdateResult();
 
   const [resultRows, setResultRows] = useState<ResultRow[]>([]);
   const loadedRecordIdRef = useRef<string | null>(null);
@@ -120,6 +122,7 @@ export function ResultsEntry() {
             );
             
             rows.push({
+              id: saved?.id,
               labRecordTestId: test.id,
               parentTestName: test.testName,
               testName: param.parameterName,
@@ -138,6 +141,7 @@ export function ResultsEntry() {
           );
           
           rows.push({
+            id: saved?.id,
             labRecordTestId: test.id,
             parentTestName: test.testName,
             testName: test.testName,
@@ -178,33 +182,66 @@ export function ResultsEntry() {
   const handleSubmit = async () => {
     if (!matchedRecord) return;
     
-    // Filter to only submit newly entered/unsaved values to prevent DB row duplication
-    const unsavedRows = resultRows.filter(row => !row.isSaved && row.result.trim() !== "");
-    if (unsavedRows.length === 0) {
-      toast.info("No new parameter results to save.");
+    // Identify new rows (no id, and non-empty result)
+    const newRows = resultRows.filter(row => !row.id && row.result.trim() !== "");
+    
+    // Identify updated rows (has id, and changed result or flag)
+    const updatedRows = resultRows.filter(row => {
+      if (!row.id) return false;
+      const original = existingResults.find(r => r.id === row.id);
+      if (!original) return false;
+      return row.result !== (original.result || "") || row.flag !== original.flag;
+    });
+
+    if (newRows.length === 0 && updatedRows.length === 0) {
+      toast.info("No new or modified results to save.");
       return;
     }
     
+    const totalChanges = newRows.length + updatedRows.length;
     const confirmed = await showConfirm({
-      title: "Submit Results",
-      description: `Submit ${unsavedRows.length} new result(s) for ${matchedRecord.patient?.patientName || "this patient"}?`,
-      confirmText: "Submit"
+      title: "Save Results",
+      description: `Save ${totalChanges} result change(s) for ${matchedRecord.patient?.patientName || "this patient"}?`,
+      confirmText: "Save"
     });
     if (!confirmed) return;
     
     try {
-      await bulkEnterResults.mutateAsync(
-        unsavedRows.map(row => ({
-          labRecordTestId: row.labRecordTestId,
-          testName: row.testName,
-          department: row.department,
-          referenceRange: row.referenceRange,
-          unit: row.unit,
-          result: row.result,
-          flag: row.flag,
-        }))
-      );
-      showSuccess({ title: "Results Submitted", description: `Results submitted for ${matchedRecord.patient?.patientName || "Patient"}.` });
+      const savePromises: Promise<any>[] = [];
+      
+      if (newRows.length > 0) {
+        savePromises.push(
+          bulkEnterResults.mutateAsync(
+            newRows.map(row => ({
+              labRecordTestId: row.labRecordTestId,
+              testName: row.testName,
+              department: row.department,
+              referenceRange: row.referenceRange,
+              unit: row.unit,
+              result: row.result,
+              flag: row.flag,
+            }))
+          )
+        );
+      }
+      
+      if (updatedRows.length > 0) {
+        updatedRows.forEach(row => {
+          savePromises.push(
+            updateResult.mutateAsync({
+              id: row.id!,
+              updates: {
+                result: row.result,
+                flag: row.flag,
+              }
+            })
+          );
+        });
+      }
+      
+      await Promise.all(savePromises);
+      
+      showSuccess({ title: "Results Saved", description: `Successfully saved results for ${matchedRecord.patient?.patientName || "Patient"}.` });
       // Transition to preview instead of clearing
       setPreviewRecordId(activeRecordId);
       setActiveRecordId(null);
@@ -559,10 +596,10 @@ export function ResultsEntry() {
                                 variant="default"
                                 size="sm"
                                 onClick={handleSubmit}
-                                disabled={bulkEnterResults.isPending}
+                                disabled={bulkEnterResults.isPending || updateResult.isPending}
                                 className="flex items-center gap-1.5 bg-primary text-primary-foreground h-9 px-4 font-semibold shadow-sm hover:shadow"
                               >
-                                {bulkEnterResults.isPending ? <Loader2 className="animate-spin mr-1" size={15} /> : <Save size={15} />}
+                                {bulkEnterResults.isPending || updateResult.isPending ? <Loader2 className="animate-spin mr-1" size={15} /> : <Save size={15} />}
                                 Save Results
                               </Button>
                             </div>
@@ -584,7 +621,14 @@ export function ResultsEntry() {
                                     
                                     {/* Details */}
                                     <div>
-                                      <p className="font-bold text-sm text-foreground">{row.testName}</p>
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-bold text-sm text-foreground">{row.testName}</p>
+                                        {row.isSaved && (
+                                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                            Saved
+                                          </span>
+                                        )}
+                                      </div>
                                       <p className="text-xs text-muted-foreground mt-0.5">
                                         {row.referenceRange ? `Reference: ${row.referenceRange}` : "No reference range"}
                                       </p>
@@ -596,13 +640,8 @@ export function ResultsEntry() {
                                     <div className="relative flex items-center w-48">
                                       <input
                                         type="text"
-                                        placeholder={row.isSaved ? "Saved" : "Enter value"}
-                                        disabled={row.isSaved}
-                                        className={`w-full pl-3 pr-14 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary font-mono text-foreground font-semibold transition-all ${
-                                          row.isSaved 
-                                            ? "bg-muted/50 border-dashed cursor-not-allowed text-muted-foreground opacity-80" 
-                                            : "border-border/80"
-                                        }`}
+                                        placeholder="Enter value"
+                                        className="w-full pl-3 pr-14 py-2 text-sm rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary font-mono text-foreground font-semibold transition-all border-border/80"
                                         value={row.result}
                                         onChange={e => updateResultRow(globalIdx, "result", e.target.value)}
                                       />
@@ -616,10 +655,7 @@ export function ResultsEntry() {
                                     {/* Badge Select flag selector */}
                                     <div className="relative shrink-0 w-24">
                                       <select
-                                        disabled={row.isSaved}
-                                        className={`w-full px-2 py-1.5 border rounded-lg text-xs font-bold uppercase tracking-wider focus:outline-none transition-all text-center ${
-                                          row.isSaved ? "cursor-not-allowed opacity-80" : "cursor-pointer"
-                                        } ${
+                                        className={`w-full px-2 py-1.5 border rounded-lg text-xs font-bold uppercase tracking-wider focus:outline-none transition-all text-center cursor-pointer ${
                                           row.flag === "Normal" ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400" :
                                           row.flag === "Abnormal" ? "border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400" :
                                           "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400"

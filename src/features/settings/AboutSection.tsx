@@ -211,6 +211,10 @@ export default function AboutSection() {
               )}
             </div>
           </div>
+          <div className="pt-6 border-t border-border/60 flex items-center justify-between text-[10px] text-muted-foreground/80 font-bold uppercase tracking-wider">
+            <span>Powered by Invitro Engine</span>
+            <span>Developed by PhiNova</span>
+          </div>
         </CardContent>
       </Card>
     </div>

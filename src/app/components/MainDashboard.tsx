@@ -13,6 +13,7 @@ import { useNavigate } from "react-router";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useSettingsStore } from "../../stores/useSettingsStore";
 import { useDashboardStats, useDashboardCharts } from "../../hooks/useDashboardStats";
+import { usePermission } from "../../hooks/usePermission";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { motion } from "motion/react";
@@ -78,7 +79,7 @@ function ChartTooltip({ active, payload, label }: any) {
 
 // ── Stat Card Component ────────────────────────────────────────
 
-function StatCard({ title, value, icon: Icon, trendText, trendType = "up", iconBg, isLoading }: {
+function StatCard({ title, value, icon: Icon, trendText, trendType = "up", iconBg, isLoading, onClick }: {
   title: string;
   value: string | number;
   icon: any;
@@ -86,9 +87,13 @@ function StatCard({ title, value, icon: Icon, trendText, trendType = "up", iconB
   trendType?: "up" | "down";
   iconBg: string;
   isLoading?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <div className="relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300">
+    <div 
+      onClick={onClick}
+      className={`relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300 ${onClick ? "cursor-pointer select-none" : ""}`}
+    >
       <div className="relative flex items-center justify-between mb-3">
         <h3 className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">{title}</h3>
         <div className={`p-2.5 rounded-xl ${iconBg} shrink-0`}>
@@ -166,6 +171,11 @@ export function MainDashboard() {
   const { settings } = useSettingsStore();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: charts, isLoading: chartsLoading } = useDashboardCharts();
+
+  const canViewPatients = usePermission("dashboard.view_patients_today");
+  const canViewTests = usePermission("dashboard.view_tests_today");
+  const canViewPending = usePermission("dashboard.view_pending_results");
+  const canViewRevenue = usePermission("dashboard.view_revenue_month");
 
   const handleInteract = () => {
     if (typeof navigator.vibrate === 'function') {
@@ -247,6 +257,7 @@ export function MainDashboard() {
           trendType="up"
           iconBg="bg-primary/5 dark:bg-primary/10 text-primary"
           isLoading={statsLoading}
+          onClick={canViewPatients ? () => navigate("/dashboard/drilldown?metric=patients") : undefined}
         />
         <StatCard
           title="Tests Ordered Today"
@@ -256,6 +267,7 @@ export function MainDashboard() {
           trendType="up"
           iconBg="bg-purple-500/5 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400"
           isLoading={statsLoading}
+          onClick={canViewTests ? () => navigate("/dashboard/drilldown?metric=tests") : undefined}
         />
         <StatCard
           title="Pending Results"
@@ -265,6 +277,7 @@ export function MainDashboard() {
           trendType="down"
           iconBg="bg-amber-500/5 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400"
           isLoading={statsLoading}
+          onClick={canViewPending ? () => navigate("/dashboard/drilldown?metric=pending") : undefined}
         />
         <StatCard
           title="Revenue (Month)"
@@ -274,6 +287,7 @@ export function MainDashboard() {
           trendType="up"
           iconBg="bg-emerald-500/5 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
           isLoading={statsLoading}
+          onClick={canViewRevenue ? () => navigate("/dashboard/drilldown?metric=revenue") : undefined}
         />
       </div>
 
@@ -304,7 +318,7 @@ export function MainDashboard() {
                     <stop offset="95%" stopColor="hsl(262, 83%, 58%)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.4} vertical={false} />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11, fill: 'var(--muted-foreground)', fontWeight: 600 }}
@@ -368,7 +382,7 @@ export function MainDashboard() {
                   dataKey="count"
                   nameKey="department"
                   strokeWidth={2}
-                  stroke="hsl(var(--card))"
+                  stroke="var(--card)"
                 >
                   {charts.departmentBreakdown.map((_entry, index) => (
                     <Cell key={index} fill={DEPT_COLORS[index % DEPT_COLORS.length]} />
@@ -382,7 +396,7 @@ export function MainDashboard() {
                   verticalAlign="bottom"
                   wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 4 }}
                   formatter={(value: string) => (
-                    <span style={{ color: 'hsl(var(--muted-foreground))' }}>
+                    <span style={{ color: 'var(--muted-foreground)' }}>
                       {value.length > 14 ? value.slice(0, 14) + '…' : value}
                     </span>
                   )}
@@ -416,7 +430,7 @@ export function MainDashboard() {
                     <stop offset="100%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.4} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" strokeOpacity={0.4} vertical={false} />
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 10, fill: 'var(--muted-foreground)', fontWeight: 600 }}
@@ -466,12 +480,12 @@ export function MainDashboard() {
                   dataKey="count"
                   nameKey="flag"
                   strokeWidth={2}
-                  stroke="hsl(var(--card))"
+                  stroke="var(--card)"
                 >
                   {charts.resultFlags.map((entry) => (
                     <Cell
                       key={entry.flag}
-                      fill={FLAG_COLORS[entry.flag] ?? 'hsl(var(--muted-foreground))'}
+                      fill={FLAG_COLORS[entry.flag] ?? 'var(--muted-foreground)'}
                     />
                   ))}
                 </Pie>
@@ -483,7 +497,7 @@ export function MainDashboard() {
                   verticalAlign="bottom"
                   wrapperStyle={{ fontSize: 11, fontWeight: 700, paddingTop: 4 }}
                   formatter={(value: string) => (
-                    <span style={{ color: 'hsl(var(--muted-foreground))' }}>{value}</span>
+                    <span style={{ color: 'var(--muted-foreground)' }}>{value}</span>
                   )}
                 />
               </PieChart>

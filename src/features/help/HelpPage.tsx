@@ -360,25 +360,47 @@ export function HelpPage() {
             </p>
           </div>
           
-          {/* Quick Tour Launcher Card */}
-          <Card className="max-w-sm md:w-[280px] shrink-0 bg-accent/20 border-accent/60">
-            <CardContent className="p-4 flex flex-col gap-3">
-              <div className="flex items-center gap-2 text-primary">
-                <Compass className="h-4 w-4 animate-spin-slow" />
-                <span className="text-xs font-extrabold uppercase tracking-wider">LIMS Interface Tour</span>
-              </div>
-              <p className="text-[11px] text-muted-foreground leading-normal">
-                New to Invitro LIMS? Take a quick 4-step tour to learn system navigation.
-              </p>
-              <Button 
-                onClick={() => setTourStep(0)} 
-                size="sm" 
-                className="w-full font-bold text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
-              >
-                <Play className="h-3.5 w-3.5 mr-1.5" /> Start Quick Tour
-              </Button>
-            </CardContent>
-          </Card>
+          {/* Quick Actions Cards */}
+          <div className="flex flex-col sm:flex-row gap-4 shrink-0">
+            <Card className="max-w-sm md:w-[250px] shrink-0 bg-accent/20 border-accent/60">
+              <CardContent className="p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-primary">
+                  <Compass className="h-4 w-4 animate-spin-slow" />
+                  <span className="text-xs font-extrabold uppercase tracking-wider">LIMS Interface Tour</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-normal">
+                  New to Invitro LIMS? Take a quick 4-step tour to learn system navigation.
+                </p>
+                <Button 
+                  onClick={() => setTourStep(0)} 
+                  size="sm" 
+                  className="w-full font-bold text-xs bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg"
+                >
+                  <Play className="h-3.5 w-3.5 mr-1.5" /> Start Quick Tour
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="max-w-sm md:w-[250px] shrink-0 bg-primary/5 border-primary/20">
+              <CardContent className="p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-primary">
+                  <Shield className="h-4 w-4" />
+                  <span className="text-xs font-extrabold uppercase tracking-wider">RBAC Simulator</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-normal">
+                  Explore how roles work and test access checks in the security simulator.
+                </p>
+                <Button 
+                  onClick={() => navigate("/rbac/help")} 
+                  size="sm" 
+                  variant="outline"
+                  className="w-full font-bold text-xs border-primary/20 hover:bg-primary/10 text-primary rounded-lg bg-transparent"
+                >
+                  Open RBAC Guide
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 

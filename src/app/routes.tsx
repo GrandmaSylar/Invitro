@@ -12,6 +12,7 @@ import { PERMISSIONS } from "../lib/permissions";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { HelpPage } from "../features/help/HelpPage";
 import { NotificationsPage } from "../features/notifications/NotificationsPage";
+import { DashboardDrilldown } from "../features/dashboard/DashboardDrilldown";
 
 import { LoginPage } from "../features/auth/LoginPage";
 import { ResetPasswordPage } from "../features/auth/ResetPasswordPage";
@@ -19,6 +20,7 @@ import { ForgotPasswordPage } from "../features/auth/ForgotPasswordPage";
 import { AccessDenied } from "./components/AccessDenied";
 import { PermissionMatrix } from "../features/rbac/PermissionMatrix";
 import { UserTable } from "../features/rbac/UserTable";
+import { RbacHelpPage } from "../features/rbac/RbacHelpPage";
 import { useRbacStore } from "../stores/useRbacStore";
 
 const requireAuth = (request: Request) => {
@@ -89,13 +91,15 @@ export const router = createHashRouter([
         loader: ({ request }) => requireAuth(request),
         children: [
           { index: true, Component: withPermission(MainDashboard), loader: requirePermission(PERMISSIONS['dashboard.view']) },
+          { path: "dashboard/drilldown", Component: withPermission(DashboardDrilldown), loader: requirePermission(PERMISSIONS['dashboard.view']) },
           { path: "patients", Component: withPermission(DashboardAlpha), loader: requirePermission(PERMISSIONS['patients.view']) },
           { path: "test-register", Component: withPermission(TestRegister), loader: requirePermission(PERMISSIONS['test_register.view']) },
           { path: "hospital-records", Component: withPermission(HospitalRecords), loader: requirePermission(PERMISSIONS['hospital_records.view']) },
           { path: "results-entry", Component: withPermission(ResultsEntry), loader: requirePermission(PERMISSIONS['results_entry.view']) },
           { path: "profile", Component: withPermission(Profile), loader: requirePermission(PERMISSIONS['profile.view']) },
-          { path: "settings", Component: withPermission(SettingsPage), loader: requirePermission(PERMISSIONS['settings.view']) },
+           { path: "settings", Component: withPermission(SettingsPage), loader: requirePermission(PERMISSIONS['settings.view']) },
           { path: "help", Component: HelpPage },
+          { path: "rbac/help", Component: RbacHelpPage },
           { path: "notifications", Component: withPermission(NotificationsPage), loader: requirePermission(PERMISSIONS['notifications.view']) },
           { path: "rbac/users", Component: withPermission(UserTable), loader: requirePermission(PERMISSIONS['rbac.manage_users']) },
           { path: "rbac/permissions", Component: withPermission(PermissionMatrix), loader: requirePermission(PERMISSIONS['rbac.manage_roles']) },

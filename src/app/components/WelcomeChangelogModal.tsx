@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function WelcomeChangelogModal() {
-  const currentVersion = '1.1.8';
+  const currentVersion = '1.1.9';
   const localStorageKey = `lims-changelog-seen-v${currentVersion}`;
   
   const [isOpen, setIsOpen] = useState(false);
@@ -62,9 +62,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Official Test Catalog Loaded</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Interactive Metrics Drilldowns</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Wiped old demo databases and loaded the fresh, official catalog containing 223 tests and 329 laboratory parameters.
+                    Click on dashboard statistics (like daily collections or patient counts) to immediately navigate to their corresponding filtered ledgers.
                   </p>
                 </div>
               </div>
@@ -75,9 +75,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">New Help & Tutorials Center</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Arrears Recovery Ledger</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Get step-by-step guides tailored specifically to your role (Receptionist, Technician, or Admin), search FAQs, or take a quick UI tour.
+                    Track outstanding client debts in a dedicated ledger view with detailed metrics, quick filters, and payment recovery tools.
                   </p>
                 </div>
               </div>
@@ -88,9 +88,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Standardized Parameter IDs</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">RBAC Sandbox & Tutorials</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Updated newly created parameter codes to follow the clean P### sequence (e.g., P004) instead of PRM-####.
+                    Learn about user roles and test permission matrices dynamically with the new interactive simulator and tutorials.
                   </p>
                 </div>
               </div>
@@ -101,9 +101,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Automatic Data Recovery</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Visual & Contrast Refinements</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    The app now automatically checks for missing files upon login and pulls down cloud data to keep your computer up-to-date.
+                    Improved Light Mode readability by adjusting overlapping active tabs, input contrast borders, and progress bar heights.
                   </p>
                 </div>
               </div>

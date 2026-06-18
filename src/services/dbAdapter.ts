@@ -15,6 +15,7 @@ import {
   mapDoctorRow
 } from '../lib/mappers';
 import { useSettingsStore } from '../stores/useSettingsStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import type { 
   Patient, 
   PatientFilters, 
@@ -565,8 +566,10 @@ export const dbAdapter: IDatabaseAdapter = {
     },
 
     recordPayment: async (labRecordId, amount, receivedById) => {
+      const resolvedReceivedById = receivedById || useAuthStore.getState().user?.id || undefined;
+
       if (window.electronAPI && (window.electronAPI as any).db) {
-        return (window.electronAPI as any).db.recordPayment(labRecordId, amount, receivedById);
+        return (window.electronAPI as any).db.recordPayment(labRecordId, amount, resolvedReceivedById);
       }
 
       const { data: receiptNumber, error: receiptError } = await supabase.rpc('generate_receipt_number');
@@ -577,7 +580,7 @@ export const dbAdapter: IDatabaseAdapter = {
         .insert({
           lab_record_id: labRecordId,
           amount,
-          received_by_id: receivedById || null,
+          received_by_id: resolvedReceivedById || null,
           receipt_number: receiptNumber
         })
         .select()

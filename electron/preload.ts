@@ -88,6 +88,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     revokeApiKey: (id: string) => ipcRenderer.invoke('db:call', 'settings', 'revokeApiKey', id),
     getSyncStatus: () => ipcRenderer.invoke('db:call', 'settings', 'getSyncStatus'),
 
+    getDashboardStats: () => ipcRenderer.invoke('db:call', 'dashboard', 'getStats'),
+    getDashboardChartData: () => ipcRenderer.invoke('db:call', 'dashboard', 'getChartData'),
+    getPatientsToday: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getPatientsToday', startDate, endDate),
+    getTestsToday: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getTestsToday', startDate, endDate),
+    getPendingResults: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getPendingResults', startDate, endDate),
+    getRevenueThisMonth: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getRevenueThisMonth', startDate, endDate),
+    getArrearsBreakdown: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getArrearsBreakdown', startDate, endDate),
+
     getTests: (filters: any) => ipcRenderer.invoke('db:call', 'catalog', 'getTests', filters),
     getTestById: (id: string) => ipcRenderer.invoke('db:call', 'catalog', 'getTestById', id),
     createTest: (testData: any) => ipcRenderer.invoke('db:call', 'catalog', 'createTest', testData),
@@ -196,6 +204,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
       createDoctor: (doctorData: any) => ipcRenderer.invoke('db:call', 'registry', 'createDoctor', doctorData),
       updateDoctor: (id: string, doctorData: any) => ipcRenderer.invoke('db:call', 'registry', 'updateDoctor', id, doctorData),
       deleteDoctor: (id: string) => ipcRenderer.invoke('db:call', 'registry', 'deleteDoctor', id),
+    },
+    dashboard: {
+      getStats: () => ipcRenderer.invoke('db:call', 'dashboard', 'getStats'),
+      getChartData: () => ipcRenderer.invoke('db:call', 'dashboard', 'getChartData'),
+      getPatientsToday: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getPatientsToday', startDate, endDate),
+      getTestsToday: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getTestsToday', startDate, endDate),
+      getPendingResults: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getPendingResults', startDate, endDate),
+      getRevenueThisMonth: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getRevenueThisMonth', startDate, endDate),
+      getArrearsBreakdown: (startDate?: string, endDate?: string) => ipcRenderer.invoke('db:call', 'dashboard', 'getArrearsBreakdown', startDate, endDate),
     }
   }
 });

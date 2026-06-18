@@ -30,6 +30,12 @@ function formatShortDate(date: Date): string {
 
 export const dashboardService = {
   getStats: async (): Promise<DashboardStats> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard
+        ? (window.electronAPI as any).db.dashboard.getStats()
+        : (window.electronAPI as any).db.getDashboardStats();
+    }
+
     const todayStart = startOfDay(new Date());
     const todayISO = todayStart.toISOString();
 
@@ -79,6 +85,12 @@ export const dashboardService = {
    * 30-day revenue trend, and result-flag distribution.
    */
   getChartData: async (): Promise<DashboardChartData> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard
+        ? (window.electronAPI as any).db.dashboard.getChartData()
+        : (window.electronAPI as any).db.getDashboardChartData();
+    }
+
     const now = new Date();
 
     // Date boundaries
@@ -198,5 +210,264 @@ export const dashboardService = {
     });
 
     return { dailyTrend, departmentBreakdown, revenueTrend, resultFlags };
+  },
+
+  getPatientsToday: async (startDate?: string, endDate?: string): Promise<any[]> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard.getPatientsToday(startDate, endDate);
+    }
+    
+    let startISO: string;
+    let endISO: string;
+    if (startDate) {
+      startISO = new Date(`${startDate}T00:00:00`).toISOString();
+    } else {
+      startISO = startOfDay(new Date()).toISOString();
+    }
+    if (endDate) {
+      endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+    } else {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      endISO = d.toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .gte('created_at', startISO)
+      .lte('created_at', endISO)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data ?? []).map(row => ({
+      id: row.id,
+      patientName: row.patient_name,
+      gender: row.gender,
+      dob: row.dob,
+      age: row.age,
+      telephone: row.telephone,
+      createdAt: row.created_at
+    }));
+  },
+
+  getTestsToday: async (startDate?: string, endDate?: string): Promise<any[]> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard.getTestsToday(startDate, endDate);
+    }
+
+    let startISO: string;
+    let endISO: string;
+    if (startDate) {
+      startISO = new Date(`${startDate}T00:00:00`).toISOString();
+    } else {
+      startISO = startOfDay(new Date()).toISOString();
+    }
+    if (endDate) {
+      endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+    } else {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      endISO = d.toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('lab_record_tests')
+      .select(`
+        id,
+        test_id,
+        test_name,
+        department,
+        test_cost,
+        lab_records!inner(
+          id,
+          lab_number,
+          record_date,
+          patients(
+            patient_name
+          )
+        )
+      `)
+      .gte('lab_records.record_date', startISO)
+      .lte('lab_records.record_date', endISO)
+      .order('lab_records(record_date)', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      labRecordId: row.lab_records?.id || '',
+      testId: row.test_id,
+      testName: row.test_name,
+      department: row.department,
+      testCost: Number(row.test_cost),
+      labNumber: row.lab_records?.lab_number || '',
+      recordDate: row.lab_records?.record_date || '',
+      patientName: row.lab_records?.patients?.patient_name || 'Unknown'
+    }));
+  },
+
+  getPendingResults: async (startDate?: string, endDate?: string): Promise<any[]> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard.getPendingResults(startDate, endDate);
+    }
+
+    let query = supabase
+      .from('lab_record_tests')
+      .select(`
+        id,
+        test_id,
+        test_name,
+        department,
+        test_cost,
+        lab_records!inner(
+          id,
+          lab_number,
+          record_date,
+          patients(
+            patient_name
+          )
+        ),
+        test_results(id)
+      `);
+
+    if (startDate) {
+      const startISO = new Date(`${startDate}T00:00:00`).toISOString();
+      query = query.gte('lab_records.record_date', startISO);
+    }
+    if (endDate) {
+      const endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+      query = query.lte('lab_records.record_date', endISO);
+    }
+
+    const { data, error } = await query.order('lab_records(record_date)', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    const pendingTests = (data ?? []).filter((row: any) => !row.test_results || row.test_results.length === 0);
+
+    return pendingTests.map((row: any) => ({
+      id: row.id,
+      labRecordId: row.lab_records?.id || '',
+      testId: row.test_id,
+      testName: row.test_name,
+      department: row.department,
+      testCost: Number(row.test_cost),
+      labNumber: row.lab_records?.lab_number || '',
+      recordDate: row.lab_records?.record_date || '',
+      patientName: row.lab_records?.patients?.patient_name || 'Unknown'
+    }));
+  },
+
+  getRevenueThisMonth: async (startDate?: string, endDate?: string): Promise<any[]> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard.getRevenueThisMonth(startDate, endDate);
+    }
+
+    let startISO: string;
+    let endISO: string;
+    if (startDate) {
+      startISO = new Date(`${startDate}T00:00:00`).toISOString();
+    } else {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      startISO = monthStart.toISOString();
+    }
+    if (endDate) {
+      endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+    } else {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      endISO = d.toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('payments')
+      .select(`
+        id,
+        amount,
+        payment_date,
+        receipt_number,
+        received_by_id,
+        users(
+          full_name
+        ),
+        lab_records!inner(
+          id,
+          lab_number,
+          patients(
+            patient_name
+          )
+        )
+      `)
+      .gte('payment_date', startISO)
+      .lte('payment_date', endISO)
+      .order('payment_date', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      labRecordId: row.lab_records?.id || '',
+      amount: Number(row.amount),
+      paymentDate: row.payment_date,
+      receiptNumber: row.receipt_number,
+      labNumber: row.lab_records?.lab_number || '',
+      patientName: row.lab_records?.patients?.patient_name || 'Unknown',
+      receivedByName: ((row.users?.full_name || '').trim() || 'System').split(' ')[0]
+    }));
+  },
+
+  getArrearsBreakdown: async (startDate?: string, endDate?: string): Promise<any[]> => {
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      return (window.electronAPI as any).db.dashboard.getArrearsBreakdown(startDate, endDate);
+    }
+
+    let startISO: string;
+    let endISO: string;
+    if (startDate) {
+      startISO = new Date(`${startDate}T00:00:00`).toISOString();
+    } else {
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      startISO = monthStart.toISOString();
+    }
+    if (endDate) {
+      endISO = new Date(`${endDate}T23:59:59.999`).toISOString();
+    } else {
+      const d = new Date();
+      d.setHours(23, 59, 59, 999);
+      endISO = d.toISOString();
+    }
+
+    const { data, error } = await supabase
+      .from('lab_records')
+      .select(`
+        id,
+        lab_number,
+        record_date,
+        total_cost,
+        amount_paid,
+        arrears,
+        patients(
+          patient_name,
+          telephone
+        )
+      `)
+      .gt('arrears', 0)
+      .gte('record_date', startISO)
+      .lte('record_date', endISO)
+      .order('arrears', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      labNumber: row.lab_number,
+      recordDate: row.record_date,
+      totalCost: Number(row.total_cost),
+      amountPaid: Number(row.amount_paid),
+      arrears: Number(row.arrears),
+      patientName: row.patients?.patient_name || 'Unknown',
+      telephone: row.patients?.telephone || '—'
+    }));
   },
 };

@@ -2,6 +2,16 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.9
+
+### New Features & Improvements
+- **Interactive Analytics Drilldowns**: Enabled direct metric click-through on dashboard indicators (daily payments, patient volumes) leading to pre-filtered registers and lists.
+- **Arrears Recovery Ledger**: Added a dedicated ledger view to track outstanding debts, view recovery metrics, and access payment tools.
+- **RBAC Sandbox & Tutorials**: Introduced step-by-step role guides, privilege testing matrices, and simulation sandboxes for user training.
+- **Contrast & Light Mode Refinements**: Rectified overlaps, input text borders, text/background styling on active navigation tabs, and progress bar contrasts.
+- **Collector Tracking**: Automated recording and fetching of the collector's name on payments, replacing the default 'system' placeholder, backed by a migration.
+- **Trademark Attribution**: Added subtle, design-compliant PhiNova branding attributions inside layout bars, login screens, and about details.
+
 ## Version 1.1.8
 
 ### Improvements & Fixes

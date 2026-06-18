@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router";
 import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { Search, ChevronDown, ChevronUp, ArrowLeft, User, Phone, Calendar, FileText, ArrowDownAz, ArrowUpZa, ClipboardCheck, Loader2, Edit } from "lucide-react";
 import { usePatientsList, useUpdatePatient } from "../../hooks/usePatients";
@@ -21,7 +22,9 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function ExistingPatientTab() {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const searchVal = searchParams.get("search") || "";
+  const [searchQuery, setSearchQuery] = useState(searchVal);
   const [expandedPatientId, setExpandedPatientId] = useState<string | null>(null);
   const [showAllRecordsFor, setShowAllRecordsFor] = useState<string | null>(null);
   const [openRecordId, setOpenRecordId] = useState<string | null>(null);
