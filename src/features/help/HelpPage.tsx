@@ -209,17 +209,17 @@ export function HelpPage() {
       steps: [
         {
           title: 'Creating and Editing Users',
-          description: 'Navigate to Administration > Users & Roles. Here you can add new staff accounts, toggle their activation status, edit credentials, or assign them roles (Admin, Lab Technician, Receptionist, Developer, Viewer).',
+          description: 'Navigate to Settings > Users & Roles. Here you can add new staff accounts, toggle their activation status, edit credentials, or assign them roles (Admin, Lab Technician, Receptionist, Developer, Viewer).',
           tip: 'Deactivating an employee immediately revokes their offline cached database access.',
           actionText: 'Manage Users & Roles',
-          actionPath: '/rbac/users'
+          actionPath: '/settings?tab=users'
         },
         {
           title: 'Role-Based Access Control (RBAC)',
-          description: 'granularly manage roles and permissions via the Permission Matrix. Toggle permissions for specific actions (e.g. "Create Patient", "Edit Results", "Delete Catalog Item") to restrict or allow features for different roles.',
+          description: 'granularly manage roles and permissions via the Permission Matrix inside the Users & Roles settings tab. Toggle permissions for specific actions (e.g. "Create Patient", "Edit Results", "Delete Catalog Item") to restrict or allow features for different roles.',
           tip: 'Users can have individual permission overrides listed in their user card details.',
           actionText: 'Open Permission Matrix',
-          actionPath: '/rbac/permissions'
+          actionPath: '/settings?tab=users'
         },
         {
           title: 'Audit Trails & System Event Logging',

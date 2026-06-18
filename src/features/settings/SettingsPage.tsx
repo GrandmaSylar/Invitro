@@ -5,6 +5,7 @@ import { SettingsPlaceholder } from '../../app/components/placeholders';
 import { Settings, Bell, Shield, Users, Mail, Key, Database, FileText, Activity, Server, Info, Palette, Receipt } from 'lucide-react';
 import { cn } from '../../app/components/ui/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useSearchParams } from 'react-router';
 
 const GeneralSection = React.lazy(() => import('./GeneralSection'));
 const ThemePresetSection = React.lazy(() => import('./ThemePresetSection'));
@@ -35,6 +36,8 @@ const SETTINGS_SECTIONS = [
 
 export function SettingsPage() {
   const { user, resolvedPermissions } = useAuthStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab');
   
   const accessibleSections = useMemo(() => {
     return SETTINGS_SECTIONS.filter(section => {
@@ -43,13 +46,19 @@ export function SettingsPage() {
     });
   }, [user, resolvedPermissions]);
 
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!activeSectionId && accessibleSections.length > 0) {
-      setActiveSectionId(accessibleSections[0].id);
+  const activeSectionId = useMemo(() => {
+    if (tabParam && accessibleSections.some(s => s.id === tabParam)) {
+      return tabParam;
     }
-  }, [accessibleSections, activeSectionId]);
+    if (accessibleSections.length > 0) {
+      return accessibleSections[0].id;
+    }
+    return null;
+  }, [tabParam, accessibleSections]);
+
+  const setActiveSectionId = (id: string) => {
+    setSearchParams({ tab: id });
+  };
 
   if (accessibleSections.length === 0) {
     return (

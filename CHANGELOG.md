@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.11
+
+### New Features & Improvements
+- **Consolidated Users & Roles Settings**: Removed the redundant dedicated sidebar link for Users & Roles, centralizing all account and permission configuration inside the Settings dashboard with dynamic query parameter controls (`?tab=users`).
+
 ## Version 1.1.10
 
 ### New Features & Improvements

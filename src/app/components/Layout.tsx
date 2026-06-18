@@ -68,7 +68,6 @@ const navigationGroups = [
   {
     category: "ADMINISTRATION",
     items: [
-      { name: "Users & Roles", icon: UserCog, path: "/rbac/users", permissionKey: PERMISSIONS['rbac.manage_users'] },
       { name: "RBAC Guide & Simulator", icon: Shield, path: "/rbac/help", permissionKey: PERMISSIONS['profile.view'] },
       { name: "Settings", icon: Settings, path: "/settings", permissionKey: "settings.view" },
     ]
