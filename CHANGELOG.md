@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.10
+
+### New Features & Improvements
+- **Functional Stat Comparisons**: Replaced static percentage placeholders on the dashboard stat cards with functional, dynamic daily rise/fall trend calculations for patients today, tests ordered today, pending results backlog, and daily revenue in both online and offline data modes.
+
 ## Version 1.1.9
 
 ### New Features & Improvements
