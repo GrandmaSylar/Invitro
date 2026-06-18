@@ -485,7 +485,7 @@ export function LoginPage() {
             {/* Card Footer matching QSS Version Printout */}
             <div className="text-center space-y-1.5 mt-8">
               <p className="text-[10px] text-[#8c9ba5] font-bold tracking-wider leading-none">
-                Invitro LIMS v1.1.11
+                Invitro LIMS v1.1.12
               </p>
               <p className="text-[8px] text-[#a0adb8] font-bold tracking-widest uppercase leading-none">
                 Developed by PhiNova

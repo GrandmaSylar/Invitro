@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.12
+
+### Improvements & Fixes
+- **Roles Dropdown Availability**: Pre-loaded standard RBAC security roles alongside user records on Settings list mount. This resolves a race condition where the user editor dialog's "Role Assignment" selection menu could render empty before the roles configuration tab had been loaded.
+
 ## Version 1.1.11
 
 ### New Features & Improvements

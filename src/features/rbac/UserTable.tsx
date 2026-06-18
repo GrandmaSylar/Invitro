@@ -55,7 +55,7 @@ function getInitials(name: string) {
 }
 
 export function UserTable() {
-  const { users, roles, setUsers } = useRbacStore();
+  const { users, roles, setUsers, setRoles } = useRbacStore();
   const [isLoading, setIsLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -67,23 +67,27 @@ export function UserTable() {
   
   const [deactivateTarget, setDeactivateTarget] = useState<User | undefined>(undefined);
 
-  const refreshUsers = React.useCallback(async () => {
+  const refreshData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await rbacService.getUsers();
-      setUsers(data);
+      const [usersData, rolesData] = await Promise.all([
+        rbacService.getUsers(),
+        rbacService.getRoles()
+      ]);
+      setUsers(usersData);
+      setRoles(rolesData);
     } catch (err) {
-      console.error('Failed to sync users:', err);
-      toast.error('Failed to sync users with database');
+      console.error('Failed to sync RBAC data:', err);
+      toast.error('Failed to sync users and roles with database');
     } finally {
       setIsLoading(false);
     }
-  }, [setUsers]);
+  }, [setUsers, setRoles]);
 
   // Sync with database on mount
   React.useEffect(() => {
-    refreshUsers();
-  }, [refreshUsers]);
+    refreshData();
+  }, [refreshData]);
 
   // Derived data
   const filteredUsers = users.filter((user: User) => {
@@ -101,7 +105,7 @@ export function UserTable() {
     try {
       await rbacService.deactivateUser(deactivateTarget.id);
       toast.success('User deactivated successfully');
-      await refreshUsers();
+      await refreshData();
     } catch (error) {
       toast.error('Failed to deactivate user');
     } finally {
@@ -119,7 +123,7 @@ export function UserTable() {
     try {
       await rbacService.updateUser(userId, { status: 'active' });
       showSuccess({ title: "User Reactivated", description: "The user has been reactivated successfully." });
-      await refreshUsers();
+      await refreshData();
     } catch (error) {
       toast.error('Failed to reactivate user');
     }
@@ -314,7 +318,7 @@ export function UserTable() {
         onOpenChange={setEditorOpen} 
         mode={editorMode} 
         user={selectedUser} 
-        onSuccess={refreshUsers}
+        onSuccess={refreshData}
       />
 
       <AlertDialog open={!!deactivateTarget} onOpenChange={(open) => !open && setDeactivateTarget(undefined)}>

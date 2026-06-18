@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function WelcomeChangelogModal() {
-  const currentVersion = '1.1.11';
+  const currentVersion = '1.1.12';
   const localStorageKey = `lims-changelog-seen-v${currentVersion}`;
   
   const [isOpen, setIsOpen] = useState(false);
@@ -57,6 +57,19 @@ export function WelcomeChangelogModal() {
             <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1">
               
               {/* Feature 1 */}
+              <div className="flex gap-3 items-start">
+                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
+                  <Check className="size-3.5 stroke-[2.5]" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-extrabold text-gray-900">Roles Dropdown Availability</h4>
+                  <p className="text-[11px] text-gray-500 leading-normal">
+                    Resolved a race condition where the role selector could appear empty by pre-loading available security roles on user settings list mount.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
               <div className="flex gap-3 items-start">
                 <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
                   <Check className="size-3.5 stroke-[2.5]" />
