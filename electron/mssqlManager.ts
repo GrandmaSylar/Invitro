@@ -578,11 +578,8 @@ export async function initMssqlDatabase(): Promise<{ success: boolean; error?: s
       IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_tr_entered_at' AND object_id = OBJECT_ID('test_results'))
         CREATE INDEX IX_tr_entered_at ON test_results(entered_at DESC);
 
-      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_audit_logs_timestamp' AND object_id = OBJECT_ID('audit_logs'))
-        CREATE INDEX IX_audit_logs_timestamp ON audit_logs(timestamp DESC);
-
-      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_audit_logs_action' AND object_id = OBJECT_ID('audit_logs'))
-        CREATE INDEX IX_audit_logs_action ON audit_logs(action);
+      IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_audit_events_action' AND object_id = OBJECT_ID('audit_events'))
+        CREATE INDEX IX_audit_events_action ON audit_events(action);
 
       IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_users_username' AND object_id = OBJECT_ID('users'))
         CREATE INDEX IX_users_username ON users(username);
@@ -757,7 +754,7 @@ export async function resetSandboxDatabase(): Promise<{ success: boolean; messag
     DELETE FROM lab_records;
     DELETE FROM patients;
     DELETE FROM notifications;
-    DELETE FROM audit_logs;
+    DELETE FROM audit_events;
   `);
 
   await seedPresetDataIfEmpty(true);

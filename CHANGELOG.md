@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.14
+
+### Bug Fixes & Schema Adjustments
+- **Database Initialization Fix**: Corrected table object name reference (`audit_logs` -> `audit_events`) in SQL Server performance index creation and sandbox database reset queries. This resolves the error during initial Database Setup Wizard connection.
+
 ## Version 1.1.13
 
 ### New Features & Technical Improvements
