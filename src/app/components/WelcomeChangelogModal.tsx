@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function WelcomeChangelogModal() {
-  const currentVersion = '1.1.12';
+  const currentVersion = '1.1.15';
   const localStorageKey = `lims-changelog-seen-v${currentVersion}`;
   
   const [isOpen, setIsOpen] = useState(false);
@@ -54,17 +54,17 @@ export function WelcomeChangelogModal() {
               Here is a summary of the improvements in this stable release:
             </p>
             
-            <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1">
+            <div className="space-y-4 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
               
               {/* Feature 1 */}
               <div className="flex gap-3 items-start">
-                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
+                <div className="p-1 bg-amber-500/10 text-amber-600 rounded-lg shrink-0 mt-0.5">
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Roles Dropdown Availability</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Training Grounds Sandbox Mode</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Resolved a race condition where the role selector could appear empty by pre-loading available security roles on user settings list mount.
+                    Added an isolated temporary database (<code className="font-mono text-amber-600">invitro_sandbox</code>) allowing staff to practice registrations and test entries without affecting live data, complete with a 1-click reset feature.
                   </p>
                 </div>
               </div>
@@ -75,48 +75,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Consolidated Users & Roles Settings</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Official Diagnostic Catalog Loaded</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Removed the redundant dedicated sidebar tab for Users & Roles, centralizing all account and permission configuration into the Settings panel.
-                  </p>
-                </div>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="flex gap-3 items-start">
-                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
-                  <Check className="size-3.5 stroke-[2.5]" />
-                </div>
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Functional Stat Comparisons</h4>
-                  <p className="text-[11px] text-gray-500 leading-normal">
-                    Replaced static placeholders with functional comparisons calculating daily rise/fall percentage trends for patients, tests, results, and revenue.
-                  </p>
-                </div>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="flex gap-3 items-start">
-                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
-                  <Check className="size-3.5 stroke-[2.5]" />
-                </div>
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Interactive Metrics Drilldowns</h4>
-                  <p className="text-[11px] text-gray-500 leading-normal">
-                    Click on dashboard statistics (like daily collections or patient counts) to immediately navigate to their corresponding filtered ledgers.
-                  </p>
-                </div>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="flex gap-3 items-start">
-                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
-                  <Check className="size-3.5 stroke-[2.5]" />
-                </div>
-                <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Arrears Recovery Ledger</h4>
-                  <p className="text-[11px] text-gray-500 leading-normal">
-                    Track outstanding client debts in a dedicated ledger view with detailed metrics, quick filters, and payment recovery tools.
+                    Pre-seeded 223 diagnostic laboratory tests, 337 parameters, and reference range mappings directly from Excel into SQL Server.
                   </p>
                 </div>
               </div>
@@ -127,9 +88,9 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">RBAC Sandbox & Tutorials</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">MSSQL Performance Indexing</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Learn about user roles and test permission matrices dynamically with the new interactive simulator and tutorials.
+                    Automated 13 high-frequency non-clustered database indexes on patient search, lab records, results, audit logs, and catalog tables for instant query response speeds.
                   </p>
                 </div>
               </div>
@@ -140,9 +101,35 @@ export function WelcomeChangelogModal() {
                   <Check className="size-3.5 stroke-[2.5]" />
                 </div>
                 <div className="space-y-0.5">
-                  <h4 className="text-xs font-extrabold text-gray-900">Visual & Contrast Refinements</h4>
+                  <h4 className="text-xs font-extrabold text-gray-900">Standardized Table Pagination</h4>
                   <p className="text-[11px] text-gray-500 leading-normal">
-                    Improved Light Mode readability by adjusting overlapping active tabs, input contrast borders, and progress bar heights.
+                    Capped all major table ledgers at 25 rows per page by default with selectable options (25, 50, 75, 100) for clean data browsing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 5 */}
+              <div className="flex gap-3 items-start">
+                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
+                  <Check className="size-3.5 stroke-[2.5]" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-extrabold text-gray-900">Custom Theme-Matching Scrollbars</h4>
+                  <p className="text-[11px] text-gray-500 leading-normal">
+                    Designed floating custom scrollbars with smooth pill thumbs and glowing accent hover effects matching all theme color presets.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 6 */}
+              <div className="flex gap-3 items-start">
+                <div className="p-1 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0 mt-0.5">
+                  <Check className="size-3.5 stroke-[2.5]" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className="text-xs font-extrabold text-gray-900">Database Setup Wizard & Windows Controls</h4>
+                  <p className="text-[11px] text-gray-500 leading-normal">
+                    Enhanced the Database Setup Wizard for seamless local/LAN connections and customized the Windows title bar control capsule.
                   </p>
                 </div>
               </div>

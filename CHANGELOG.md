@@ -2,6 +2,11 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.15
+
+### UI & Modal Updates
+- **First-Run Welcome Screen Updated**: Synchronized the in-app Welcome & What's New modal version badge and release highlight list with current system features (Training Grounds Sandbox DB, Excel Catalog Seeding, Performance Indexing, Table Pagination, Custom Scrollbars).
+
 ## Version 1.1.14
 
 ### Bug Fixes & Schema Adjustments
