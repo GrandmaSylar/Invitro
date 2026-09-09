@@ -20,6 +20,7 @@ import { ResultPreview } from "./ResultPreview";
 import { Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { DataTablePagination } from "../../app/components/ui/DataTablePagination";
 
 export function ExistingPatientTab() {
   const [searchParams] = useSearchParams();
@@ -150,6 +151,9 @@ export function PatientResultsList({
   showAllRecordsFor: string | null, setShowAllRecordsFor: (id: string | null) => void,
   setOpenRecordId: (id: string | null) => void
 }) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
   if (isError) {
     return (
       <div className="text-center py-8 text-destructive">
@@ -174,26 +178,39 @@ export function PatientResultsList({
     );
   }
 
+  const start = (page - 1) * pageSize;
+  const paginatedPatients = patients.slice(start, start + pageSize);
+
   return (
-    <div className="border rounded-md divide-y">
-      {patients.map(patient => (
-        <PatientRow
-          key={patient.id}
-          patient={patient}
-          isExpanded={expandedPatientId === patient.id}
-          onToggle={() => {
-            if (expandedPatientId === patient.id) {
-              setExpandedPatientId(null);
-            } else {
-              setExpandedPatientId(patient.id);
-              setShowAllRecordsFor(null);
-            }
-          }}
-          showAll={showAllRecordsFor === patient.id}
-          onShowAll={() => setShowAllRecordsFor(patient.id)}
-          onOpenRecord={setOpenRecordId}
-        />
-      ))}
+    <div className="border rounded-md overflow-hidden bg-card">
+      <div className="divide-y">
+        {paginatedPatients.map(patient => (
+          <PatientRow
+            key={patient.id}
+            patient={patient}
+            isExpanded={expandedPatientId === patient.id}
+            onToggle={() => {
+              if (expandedPatientId === patient.id) {
+                setExpandedPatientId(null);
+              } else {
+                setExpandedPatientId(patient.id);
+                setShowAllRecordsFor(null);
+              }
+            }}
+            showAll={showAllRecordsFor === patient.id}
+            onShowAll={() => setShowAllRecordsFor(patient.id)}
+            onOpenRecord={setOpenRecordId}
+          />
+        ))}
+      </div>
+
+      <DataTablePagination
+        currentPage={page}
+        pageSize={pageSize}
+        totalItems={patients.length}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

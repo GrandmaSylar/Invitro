@@ -1,12 +1,55 @@
 import './esm-globals.js';
-import { app, BrowserWindow, shell, ipcMain, nativeTheme, dialog } from 'electron';
+import { app, BrowserWindow, shell, ipcMain, nativeTheme, dialog, safeStorage } from 'electron';
 import { join } from 'node:path';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import log from 'electron-log/main';
 import { autoUpdater } from 'electron-updater';
-import { initDatabase, cacheUserCredentials, verifyOfflineLogin, encryptDatabase, getOrCreateDeviceID, setForcedOffline, getForcedOffline, hasCachedUsers, runFullSyncCycle } from './database.js';
-import { setMainProcessSession } from './supabaseNode.js';
-import { dbHandlers } from './dbHandlers.js';
+import { 
+  getPool, 
+  closePool, 
+  hasDbConfig, 
+  getDbConfig, 
+  saveDbConfig, 
+  resetDbConfig, 
+  testConnection, 
+  getStatus, 
+  initMssqlDatabase,
+  toggleSandboxMode,
+  resetSandboxDatabase,
+  isSandboxActive
+} from './mssqlManager.js';
+import { dbHandlers } from './mssqlDbHandlers.js';
+
+function getOrCreateDeviceID(): string {
+  const metaDir = app.getPath('userData');
+  const metaPath = join(metaDir, 'device.key');
+  
+  try {
+    if (existsSync(metaPath)) {
+      const encrypted = readFileSync(metaPath);
+      if (safeStorage.isEncryptionAvailable()) {
+        return safeStorage.decryptString(encrypted);
+      } else {
+        return encrypted.toString('utf8');
+      }
+    }
+  } catch (err: any) {
+    log.error('Failed to read or decrypt persistent device.key:', err.message);
+  }
+
+  const newId = 'dev-' + crypto.randomUUID();
+  try {
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(newId);
+      writeFileSync(metaPath, encrypted);
+    } else {
+      writeFileSync(metaPath, newId, 'utf8');
+    }
+  } catch (err: any) {
+    log.error('Failed to save encrypted device.key:', err.message);
+  }
+  return newId;
+}
 
 // Initialize logging
 log.initialize();
@@ -96,7 +139,14 @@ function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  initDatabase();
+  if (hasDbConfig()) {
+    getPool().catch((err) => {
+      log.error('Initial MSSQL connection pool error:', err.message);
+    });
+  } else {
+    log.info('No database configuration found on startup. Wizard will be presented.');
+  }
+
   createSplashWindow();
   
   // Initialize main window shortly after splash
@@ -120,8 +170,8 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', () => {
-  encryptDatabase();
+app.on('before-quit', async () => {
+  await closePool();
 });
 
 // IPC Setup
@@ -201,64 +251,90 @@ ipcMain.handle('preview-pdf', async (_event, options: { title: string; paperSize
   }
 });
 
-// Cache User Credentials Offline
-ipcMain.handle('cache-user-credentials', async (_event, options: { userRow: any; roleRow: any; plaintextPassword?: string }) => {
+
+
+
+
+// Database Setup, Telemetry & Fail-Safe IPC Handlers (fees_tracker architecture)
+ipcMain.handle('db-check-config', () => {
+  return hasDbConfig();
+});
+
+ipcMain.handle('db-save-config', async (_event, config: any) => {
   try {
-    cacheUserCredentials(options.userRow, options.roleRow, options.plaintextPassword);
+    await saveDbConfig(config);
     return { success: true };
   } catch (err: any) {
-    log.error('Failed to cache user credentials:', err);
+    log.error('Failed to save database configuration:', err.message);
     return { success: false, error: err.message };
   }
 });
 
-// Perform Offline Login credential check
-ipcMain.handle('offline-login', async (_event, options: { login: string; password: string }) => {
+ipcMain.handle('db-test-connection', async (_event, config: any) => {
+  return await testConnection(config);
+});
+
+ipcMain.handle('db-initialize', async () => {
+  return await initMssqlDatabase();
+});
+
+ipcMain.handle('db-get-connection-info', async () => {
   try {
-    const result = await verifyOfflineLogin(options.login, options.password);
-    return { success: true, ...result };
+    const config = getDbConfig();
+    if (!config) return { success: false, error: 'No connection configuration found.' };
+    return {
+      success: true,
+      config: {
+        server: config.server,
+        port: config.port || 1433,
+        database: config.database,
+        user: config.user,
+        encrypt: config.encrypt,
+        trustServerCertificate: config.trustServerCertificate
+      }
+    };
   } catch (err: any) {
-    log.error('Failed to execute offline login:', err);
     return { success: false, error: err.message };
   }
 });
 
-// Update Supabase session inside the main process Node client
-ipcMain.handle('update-supabase-session', async (_event, session: { access_token: string; refresh_token: string }) => {
+ipcMain.handle('db-get-status', async () => {
+  return await getStatus();
+});
+
+ipcMain.handle('db-reset-config', async () => {
   try {
-    await setMainProcessSession(session);
+    await resetDbConfig();
     return { success: true };
   } catch (err: any) {
-    log.error('Failed to update Supabase Node session:', err);
     return { success: false, error: err.message };
   }
 });
 
-// Forced offline mode configuration handlers
-ipcMain.handle('set-forced-offline', async (_event, forced: boolean) => {
-  setForcedOffline(forced);
-});
-
-ipcMain.handle('is-forced-offline', async () => {
-  return getForcedOffline();
-});
-
-ipcMain.handle('has-cached-users', async () => {
-  return hasCachedUsers();
-});
-
-// Trigger a database sync cycle manually
-ipcMain.handle('trigger-sync', async () => {
+// Sandbox / Training Grounds IPC Handlers
+ipcMain.handle('db-toggle-sandbox', async (_event, enabled: boolean) => {
   try {
-    await runFullSyncCycle();
-    return { success: true };
+    return await toggleSandboxMode(enabled);
   } catch (err: any) {
-    log.error('Manual sync trigger failed:', err);
+    log.error('Failed to toggle sandbox mode:', err.message);
     return { success: false, error: err.message };
   }
 });
 
-// Generic SQLite local database IPC handler
+ipcMain.handle('db-reset-sandbox', async () => {
+  try {
+    return await resetSandboxDatabase();
+  } catch (err: any) {
+    log.error('Failed to reset sandbox database:', err.message);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('db-get-sandbox-status', () => {
+  return { isSandbox: isSandboxActive() };
+});
+
+// Generic database IPC handler
 ipcMain.handle('db:call', async (_event, serviceName: string, methodName: string, ...args: any[]) => {
   try {
     const handler = dbHandlers[serviceName]?.[methodName];

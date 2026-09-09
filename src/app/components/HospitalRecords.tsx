@@ -7,9 +7,17 @@ import { motion } from "motion/react";
 import { Button } from "./ui/button";
 import { cn } from "./ui/utils";
 import { useHospitals, useCreateHospital, useDeleteHospital, useDoctors, useCreateDoctor, useDeleteDoctor } from "../../hooks/useRegistry";
+import { DataTablePagination } from "./ui/DataTablePagination";
 
 export function HospitalRecords() {
   const [activeTab, setActiveTab] = useState<"hospital" | "doctor">("hospital");
+
+  // Pagination states (Default 25 limit)
+  const [hospPage, setHospPage] = useState(1);
+  const [hospPageSize, setHospPageSize] = useState(25);
+
+  const [docPage, setDocPage] = useState(1);
+  const [docPageSize, setDocPageSize] = useState(25);
 
   // Hospital Register State
   const [hospitalName, setHospitalName] = useState("");
@@ -201,28 +209,38 @@ export function HospitalRecords() {
                     </tr>
                   </thead>
                   <tbody>
-                    {hospitalData.map((hospital, index) => (
-                      <tr 
-                        key={hospital.id}
-                        onClick={() => setSelectedHospital(index)}
-                        className={`border-t border-border cursor-pointer transition-colors ${
-                          selectedHospital === index 
-                            ? 'bg-primary/10 border-l-4 border-l-primary' 
-                            : index === focusedHospitalIndex
-                              ? 'bg-muted ring-2 ring-inset ring-primary'
-                              : index % 2 === 0
-                                ? 'bg-background hover:bg-muted/50'
-                                : 'bg-muted/30 hover:bg-muted/50'
-                        }`}
-                      >
-                        <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{hospital.hospitalName}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.location}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.phoneNumber}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{hospital.address}</td>
-                      </tr>
-                    ))}
+                    {hospitalData.slice((hospPage - 1) * hospPageSize, hospPage * hospPageSize).map((hospital, index) => {
+                      const actualIndex = (hospPage - 1) * hospPageSize + index;
+                      return (
+                        <tr 
+                          key={hospital.id}
+                          onClick={() => setSelectedHospital(actualIndex)}
+                          className={`border-t border-border cursor-pointer transition-colors ${
+                            selectedHospital === actualIndex 
+                              ? 'bg-primary/10 border-l-4 border-l-primary' 
+                              : actualIndex === focusedHospitalIndex
+                                ? 'bg-muted ring-2 ring-inset ring-primary'
+                                : index % 2 === 0
+                                  ? 'bg-background hover:bg-muted/50'
+                                  : 'bg-muted/30 hover:bg-muted/50'
+                          }`}
+                        >
+                          <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{hospital.hospitalName}</td>
+                          <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.location}</td>
+                          <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{hospital.phoneNumber}</td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">{hospital.address}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+                <DataTablePagination
+                  currentPage={hospPage}
+                  pageSize={hospPageSize}
+                  totalItems={hospitalData.length}
+                  onPageChange={setHospPage}
+                  onPageSizeChange={setHospPageSize}
+                />
               </div>
               )}
 
@@ -440,28 +458,38 @@ export function HospitalRecords() {
                     </tr>
                   </thead>
                   <tbody>
-                    {doctorData.map((doctor, index) => (
-                      <tr 
-                        key={doctor.id}
-                        onClick={() => setSelectedDoctor(index)}
-                        className={`border-t border-border cursor-pointer transition-colors ${
-                          selectedDoctor === index 
-                            ? 'bg-primary/10 border-l-4 border-l-primary' 
-                            : index === focusedDoctorIndex
-                              ? 'bg-muted ring-2 ring-inset ring-primary'
-                              : index % 2 === 0
-                                ? 'bg-background hover:bg-muted/50'
-                                : 'bg-muted/30 hover:bg-muted/50'
-                        }`}
-                      >
-                        <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{doctor.doctorName}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.speciality}</td>
-                        <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.phoneNumber}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">{hospitalData.find(h => h.id === doctor.affiliateHospitalId)?.hospitalName ?? '-'}</td>
-                      </tr>
-                    ))}
+                    {doctorData.slice((docPage - 1) * docPageSize, docPage * docPageSize).map((doctor, index) => {
+                      const actualIndex = (docPage - 1) * docPageSize + index;
+                      return (
+                        <tr 
+                          key={doctor.id}
+                          onClick={() => setSelectedDoctor(actualIndex)}
+                          className={`border-t border-border cursor-pointer transition-colors ${
+                            selectedDoctor === actualIndex 
+                              ? 'bg-primary/10 border-l-4 border-l-primary' 
+                              : actualIndex === focusedDoctorIndex
+                                ? 'bg-muted ring-2 ring-inset ring-primary'
+                                : index % 2 === 0
+                                  ? 'bg-background hover:bg-muted/50'
+                                  : 'bg-muted/30 hover:bg-muted/50'
+                          }`}
+                        >
+                          <td className="border-r border-border px-3 py-2 text-xs font-semibold text-foreground">{doctor.doctorName}</td>
+                          <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.speciality}</td>
+                          <td className="border-r border-border px-3 py-2 text-xs text-muted-foreground">{doctor.phoneNumber}</td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">{hospitalData.find(h => h.id === doctor.affiliateHospitalId)?.hospitalName ?? '-'}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+                <DataTablePagination
+                  currentPage={docPage}
+                  pageSize={docPageSize}
+                  totalItems={doctorData.length}
+                  onPageChange={setDocPage}
+                  onPageSizeChange={setDocPageSize}
+                />
               </div>
               )}
 

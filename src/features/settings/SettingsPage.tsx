@@ -30,7 +30,7 @@ const SETTINGS_SECTIONS = [
   { id: 'api_keys', label: 'API Keys', icon: Key, permissionKey: 'settings.api_keys', group: 'Administration', isMock: false },
   { id: 'backup', label: 'Backup & Restore', icon: Database, permissionKey: 'settings.backup', group: 'System', isMock: false },
   { id: 'audit_log', label: 'Audit Log', icon: FileText, permissionKey: 'settings.audit_log', group: 'System', isMock: false },
-  { id: 'health', label: 'System Health', icon: Activity, permissionKey: 'settings.health', group: 'System', isMock: true },
+  { id: 'health', label: 'System Health', icon: Activity, permissionKey: 'settings.health', group: 'System', isMock: false },
   { id: 'about', label: 'About & Version', icon: Info, permissionKey: 'settings.general', group: 'System', isMock: false },
 ];
 

@@ -47,6 +47,10 @@ lims.db*
 *.key
 device.key
 db.key
+db_config.json
+sandbox_mode.json
+deployment-docs/credentials.md
+deployment-docs/*.key
 
 # PDFs
 *.pdf

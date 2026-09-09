@@ -320,6 +320,14 @@ html.dark[data-preset="silent-waters"] {
     @apply bg-background text-foreground transition-colors duration-200;
   }
 
+  /* ── Solid Opaque Cards & Tiles (Prevents scribbles from bleeding inside cards) ── */
+  [data-slot="card"],
+  .bg-card {
+    background-color: var(--card);
+    position: relative;
+    z-index: 10;
+  }
+
   /**
   * Default typography styles for HTML elements (h1-h4, p, label, button, input).
   * These are in @layer base, so Tailwind utility classes (like text-sm, text-lg) automatically override them.

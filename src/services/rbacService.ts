@@ -1,8 +1,7 @@
 /**
- * RBAC Service — Users & Roles CRUD via Supabase.
- *
- * This service is a pure data layer. It does NOT touch Zustand stores.
- * Stores/hooks call this service and update themselves on success.
+ * RBAC Service — Users & Roles CRUD.
+ * Supports direct desktop Microsoft SQL Server execution via Electron IPC,
+ * with fallback to Supabase for web mode.
  */
 import { supabase } from '../lib/supabase';
 import { mapUserRow, mapRoleRow } from '../lib/mappers';
@@ -12,6 +11,10 @@ export const rbacService = {
   // ── ROLES ────────────────────────────────────────────────────
 
   getRoles: async (): Promise<Role[]> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'getRoles');
+    }
+
     const { data, error } = await supabase
       .from('roles')
       .select('*')
@@ -22,6 +25,10 @@ export const rbacService = {
   },
 
   updateRolePermissions: async (roleId: string, permissions: PermissionMap): Promise<Role> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'updateRole', roleId, { permissions });
+    }
+
     const { data, error } = await supabase
       .from('roles')
       .update({ permissions: permissions as any })
@@ -34,6 +41,10 @@ export const rbacService = {
   },
 
   createRole: async (role: Omit<Role, 'id' | 'createdAt'>): Promise<Role> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'createRole', role);
+    }
+
     const newId = `role_${crypto.randomUUID()}`;
     const { data, error } = await supabase
       .from('roles')
@@ -53,6 +64,11 @@ export const rbacService = {
   },
 
   deleteRole: async (roleId: string): Promise<void> => {
+    if (window.electronAPI) {
+      await window.electronAPI.invoke('db:call', 'rbac', 'deleteRole', roleId);
+      return;
+    }
+
     const { error } = await supabase
       .from('roles')
       .delete()
@@ -64,6 +80,10 @@ export const rbacService = {
   // ── USERS ────────────────────────────────────────────────────
 
   getUsers: async (): Promise<User[]> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'getUsers');
+    }
+
     const { data, error } = await supabase
       .from('users')
       .select('*')
@@ -79,14 +99,14 @@ export const rbacService = {
       password?: string;
     }
   ): Promise<User> => {
-    const password = userData.password || 'tempPassword123!';
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'createUser', userData);
+    }
 
+    const password = userData.password || 'tempPassword123!';
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
-    // Use raw fetch to bypass GoTrueClient entirely. 
-    // This guarantees no session persistence, no broadcast channel interference, 
-    // and no accidental admin logouts or UI freezes.
     const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
       method: 'POST',
       headers: {
@@ -113,7 +133,6 @@ export const rbacService = {
     }
 
     const authData = await response.json();
-
     const userId = authData.user?.id
       || authData.id
       || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
@@ -140,7 +159,11 @@ export const rbacService = {
     return mapUserRow(data);
   },
 
-  updateUser: async (userId: string, userData: Partial<User>): Promise<User> => {
+  updateUser: async (userId: string, userData: Partial<User> & { password?: string }): Promise<User> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'updateUser', userId, userData);
+    }
+
     const updates: Record<string, any> = {};
     if (userData.fullName !== undefined) updates.full_name = userData.fullName;
     if (userData.email !== undefined) updates.email = userData.email;
@@ -164,6 +187,10 @@ export const rbacService = {
   },
 
   updateUserOverrides: async (userId: string, permissionOverrides: PermissionMap): Promise<User> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'updateUser', userId, { permissionOverrides });
+    }
+
     const { data, error } = await supabase
       .from('users')
       .update({ permission_overrides: permissionOverrides as any })
@@ -176,6 +203,10 @@ export const rbacService = {
   },
 
   deactivateUser: async (userId: string): Promise<User> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'deleteUser', userId);
+    }
+
     const { data, error } = await supabase
       .from('users')
       .update({ status: 'inactive' })
@@ -188,8 +219,11 @@ export const rbacService = {
   },
 
   updateThemePreset: async (userId: string, preset: 'default' | 'ocean-breeze' | 'turquoise-harmony' | 'silent-waters'): Promise<User> => {
+    if (window.electronAPI) {
+      return await window.electronAPI.invoke('db:call', 'rbac', 'updateUser', userId, { themePreset: preset });
+    }
+
     try {
-      // 1. Try directly updating the dedicated theme_preset column
       const { data, error } = await supabase
         .from('users')
         .update({ theme_preset: preset })
@@ -200,7 +234,6 @@ export const rbacService = {
       if (error) throw error;
       return mapUserRow(data);
     } catch (err) {
-      // 2. Fallback: Save within permission_overrides JSONB
       const { data: userRow, error: fetchError } = await supabase
         .from('users')
         .select('permission_overrides')

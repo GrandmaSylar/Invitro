@@ -7,6 +7,7 @@ import { Button } from '../../app/components/ui/button';
 import { Badge } from '../../app/components/ui/badge';
 import { useAuditLog } from '../../hooks/useAuditLog';
 import { FilterX } from 'lucide-react';
+import { DataTablePagination } from '../../app/components/ui/DataTablePagination';
 
 export default function AuditLogSection() {
   const { events, loading, refresh } = useAuditLog();
@@ -14,6 +15,10 @@ export default function AuditLogSection() {
   const [actionFilter, setActionFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // Pagination state (Default 25 limit)
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const uniqueActions = useMemo(() => {
     const actions = new Set(events.map(e => e.action));
@@ -45,6 +50,11 @@ export default function AuditLogSection() {
       return matches;
     });
   }, [events, actionFilter, dateFrom, dateTo]);
+
+  const paginatedEvents = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredEvents.slice(start, start + pageSize);
+  }, [filteredEvents, page, pageSize]);
 
   const handleClearFilters = () => {
     setActionFilter('all');
@@ -147,7 +157,7 @@ export default function AuditLogSection() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredEvents.map((e) => (
+                  paginatedEvents.map((e) => (
                     <TableRow key={e.id}>
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {new Date(e.timestamp).toLocaleString()}
@@ -173,6 +183,13 @@ export default function AuditLogSection() {
                 )}
               </TableBody>
             </Table>
+            <DataTablePagination
+              currentPage={page}
+              pageSize={pageSize}
+              totalItems={filteredEvents.length}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
           
         </CardContent>

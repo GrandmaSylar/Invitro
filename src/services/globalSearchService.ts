@@ -12,10 +12,78 @@ export const globalSearchService = {
   searchAll: async (query: string): Promise<GlobalSearchResult[]> => {
     if (!query || query.trim().length < 2) return [];
 
-    const searchQuery = `%${query.trim()}%`;
     const results: GlobalSearchResult[] = [];
 
-    // Run parallel queries against the 4 tables
+    if (window.electronAPI && (window.electronAPI as any).db) {
+      const q = query.trim();
+      const lowerQ = q.toLowerCase();
+      const db = (window.electronAPI as any).db;
+
+      const [patients, hospitals, doctors, tests] = await Promise.all([
+        db.patients ? db.patients.searchPatients(q) : db.searchPatients(q),
+        db.registry ? db.registry.getHospitals() : db.getHospitals(),
+        db.registry ? db.registry.getDoctors() : db.getDoctors(),
+        db.catalog ? db.catalog.getTests() : db.getTests(),
+      ]);
+
+      (patients || []).slice(0, 5).forEach((p: any) => {
+        const name = p.patientName || p.patient_name || 'Patient';
+        results.push({
+          id: p.id,
+          type: 'patient',
+          title: name,
+          subtitle: p.telephone || 'No phone',
+          url: `/patients?search=${encodeURIComponent(name)}`
+        });
+      });
+
+      (hospitals || [])
+        .filter((h: any) => (h.hospitalName || h.hospital_name || '').toLowerCase().includes(lowerQ))
+        .slice(0, 5)
+        .forEach((h: any) => {
+          results.push({
+            id: h.id,
+            type: 'hospital',
+            title: h.hospitalName || h.hospital_name,
+            subtitle: h.phoneNumber || h.phone_number || 'Hospital',
+            url: '/hospital-records'
+          });
+        });
+
+      (doctors || [])
+        .filter((d: any) => 
+          (d.doctorName || d.doctor_name || '').toLowerCase().includes(lowerQ) ||
+          (d.speciality || '').toLowerCase().includes(lowerQ)
+        )
+        .slice(0, 5)
+        .forEach((d: any) => {
+          results.push({
+            id: d.id,
+            type: 'doctor',
+            title: d.doctorName || d.doctor_name,
+            subtitle: d.speciality || 'Doctor',
+            url: '/hospital-records'
+          });
+        });
+
+      (tests || [])
+        .filter((t: any) => (t.testName || t.test_name || '').toLowerCase().includes(lowerQ))
+        .slice(0, 5)
+        .forEach((t: any) => {
+          const name = t.testName || t.test_name || 'Test';
+          results.push({
+            id: t.id,
+            type: 'test',
+            title: name,
+            subtitle: t.department || 'Lab Test',
+            url: `/test-register?search=${encodeURIComponent(name)}`
+          });
+        });
+
+      return results;
+    }
+
+    const searchQuery = `%${query.trim()}%`;
     const [
       patientsRes,
       hospitalsRes,
@@ -48,7 +116,6 @@ export const globalSearchService = {
         .limit(5)
     ]);
 
-    // Map Patients
     if (patientsRes.data) {
       patientsRes.data.forEach(p => {
         results.push({
@@ -61,7 +128,6 @@ export const globalSearchService = {
       });
     }
 
-    // Map Hospitals
     if (hospitalsRes.data) {
       hospitalsRes.data.forEach(h => {
         results.push({
@@ -74,7 +140,6 @@ export const globalSearchService = {
       });
     }
 
-    // Map Doctors
     if (doctorsRes.data) {
       doctorsRes.data.forEach(d => {
         results.push({
@@ -87,7 +152,6 @@ export const globalSearchService = {
       });
     }
 
-    // Map Tests
     if (testsRes.data) {
       testsRes.data.forEach(t => {
         results.push({

@@ -38,16 +38,34 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   exportPDF: (options: { title: string; paperSize: string }) => ipcRenderer.invoke('export-pdf', options),
   previewPDF: (options: { title: string; paperSize: string }) => ipcRenderer.invoke('preview-pdf', options),
-  cacheUserCredentials: (userRow: any, roleRow: any, plaintextPassword?: string) => ipcRenderer.invoke('cache-user-credentials', { userRow, roleRow, plaintextPassword }),
-  offlineLogin: (options: { login: string; password: string }) => ipcRenderer.invoke('offline-login', options),
-  updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => ipcRenderer.invoke('update-supabase-session', session),
   getDeviceId: () => ipcRenderer.invoke('get-device-id'),
-  setForcedOffline: (forced: boolean) => ipcRenderer.invoke('set-forced-offline', forced),
-  isForcedOffline: () => ipcRenderer.invoke('is-forced-offline'),
-  hasCachedUsers: () => ipcRenderer.invoke('has-cached-users'),
-  triggerSync: () => ipcRenderer.invoke('trigger-sync'),
+
+  // Database Setup & Telemetry (fees_tracker architecture)
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
+  checkDbConfig: () => ipcRenderer.invoke('db-check-config'),
+  saveDbConfig: (config: any) => ipcRenderer.invoke('db-save-config', config),
+  testDbConnection: (config: any) => ipcRenderer.invoke('db-test-connection', config),
+  initializeDb: () => ipcRenderer.invoke('db-initialize'),
+  getDbConnectionInfo: () => ipcRenderer.invoke('db-get-connection-info'),
+  getDbStatus: () => ipcRenderer.invoke('db-get-status'),
+  resetDbConfig: () => ipcRenderer.invoke('db-reset-config'),
+  toggleSandboxMode: (enabled: boolean) => ipcRenderer.invoke('db-toggle-sandbox', enabled),
+  resetSandboxDatabase: () => ipcRenderer.invoke('db-reset-sandbox'),
+  getSandboxStatus: () => ipcRenderer.invoke('db-get-sandbox-status'),
 
   db: {
+    // Database Config & Status
+    checkConfig: () => ipcRenderer.invoke('db-check-config'),
+    saveConfig: (config: any) => ipcRenderer.invoke('db-save-config', config),
+    testConnection: (config: any) => ipcRenderer.invoke('db-test-connection', config),
+    initialize: () => ipcRenderer.invoke('db-initialize'),
+    getConnectionInfo: () => ipcRenderer.invoke('db-get-connection-info'),
+    getStatus: () => ipcRenderer.invoke('db-get-status'),
+    resetConfig: () => ipcRenderer.invoke('db-reset-config'),
+    toggleSandboxMode: (enabled: boolean) => ipcRenderer.invoke('db-toggle-sandbox', enabled),
+    resetSandboxDatabase: () => ipcRenderer.invoke('db-reset-sandbox'),
+    getSandboxStatus: () => ipcRenderer.invoke('db-get-sandbox-status'),
+
     // Flat methods for dbAdapter compatibility
     getPatients: (filters: any) => ipcRenderer.invoke('db:call', 'patients', 'getPatients', filters),
     getPatientById: (id: string) => ipcRenderer.invoke('db:call', 'patients', 'getPatientById', id),

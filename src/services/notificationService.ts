@@ -4,6 +4,10 @@ import type { Notification } from '../lib/types';
 
 export const notificationService = {
   getNotifications: async (userId: string): Promise<Notification[]> => {
+    if (window.electronAPI) {
+      // In desktop MSSQL mode, return empty notification list cleanly
+      return [];
+    }
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -15,6 +19,9 @@ export const notificationService = {
   },
 
   getUnreadCount: async (userId: string): Promise<number> => {
+    if (window.electronAPI) {
+      return 0;
+    }
     const { count, error } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })

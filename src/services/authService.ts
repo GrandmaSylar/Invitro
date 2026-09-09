@@ -14,22 +14,25 @@ export const authService = {
    * use Supabase's built-in auth for session management but
    * resolve the LIMS user profile + role from our custom tables.
    */
-  authenticate: async (credentials: { login: string; password: string }, forceOffline?: boolean): Promise<{
+  authenticate: async (credentials: { login: string; password: string }): Promise<{
     user: User;
     permissions: Record<string, boolean>;
     twoFactorRequired: boolean;
   }> => {
-    if (forceOffline && window.electronAPI?.offlineLogin) {
-      console.info('Forced offline login requested. Skipping online authentication.');
-      const result = await window.electronAPI.offlineLogin(credentials);
-      if (result.success && result.user) {
-        return {
-          user: result.user,
-          permissions: result.permissions || {},
-          twoFactorRequired: result.user.twoFactorEnabled,
-        };
-      } else {
-        throw new Error(result.error || 'Offline login failed');
+    if (window.electronAPI) {
+      try {
+        const result = await window.electronAPI.invoke('db:call', 'rbac', 'authenticate', credentials.login, credentials.password);
+        if (result && result.user) {
+          return {
+            user: result.user,
+            permissions: result.permissions || {},
+            twoFactorRequired: !!result.user.twoFactorEnabled,
+          };
+        } else {
+          throw new Error('Invalid credentials');
+        }
+      } catch (err: any) {
+        throw new Error(err.message || 'Invalid username or password');
       }
     }
 
@@ -120,14 +123,7 @@ export const authService = {
         console.warn('Non-critical: Failed to update session details and active device ID', e);
       }
 
-      // Cache credentials locally in Electron if available
-      if (window.electronAPI?.cacheUserCredentials) {
-        try {
-          await window.electronAPI.cacheUserCredentials(userRow, roleRow, credentials.password);
-        } catch (cacheErr) {
-          console.error('Failed to cache credentials locally:', cacheErr);
-        }
-      }
+
 
       const user = mapUserRow(userRow);
       const rolePermissions = roleRow ? (roleRow.permissions as Record<string, boolean>) : {};
@@ -142,26 +138,6 @@ export const authService = {
         twoFactorRequired: user.twoFactorEnabled,
       };
     } catch (err: any) {
-      // If we are running in Electron and the error looks like a network failure, fall back to offline login:
-      const isNetworkError = err.message?.includes('fetch') || 
-                             err.message?.includes('Network') || 
-                             err.message?.includes('load') ||
-                             !navigator.onLine;
-
-      if (window.electronAPI?.offlineLogin && isNetworkError) {
-        console.warn('Network offline or fetch failed. Attempting offline authentication fallback.');
-        const result = await window.electronAPI.offlineLogin(credentials);
-        if (result.success && result.user) {
-          return {
-            user: result.user,
-            permissions: result.permissions || {},
-            twoFactorRequired: result.user.twoFactorEnabled,
-          };
-        } else {
-          throw new Error(result.error || 'Offline login failed');
-        }
-      }
-
       throw err;
     }
   },
@@ -170,7 +146,24 @@ export const authService = {
     const state = useAuthStore.getState();
     if (!state.user) return;
     
-    // Fetch the LIMS user profile from our custom users table
+    if (window.electronAPI) {
+      try {
+        const user = await window.electronAPI.invoke('db:call', 'rbac', 'getUserById', state.user.id);
+        const role = user.roleId ? await window.electronAPI.invoke('db:call', 'rbac', 'getRoleById', user.roleId) : null;
+        const rolePermissions = role ? (role.permissions || {}) : {};
+        const permissions = {
+          ...rolePermissions,
+          ...(user.permissionOverrides || {})
+        };
+        state.updateResolvedPermissions(permissions);
+        state.login(user, permissions, state.loginMethod || '');
+        return;
+      } catch (e) {
+        console.warn('Failed to refresh session via MSSQL:', e);
+      }
+    }
+
+    // Fetch the LIMS user profile from our custom users table (Supabase web fallback)
     const { data: userRow, error: userError } = await supabase
       .from('users')
       .select('*')

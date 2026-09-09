@@ -2,6 +2,16 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.13
+
+### New Features & Technical Improvements
+- **Dev / Test / Training Grounds Environment**: Added an isolated, persistent Training Ground database mode (`invitro_sandbox`) allowing staff to test registrations, lab orders, and result entries without affecting live production data (`invitro`). Includes an on-demand reset function to restore preset defaults.
+- **Excel Diagnostic Catalog Seeding**: Automated complete parsing and seeding of 223 diagnostic lab tests, 337 parameters, and test-parameter mappings directly from `Lab_Tests_and_Parameters_v2.xlsx`.
+- **Database Performance Indexing**: Implemented 13 high-frequency non-clustered MSSQL performance indexes on patient phones/names, record dates, test results, audit logs, and catalog lookup columns for maximized read/write throughput.
+- **Standardized 25-Row Table Pagination**: Added reusable pagination across all major views (Test Register, Patient Directory, Results Entry, Hospital Records, Audit Logs, Users) capped at 25 rows per page by default (with 50, 75, 100 limit options).
+- **Custom Theme-Matching Scrollbars**: Built custom theme-aware scrollbars with sleek floating pill thumbs and glowing accent hover states supporting light, dark, and all color presets (`ocean-breeze`, `emerald-health`, etc.).
+- **UI Refinements**: Customized Windows chrome control box, integrated amber training status banner, and refined dashboard layout headers.
+
 ## Version 1.1.12
 
 ### Improvements & Fixes

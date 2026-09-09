@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRbacStore } from '../../stores/useRbacStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 import { rbacService } from '../../services/rbacService';
 import { showConfirm, showSuccess } from '../../stores/useDialogStore';
 import { User, Role } from '../../lib/types';
@@ -35,8 +36,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../app/components/ui/alert-dialog';
-import { PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '../../app/components/ui/pagination';
 import { Search, MoreVertical, Plus, UserCheck, UserX, Edit2 } from 'lucide-react';
+import { DataTablePagination } from '../../app/components/ui/DataTablePagination';
 import { toast } from 'sonner';
 
 const ITEMS_PER_PAGE = 8;
@@ -59,7 +60,8 @@ export function UserTable() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>('create');
@@ -97,11 +99,28 @@ export function UserTable() {
     return matchesSearch && matchesRole;
   });
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-  const paginatedUsers = filteredUsers.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+  const currentUser = useAuthStore((s) => s.user);
+
+  const paginatedUsers = React.useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredUsers.slice(start, start + pageSize);
+  }, [filteredUsers, page, pageSize]);
 
   const handleDeactivateConfirm = async () => {
     if (!deactivateTarget) return;
+
+    if (deactivateTarget.id === currentUser?.id) {
+      toast.error('You cannot deactivate your own logged-in account.');
+      setDeactivateTarget(undefined);
+      return;
+    }
+
+    if (deactivateTarget.roleId === 'developer' && currentUser?.roleId !== 'developer') {
+      toast.error('You do not have permission to deactivate a developer account.');
+      setDeactivateTarget(undefined);
+      return;
+    }
+
     try {
       await rbacService.deactivateUser(deactivateTarget.id);
       toast.success('User deactivated successfully');
@@ -267,49 +286,14 @@ export function UserTable() {
               )}
             </TableBody>
           </Table>
-          
-          <div className="p-4 border-t border-border bg-muted/20">
-            {totalPages > 1 && (
-              <nav role="navigation" aria-label="pagination" className="mx-auto flex w-full justify-center">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={() => setPage(Math.max(0, page - 1))}
-                      className={page === 0 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
-                  </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => {
-                    if (totalPages <= 5 || i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 1) {
-                      return (
-                        <PaginationItem key={i}>
-                          <PaginationLink
-                            isActive={i === page}
-                            onClick={() => setPage(i)}
-                            className="cursor-pointer"
-                          >
-                            {i + 1}
-                          </PaginationLink>
-                        </PaginationItem>
-                      );
-                    }
-                    if (i === 1 && page > 3) {
-                      return <PaginationItem key="start-ellipsis"><PaginationEllipsis /></PaginationItem>;
-                    }
-                    if (i === totalPages - 2 && page < totalPages - 4) {
-                      return <PaginationItem key="end-ellipsis"><PaginationEllipsis /></PaginationItem>;
-                    }
-                    return null;
-                  })}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                      className={page === totalPages - 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </nav>
-            )}
-          </div>
+
+          <DataTablePagination
+            currentPage={page}
+            pageSize={pageSize}
+            totalItems={filteredUsers.length}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       </div>
 

@@ -20,14 +20,7 @@ interface Window {
     offMaximizeChange: (callback: (event: any, maximized: boolean) => void) => void;
     exportPDF: (options: { title: string; paperSize: string }) => Promise<{ success: boolean; filePath?: string; error?: string }>;
     previewPDF: (options: { title: string; paperSize: string }) => Promise<{ success: boolean; error?: string }>;
-    cacheUserCredentials: (userRow: any, roleRow: any, plaintextPassword?: string) => Promise<{ success: boolean; error?: string }>;
-    offlineLogin: (options: { login: string; password: string }) => Promise<{ success: boolean; user?: any; permissions?: Record<string, boolean>; error?: string }>;
-    updateSupabaseSession: (session: { access_token: string; refresh_token: string }) => Promise<{ success: boolean; error?: string }>;
     getDeviceId: () => Promise<string>;
-    setForcedOffline: (forced: boolean) => Promise<void>;
-    isForcedOffline: () => Promise<boolean>;
-    hasCachedUsers: () => Promise<boolean>;
-    triggerSync: () => Promise<{ success: boolean; error?: string }>;
     getHospitals: () => Promise<any[]>;
     createHospital: (hospitalData: any) => Promise<any>;
     updateHospital: (id: string, hospitalData: any) => Promise<any>;
@@ -35,7 +28,18 @@ interface Window {
     getDoctors: (hospitalId?: string) => Promise<any[]>;
     createDoctor: (doctorData: any) => Promise<any>;
     updateDoctor: (id: string, doctorData: any) => Promise<any>;
-    deleteDoctor: (id: string) => Promise<void>;
+    // Generic and Database Setup Methods (fees_tracker architecture)
+    invoke?: (channel: string, ...args: any[]) => Promise<any>;
+    checkDbConfig?: () => Promise<boolean>;
+    saveDbConfig?: (config: any) => Promise<{ success: boolean; error?: string }>;
+    testDbConnection?: (config: any) => Promise<{ success: boolean; latency?: number; strength?: string; isInitialized?: boolean; error?: string }>;
+    initializeDb?: () => Promise<{ success: boolean; error?: string }>;
+    getDbConnectionInfo?: () => Promise<{ success: boolean; config?: any; error?: string }>;
+    getDbStatus?: () => Promise<{ status: 'Connected' | 'Disconnected' | 'Not Configured' | 'Checking'; latency: number; strength: string; server?: string; error?: string }>;
+    resetDbConfig?: () => Promise<{ success: boolean; error?: string }>;
+    toggleSandboxMode?: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
+    resetSandboxDatabase?: () => Promise<{ success: boolean; error?: string }>;
+    getSandboxStatus?: () => Promise<{ isSandbox: boolean }>;
     db?: any;
   }
 }

@@ -29,6 +29,7 @@ import { PERMISSIONS } from "../../lib/permissions";
 import { MyPermissionsModal } from "./MyPermissionsModal";
 import { GlobalDialogs } from "./GlobalDialogs";
 import { TitleBar } from "./TitleBar";
+import { TrainingBanner } from "./TrainingBanner";
 import { GlobalSearch } from "./GlobalSearch";
 import {
   DropdownMenu,
@@ -145,7 +146,24 @@ export function Layout() {
   const initializeSettings = useSettingsStore(state => state.initialize);
   const [showPermissions, setShowPermissions] = useState(false);
   const [showSignOut, setShowSignOut] = useState(false);
+  const [isSandbox, setIsSandbox] = useState(false);
 
+  useEffect(() => {
+    if (window.electronAPI?.getSandboxStatus) {
+      window.electronAPI.getSandboxStatus().then(res => {
+        if (res) setIsSandbox(res.isSandbox);
+      });
+    }
+  }, []);
+
+  const handleExitSandbox = async () => {
+    if (window.electronAPI?.toggleSandboxMode) {
+      const res = await window.electronAPI.toggleSandboxMode(false);
+      if (res?.success) {
+        window.location.reload();
+      }
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -195,8 +213,6 @@ export function Layout() {
             </div>
           </div>
 
-
-
           {/* Categorized Navigation List */}
           <nav className="flex-1 py-4 flex flex-col gap-5 px-3 overflow-y-auto overflow-x-hidden">
             {navigationGroups.map((group) => {
@@ -237,6 +253,8 @@ export function Layout() {
 
         {/* Main Content Pane */}
         <div className="flex-1 flex flex-col overflow-hidden ml-16">
+          {/* Training Grounds Active Banner */}
+          {isSandbox && <TrainingBanner onExit={handleExitSandbox} />}
           {/* Header Bar */}
           <header className="relative z-40 bg-card/95 backdrop-blur-md border-b border-border/80 px-8 py-4 transition-colors duration-200 shrink-0">
             <div className="flex items-center justify-between gap-4">

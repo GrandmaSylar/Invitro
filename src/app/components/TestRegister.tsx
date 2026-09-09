@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { showConfirm, showSuccess } from "../../stores/useDialogStore";
 import { ClipboardList, Pill, Trash2, Edit, Save, Loader2, FlaskConical, Plus, Library, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { catalogService } from "../../services/catalogService";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { motion } from "motion/react";
 import { cn } from "./ui/utils";
+import { DataTablePagination } from "./ui/DataTablePagination";
 import { 
   useTests, useCreateTest, useUpdateTest, useDeleteTest, 
   useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
@@ -127,11 +128,20 @@ export function TestRegister() {
   const [libSortField, setLibSortField] = useState<keyof Parameter>("parameterCode");
   const [libSortOrder, setLibSortOrder] = useState<"asc" | "desc">("asc");
 
+  // Pagination States (Default 25 limit)
+  const [testPage, setTestPage] = useState(1);
+  const [testPageSize, setTestPageSize] = useState(25);
+
   // Filtered lists
   const filteredTests = tests.filter(t =>
     t.id !== editingTestId &&
     (searchTests === "" || t.testName.toLowerCase().includes(searchTests.toLowerCase()) || (t.department || "").toLowerCase().includes(searchTests.toLowerCase()))
   );
+
+  const paginatedTests = useMemo(() => {
+    const start = (testPage - 1) * testPageSize;
+    return filteredTests.slice(start, start + testPageSize);
+  }, [filteredTests, testPage, testPageSize]);
   const filteredParameters = parameters.filter(p =>
     searchParams === "" || 
     p.parameterName.toLowerCase().includes(searchParams.toLowerCase()) || 
@@ -530,7 +540,7 @@ export function TestRegister() {
                         <th className="px-3 py-2 text-right text-xs uppercase tracking-wide font-bold text-muted-foreground w-24">Actions</th>
                       </tr></thead>
                       <tbody>
-                        {filteredTests.map((test, index) => (
+                        {paginatedTests.map((test, index) => (
                           <React.Fragment key={test.id}>{/* Main row */}
                           <tr
                             onClick={() => toggleTestSelection(test.id)}
@@ -582,6 +592,15 @@ export function TestRegister() {
                         ))}
                       </tbody>
                     </table>
+                    
+                    {/* Pagination Bar */}
+                    <DataTablePagination
+                      currentPage={testPage}
+                      pageSize={testPageSize}
+                      totalItems={filteredTests.length}
+                      onPageChange={setTestPage}
+                      onPageSizeChange={setTestPageSize}
+                    />
                   </div>
                 )}
               </div>

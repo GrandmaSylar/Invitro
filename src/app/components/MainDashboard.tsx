@@ -1,5 +1,5 @@
 import { 
-  Activity, 
+  Activity,
   Users, 
   TestTube, 
   TrendingUp, 
@@ -7,7 +7,10 @@ import {
   Clock, 
   BarChart3, 
   PieChart as PieChartIcon,
-  ArrowUpRight 
+  ArrowUpRight,
+  ShieldCheck,
+  Calendar,
+  UserCheck
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useAuthStore } from "../../stores/useAuthStore";
@@ -17,7 +20,7 @@ import { usePermission } from "../../hooks/usePermission";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { motion } from "motion/react";
-import { useState, MouseEvent } from "react";
+import { useState, useEffect, MouseEvent } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -92,7 +95,7 @@ function StatCard({ title, value, icon: Icon, trendText, trendType = "up", iconB
   return (
     <div 
       onClick={onClick}
-      className={`relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300 ${onClick ? "cursor-pointer select-none" : ""}`}
+      className={`relative rounded-2xl border border-border/60 bg-card p-6 shadow-sm overflow-hidden group hover:shadow-md hover-lift transition-all duration-300 z-10 ${onClick ? "cursor-pointer select-none" : ""}`}
     >
       <div className="relative flex items-center justify-between mb-3">
         <h3 className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">{title}</h3>
@@ -133,7 +136,7 @@ function ChartCard({ title, subtitle, icon: Icon, children, className = "" }: {
   className?: string;
 }) {
   return (
-    <div className={`rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden ${className}`}>
+    <div className={`rounded-2xl border border-border/60 bg-card shadow-sm overflow-hidden z-10 relative ${className}`}>
       <div className="p-6 pb-2">
         <div className="flex items-center gap-2.5 mb-1">
           <Icon size={16} className="text-primary stroke-[2.2]" />
@@ -188,6 +191,16 @@ export function MainDashboard() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: charts, isLoading: chartsLoading } = useDashboardCharts();
 
+  // Live Date & Time Clock Hook
+  const [now, setNow] = useState<Date>(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const dateString = now.toLocaleDateString([], { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+
   const canViewPatients = usePermission("dashboard.view_patients_today");
   const canViewTests = usePermission("dashboard.view_tests_today");
   const canViewPending = usePermission("dashboard.view_pending_results");
@@ -205,11 +218,11 @@ export function MainDashboard() {
   };
 
   return (
-    <div className="p-6 sm:p-8 max-w-[1440px] mx-auto space-y-8 animate-in fade-in duration-500">
+    <div className="p-6 sm:p-8 max-w-[1440px] mx-auto space-y-8 animate-in fade-in duration-500 relative z-10">
 
-      {/* Hero Banner with horizontal image and gradient dark overlay */}
+      {/* Hero Banner with Live Time/Date & Active Session Widgets */}
       <motion.div 
-        className="relative w-full rounded-2xl overflow-hidden border border-border/40 shadow-md min-h-[220px] flex flex-col justify-center p-8" 
+        className="relative w-full rounded-2xl overflow-hidden border border-border/40 shadow-md min-h-[240px] flex flex-col justify-center p-8 z-10" 
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
@@ -223,18 +236,30 @@ export function MainDashboard() {
         />
         
         {/* Colour-tinted dark overlay for text contrast */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-slate-950/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/85 to-slate-950/40" />
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-3">
-            {/* Health Badge */}
-            <div className="inline-flex items-center gap-2 bg-[#0b0f19]/80 border border-white/10 px-3 py-1 rounded-full text-[10px] font-bold text-slate-200 tracking-wider">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-              </span>
-              <Activity size={10} className="stroke-[2.5]" />
-              ALL INSTRUMENTS ONLINE
+            
+            {/* Top Widget Bar: Live Time + Active Session */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              
+              {/* Live Clock & Date Widget */}
+              <div className="inline-flex items-center gap-2 bg-slate-900/80 border border-slate-700/60 px-3 py-1 rounded-full text-[10.5px] font-mono font-bold text-emerald-400 tracking-tight backdrop-blur-md shadow-sm">
+                <Calendar size={11} className="text-slate-400 shrink-0" />
+                <span>{dateString}</span>
+                <span className="text-slate-500">•</span>
+                <Clock size={11} className="text-emerald-400 shrink-0 animate-pulse" />
+                <span>{timeString}</span>
+              </div>
+
+              {/* Active Session Status Widget */}
+              <div className="inline-flex items-center gap-2 bg-blue-950/80 border border-blue-500/30 px-3 py-1 rounded-full text-[10px] font-bold text-blue-200 tracking-tight backdrop-blur-md shadow-sm">
+                <ShieldCheck size={11} className="text-blue-400 shrink-0" />
+                <span>ACTIVE SESSION:</span>
+                <span className="text-white font-extrabold uppercase">{user?.roleId || 'Admin'}</span>
+              </div>
+
             </div>
             
             <h1 className="text-4xl md:text-5xl font-black tracking-tight text-white leading-tight">
@@ -272,7 +297,7 @@ export function MainDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Patients Today"
-          value={stats?.patientsToday ?? 42}
+          value={stats?.patientsToday ?? 0}
           icon={Users}
           trendText={patientTrend.trendText}
           trendType={patientTrend.trendType}
@@ -282,7 +307,7 @@ export function MainDashboard() {
         />
         <StatCard
           title="Tests Ordered Today"
-          value={stats?.testsToday ?? 118}
+          value={stats?.testsToday ?? 0}
           icon={FlaskConical}
           trendText={testTrend.trendText}
           trendType={testTrend.trendType}
@@ -292,7 +317,7 @@ export function MainDashboard() {
         />
         <StatCard
           title="Pending Results"
-          value={stats?.pendingResults ?? 9}
+          value={stats?.pendingResults ?? 0}
           icon={Clock}
           trendText={pendingTrend.trendText}
           trendType={pendingTrend.trendType}
@@ -302,7 +327,7 @@ export function MainDashboard() {
         />
         <StatCard
           title="Revenue (Month)"
-          value={stats?.revenueThisMonth ? `₵${stats.revenueThisMonth.toLocaleString()}` : "₵12,840"}
+          value={`₵${(stats?.revenueThisMonth ?? 0).toLocaleString()}`}
           icon={TrendingUp}
           trendText={revenueTrend.trendText}
           trendType={revenueTrend.trendType}

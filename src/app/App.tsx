@@ -1,19 +1,41 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { RouterProvider } from "react-router";
 import { ThemeProvider } from "next-themes";
 import { router } from "./routes";
 import { useSettingsStore } from "../stores/useSettingsStore";
 import { useAuthStore } from "../stores/useAuthStore";
-import { useSyncStore } from "../stores/useSyncStore";
 import { toast } from "sonner";
 import { supabase } from "../lib/supabase";
 import { WelcomeChangelogModal } from "./components/WelcomeChangelogModal";
+import { DbWizard } from "./components/DbWizard";
+
+import { ScribbleBackground } from "./components/ScribbleBackground";
 
 // INVITRO AIDMED DIAGNOSTICS - Laboratory Inventory Management System
 export default function App() {
+  const [dbConfigured, setDbConfigured] = useState<boolean | null>(null);
   const initializeSettings = useSettingsStore(state => state.initialize);
-  const initializeOfflineState = useSyncStore(state => state.initializeOfflineState);
   const themePreset = useAuthStore(state => state.user?.themePreset);
+
+  // Check database configuration on desktop boot (fees_tracker architecture)
+  useEffect(() => {
+    if (window.electronAPI) {
+      const checkConfig = async () => {
+        try {
+          const configured = await (window.electronAPI.checkDbConfig 
+            ? window.electronAPI.checkDbConfig() 
+            : window.electronAPI.invoke?.('db-check-config'));
+          setDbConfigured(!!configured);
+        } catch (err) {
+          console.error('Failed to check db configuration:', err);
+          setDbConfigured(true);
+        }
+      };
+      checkConfig();
+    } else {
+      setDbConfigured(true);
+    }
+  }, []);
 
   // Synchronize user theme preset with DOM attribute
   useEffect(() => {
@@ -24,49 +46,10 @@ export default function App() {
     }
   }, [themePreset]);
 
-  // Listen to Supabase auth state changes and sync sessions with Electron main process
-  useEffect(() => {
-    // Explicit session check on startup to sync session with main process
-    const syncSession = async () => {
-      if (window.electronAPI?.updateSupabaseSession) {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            await window.electronAPI.updateSupabaseSession({
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
-            });
-          }
-        } catch (err) {
-          console.error('Failed to sync initial session with Main process:', err);
-        }
-      }
-    };
-    syncSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (window.electronAPI?.updateSupabaseSession) {
-        if (session) {
-          try {
-            await window.electronAPI.updateSupabaseSession({
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
-            });
-          } catch (err) {
-            console.error('Failed to sync session with Main process:', err);
-          }
-        }
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     initializeSettings();
-    initializeOfflineState();
 
     // Auto-update listener
     if (window.electronAPI) {
@@ -92,7 +75,7 @@ export default function App() {
         cleanupDownloaded();
       };
     }
-  }, [initializeSettings, initializeOfflineState]);
+  }, [initializeSettings]);
 
   // Strict Single-Device Login session checking loop
   useEffect(() => {
@@ -103,19 +86,25 @@ export default function App() {
       if (!state.isAuthenticated || !state.user) return;
 
       try {
-        // Fetch the user's latest overrides from Supabase
-        const { data: userRow, error } = await supabase
-          .from('users')
-          .select('permission_overrides')
-          .eq('id', state.user.id)
-          .single();
+        let activeDeviceId: string | undefined;
 
-        if (error || !userRow) {
-          return;
+        if (window.electronAPI) {
+          const user = await window.electronAPI.invoke('db:call', 'rbac', 'getUserById', state.user.id);
+          activeDeviceId = user?.permissionOverrides?._active_device_id;
+        } else {
+          // Fetch the user's latest overrides from Supabase web
+          const { data: userRow, error } = await supabase
+            .from('users')
+            .select('permission_overrides')
+            .eq('id', state.user.id)
+            .single();
+
+          if (error || !userRow) {
+            return;
+          }
+          const overrides = userRow.permission_overrides as any;
+          activeDeviceId = overrides?._active_device_id;
         }
-
-        const overrides = userRow.permission_overrides as any;
-        const activeDeviceId = overrides?._active_device_id;
 
         if (activeDeviceId) {
           let localDeviceId = 'web-browser';
@@ -150,8 +139,18 @@ export default function App() {
     };
   }, []);
 
+  if (dbConfigured === false) {
+    return (
+      <ThemeProvider attribute="class" storageKey="lims-theme" defaultTheme="system" enableSystem>
+        <ScribbleBackground />
+        <DbWizard onSuccess={() => setDbConfigured(true)} />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ThemeProvider attribute="class" storageKey="lims-theme" defaultTheme="system" enableSystem>
+      <ScribbleBackground />
       <RouterProvider router={router} />
       <WelcomeChangelogModal />
     </ThemeProvider>

@@ -1,114 +1,176 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../app/components/ui/card';
 import { Button } from '../../app/components/ui/button';
-import { Badge } from '../../app/components/ui/badge';
-import { Label } from '../../app/components/ui/label';
-import { Progress } from '../../app/components/ui/progress';
-import { useSettingsStore } from '../../stores/useSettingsStore';
-import { CheckCircle2, Play } from 'lucide-react';
+import { Wrench, Database, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { showConfirm, showSuccess } from '../../stores/useDialogStore';
+import { useAuthStore } from '../../stores/useAuthStore';
 
 export default function SystemHealthSection() {
-  const [diagRunning, setDiagRunning] = useState(false);
-  const [diagComplete, setDiagComplete] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [dbInfo, setDbInfo] = useState<{
+    server: string;
+    port?: string | number;
+    database: string;
+    user: string;
+  } | null>(null);
+  const [dbStrength, setDbStrength] = useState<string>('Checking...');
+  const [dbLatency, setDbLatency] = useState<number | null>(null);
+  const [resetting, setResetting] = useState(false);
 
-  const activeDbName = import.meta.env.VITE_SUPABASE_URL ? 'Supabase' : 'None';
+  const logout = useAuthStore((s) => s.logout);
+
+  const fetchDbDiagnostics = async () => {
+    if (!window.electronAPI) {
+      setDbStrength('Web Mode (Supabase)');
+      return;
+    }
+
+    try {
+      const infoRes = await (window.electronAPI.getDbConnectionInfo
+        ? window.electronAPI.getDbConnectionInfo()
+        : window.electronAPI.invoke?.('db-get-connection-info'));
+
+      if (infoRes?.success && infoRes.config) {
+        setDbInfo(infoRes.config);
+        const testRes = await (window.electronAPI.testDbConnection
+          ? window.electronAPI.testDbConnection(infoRes.config)
+          : window.electronAPI.invoke?.('db-test-connection', infoRes.config));
+
+        if (testRes?.success) {
+          const strengthText = testRes.strength === 'Poor' ? 'Slow / Unstable' : testRes.strength;
+          setDbStrength(strengthText);
+          setDbLatency(testRes.latency ?? 0);
+        } else {
+          setDbStrength('Connection Unreachable');
+          setDbLatency(null);
+        }
+      } else {
+        setDbStrength('Not Configured');
+      }
+    } catch (err) {
+      console.error('Failed to query connection info diagnostics:', err);
+      setDbStrength('Error checking status');
+    }
+  };
 
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (diagRunning) {
-      setProgress(0);
-      setDiagComplete(false);
-      interval = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) {
-            clearInterval(interval);
-            setDiagRunning(false);
-            setDiagComplete(true);
-            return 100;
-          }
-          return p + 5;
-        });
-      }, 100);
-    }
-    return () => clearInterval(interval);
-  }, [diagRunning]);
+    fetchDbDiagnostics();
+  }, []);
 
-  const handleRunDiagnostics = () => {
-    if (diagRunning) return;
-    setDiagRunning(true);
+  const handleResetDatabaseConfig = async () => {
+    const confirmed = await showConfirm({
+      title: 'Reset Database Configuration',
+      description: 'This will log you out, tear down current connection pools, and prompt for credentials on next boot. Are you sure you want to proceed?',
+      confirmText: 'Reset Configuration',
+      cancelText: 'Cancel',
+      variant: 'destructive'
+    });
+
+    if (!confirmed) return;
+
+    setResetting(true);
+    try {
+      const res = await (window.electronAPI?.resetDbConfig
+        ? window.electronAPI.resetDbConfig()
+        : window.electronAPI?.invoke?.('db-reset-config'));
+
+      if (res?.success) {
+        showSuccess({
+          title: 'Database Reset',
+          description: 'Database configuration has been cleared. Redirecting to setup wizard...'
+        });
+        setTimeout(() => {
+          logout();
+          window.location.reload();
+        }, 1200);
+      } else {
+        throw new Error(res?.error || 'Failed to reset database configuration.');
+      }
+    } catch (err: any) {
+      console.error('Reset database error:', err);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const getStatusColor = () => {
+    if (dbStrength === 'Excellent') return 'text-emerald-500 font-bold';
+    if (dbStrength === 'Good') return 'text-emerald-600 font-bold';
+    if (dbStrength.includes('Slow') || dbStrength.includes('Unstable')) return 'text-rose-500 font-bold';
+    if (dbStrength === 'Moderate') return 'text-amber-500 font-bold';
+    return 'text-muted-foreground font-bold';
   };
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>System Health</CardTitle>
-          <CardDescription>View application metrics and run diagnostics.</CardDescription>
+      <Card className="shadow-sm border-border">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-bold tracking-tight">System Diagnostics</CardTitle>
+          <CardDescription>Active database telemetries, network latencies, and connection pool controls.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-6">
           
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">App Version</Label>
-              <div className="font-semibold text-lg">1.0.0</div>
-            </div>
-            <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Build Date</Label>
-              <div className="font-semibold text-lg">2025-01-01</div>
-            </div>
-            <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Active DB Connection</Label>
-              <div className="font-semibold text-lg truncate" title={activeDbName}>
-                {activeDbName}
-              </div>
-            </div>
-            <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Session Count</Label>
-              <div className="font-semibold text-lg">1</div>
-            </div>
-            <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Memory Usage</Label>
-              <div className="font-semibold text-lg">128 MB</div>
-            </div>
-            <div className="flex flex-col gap-1 p-4 rounded-lg border bg-card shadow-sm">
-              <Label className="text-muted-foreground text-xs uppercase tracking-wider">Uptime</Label>
-              <div className="font-semibold text-lg">0d 0h (session)</div>
-            </div>
-          </div>
+          {/* Active Database Connection Card (Replicated from fees_tracker) */}
+          <div className="rounded-xl border border-border/80 bg-amber-500/[0.03] dark:bg-amber-500/[0.02] p-5 space-y-4">
+            <h4 className="text-sm font-bold text-emerald-600 dark:text-emerald-400 tracking-wide">
+              Active Database Connection
+            </h4>
 
-          <div className="space-y-4 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <h4 className="font-medium">Run Diagnostics</h4>
-                <p className="text-sm text-muted-foreground">
-                  Perform health checks on database connections and core services.
-                </p>
-              </div>
-              <Button onClick={handleRunDiagnostics} disabled={diagRunning} className="gap-2">
-                <Play className="h-4 w-4" />
-                {diagRunning ? 'Running...' : 'Run Checks'}
-              </Button>
-            </div>
+            {dbInfo ? (
+              <div className="grid grid-cols-[140px_1fr] sm:grid-cols-[180px_1fr] gap-y-3 text-sm">
+                <span className="text-muted-foreground font-medium">Server Host:</span>
+                <strong className="text-foreground font-semibold">{dbInfo.server}:{dbInfo.port || 1433}</strong>
 
-            {diagRunning && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Running checks...</span>
-                  <span className="font-medium">{progress}%</span>
-                </div>
-                <Progress value={progress} />
-              </div>
-            )}
+                <span className="text-muted-foreground font-medium">Database:</span>
+                <strong className="text-foreground font-semibold font-mono">{dbInfo.database}</strong>
 
-            {diagComplete && !diagRunning && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-in fade-in">
-                <CheckCircle2 className="h-5 w-5" />
-                <span className="font-medium text-sm">All diagnostic checks passed. System is healthy.</span>
+                <span className="text-muted-foreground font-medium">Username:</span>
+                <strong className="text-foreground font-semibold">{dbInfo.user}</strong>
+
+                <span className="text-muted-foreground font-medium">Connection Status:</span>
+                <span className={getStatusColor()}>
+                  {dbStrength} {dbLatency !== null && `(${dbLatency}ms)`}
+                </span>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground py-2 flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin text-muted-foreground" />
+                <span>Retrieving active connection statistics...</span>
               </div>
             )}
           </div>
-          
+
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            If your database server IP address, LAN routing, or credentials change, you can trigger a re-configuration of the main connection pool.
+          </p>
+
+          {/* Database Connection Wizard Subcard (Replicated from fees_tracker) */}
+          <div className="rounded-xl border border-border/70 bg-muted/30 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-foreground font-bold text-sm">
+              <Wrench size={16} className="text-muted-foreground" />
+              <span>Database Connection Wizard</span>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              This will log you out, tear down current connection pools, and prompt for credentials on next boot.
+            </p>
+
+            <Button
+              variant="outline"
+              onClick={handleResetDatabaseConfig}
+              disabled={resetting}
+              className="w-full sm:w-auto font-semibold text-foreground border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all"
+            >
+              {resetting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin mr-2" />
+                  <span>Resetting Configuration...</span>
+                </>
+              ) : (
+                <span>Reset Database Configuration</span>
+              )}
+            </Button>
+          </div>
+
         </CardContent>
       </Card>
     </div>
