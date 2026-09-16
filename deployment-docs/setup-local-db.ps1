@@ -5,8 +5,11 @@ $ErrorActionPreference = "Stop"
 
 # 1. Download Details
 $installerUrl = "https://go.microsoft.com/fwlink/?linkid=2215158" # SQL Server 2022 Express Web Installer
-$installerPath = "$env:TEMP\SQL2022-SSEI-Expr.exe"
+$installerPath = "$env:TEMP\SQL2022-SSEI-Expr-$((Get-Date).Ticks).exe"
 $downloadDir = "C:\SQL2022InvitroInstall"
+
+# Kill any existing hung installer processes
+Get-Process -Name "SQL2022-SSEI-Expr*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 
 # Check Admin privileges
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
@@ -31,17 +34,17 @@ if (-not (Test-Path $downloadDir)) {
 # 3. Silent Extract and Install SQL Server Express
 Write-Host "2. Running Silent SQL Server Installation (SA Pass: InvitroLims@2026!). Please wait..." -ForegroundColor Cyan
 $installArgs = @(
-    "/Action=Install",
-    "/SelectFeatures=SQL",
-    "/InstanceName=MSSQLSERVER",
+    "/ACTION=Install",
+    "/FEATURES=SQLEngine",
+    "/INSTANCENAME=MSSQLSERVER",
     "/SQLSVCSTARTUPTYPE=Automatic",
     "/SQLSYSADMINACCOUNTS=BUILTIN\Administrators",
     "/SECURITYMODE=SQL",
     "/SAPWD=InvitroLims@2026!",
     "/TCPENABLED=1",
-    "/NPENABLED=0",
+    "/NPENABLED=1",
     "/IACCEPTSQLSERVERLICENSETERMS",
-    "/QuietSimple"
+    "/QUIET"
 )
 
 # Start installer and wait for exit
@@ -111,8 +114,13 @@ try {
 
 # 7. Restart SQL Service to Apply Configurations
 Write-Host "6. Restarting SQL Server Service to apply network changes..." -ForegroundColor Cyan
-Restart-Service -Name "MSSQLSERVER" -Force
-Write-Host "SQL Service restarted successfully." -ForegroundColor Green
+$sqlService = Get-Service -Name "MSSQLSERVER", "MSSQL`$SQLEXPRESS", "SQLEXPRESS" -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($sqlService) {
+    Restart-Service -Name $sqlService.Name -Force
+    Write-Host "SQL Service '$($sqlService.Name)' restarted successfully." -ForegroundColor Green
+} else {
+    Write-Host "Warning: SQL Server service not found under standard names (MSSQLSERVER/SQLEXPRESS). Please verify service name in services.msc." -ForegroundColor Yellow
+}
 
 # Cleanup
 Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue

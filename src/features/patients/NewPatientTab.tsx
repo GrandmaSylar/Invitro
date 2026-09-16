@@ -11,6 +11,7 @@ import { patientService } from "../../services/patientService";
 import { labRecordService, generateLabNumber, previewLabNumber } from "../../services/labRecordService";
 
 import type { Test, TestItem } from "../../lib/types";
+import { calculateAgeFromDob } from "../../lib/mappers";
 import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/ui/card";
 import { Input } from "../../app/components/ui/input";
 import { Label } from "../../app/components/ui/label";
@@ -99,14 +100,7 @@ export function NewPatientTab() {
   // Calculate age when dob changes
   useEffect(() => {
     if (dob) {
-      const today = new Date();
-      const birthDate = new Date(dob);
-      let calculatedAge = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        calculatedAge--;
-      }
-      setAge(Math.max(0, calculatedAge));
+      setAge(calculateAgeFromDob(dob));
     }
   }, [dob]);
 
@@ -187,11 +181,12 @@ export function NewPatientTab() {
     
     if (!patientId) {
       try {
+        const finalAge = dob ? calculateAgeFromDob(dob) : (typeof age === 'number' ? age : undefined);
         const patient = await patientService.createPatient({
           patientName,
           gender: gender || undefined,
           dob: dob || undefined,
-          age: typeof age === 'number' ? age : undefined,
+          age: typeof finalAge === 'number' ? finalAge : undefined,
           telephone: telephone || undefined,
         });
         patientId = patient.id;
@@ -449,23 +444,35 @@ export function NewPatientTab() {
                 id="dob"
                 type="date" 
                 value={dob} 
-                onChange={(e) => setDob(e.target.value)} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDob(val);
+                  if (val) {
+                    setAge(calculateAgeFromDob(val));
+                  }
+                }} 
                 disabled={!!committedPatient || isSaving}
               />
+              <p className="text-[11px] text-muted-foreground">
+                Selecting Date of Birth will automatically calculate and lock Age.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="age">Age (Optional)</Label>
+              <Label htmlFor="age">Age {dob ? "(Calculated)" : "(Optional)"}</Label>
               <Input 
                 id="age"
                 type="number"
                 min="0"
                 value={age} 
                 onChange={(e) => setAge(e.target.value ? parseInt(e.target.value, 10) : "")}
-                className="w-24" 
+                className="w-full" 
                 placeholder="Years"
-                disabled={!!committedPatient || isSaving}
+                disabled={!!committedPatient || isSaving || !!dob}
               />
+              <p className="text-[11px] text-muted-foreground">
+                {dob ? "Locked (Auto-calculated from DOB)" : "Enter age directly if Date of Birth is unknown"}
+              </p>
             </div>
 
             <div className="col-span-2 space-y-2">

@@ -2,6 +2,16 @@
 
 All notable updates to this project will be documented here in plain, easy-to-understand language.
 
+## Version 1.1.16
+
+### New Features & Enhancements
+- **Real-Time Database Connection & Latency Tracking**: Added live DB connection status indicator and latency ms counter (`DB: <ms>`) to the login card footer.
+- **Database Setup Wizard Access**: Added a quick reset button on the login screen with a system-themed confirmation prompt to clear database credentials and launch the database setup wizard.
+- **Form Submission Protection**: Disabled and visually greyed-out all login input fields, login tab selectors, and "Remember me" checkboxes during active authentication to prevent duplicate submissions.
+- **Patient DOB & Age Synchronization**: Enhanced patient registration and editing so that entering a Date of Birth (DOB) forces automatic age calculation and locks the age field, maintaining strict consistency between DOB and age.
+- **User Management Last Login Tracking**: Fixed `Last Login` timestamp recording so it accurately registers every user's latest login timestamp upon authentication.
+- **Navigation & Theme Cleanups**: Updated navbar header to "Test and Parameters" and removed redundant Supabase status badges from Theme Preset settings.
+
 ## Version 1.1.15
 
 ### UI & Modal Updates

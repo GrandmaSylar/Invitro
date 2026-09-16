@@ -283,12 +283,11 @@ export default function ThemePresetSection() {
             })}
           </div>
         </CardContent>
-        <CardFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-b-xl">
+        <CardFooter className="border-t border-border/50 bg-muted/20 px-6 py-4 flex items-center justify-between gap-2 rounded-b-xl">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Monitor className="h-4 w-4 text-muted-foreground/70" />
             <span>Theme settings are linked directly to user ID <strong>{user?.id ? `${user.id.substring(0, 8)}...` : 'N/A'}</strong>.</span>
           </div>
-          <span className="text-[10px] text-muted-foreground font-mono bg-muted px-2 py-0.5 rounded">Supabase Connected</span>
         </CardFooter>
       </Card>
     </div>

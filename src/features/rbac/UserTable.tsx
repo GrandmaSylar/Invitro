@@ -248,8 +248,11 @@ export function UserTable() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                        {user.lastLogin ? new Date(user.lastLogin).toLocaleString(undefined, {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        }) : 'Never'}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>

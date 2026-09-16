@@ -346,23 +346,39 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const pool = await getPool();
       const req = pool.request();
       req.input('id', sql.VarChar(100), id);
-      req.input('patient_name', sql.NVarChar(200), patientData.patientName || null);
-      req.input('gender', sql.NVarChar(50), patientData.gender || null);
-      req.input('dob', sql.NVarChar(50), patientData.dob || null);
-      req.input('age', sql.Int, patientData.age !== undefined ? Number(patientData.age) : null);
-      req.input('telephone', sql.NVarChar(50), patientData.telephone || null);
+      
+      const setClauses: string[] = [];
 
-      await req.query(`
-        UPDATE patients
-        SET 
-          patient_name = COALESCE(@patient_name, patient_name),
-          gender = COALESCE(@gender, gender),
-          dob = COALESCE(@dob, dob),
-          age = COALESCE(@age, age),
-          telephone = COALESCE(@telephone, telephone),
-          updated_at = GETDATE()
-        WHERE id = @id;
-      `);
+      if (patientData.patientName !== undefined) {
+        req.input('patient_name', sql.NVarChar(200), patientData.patientName || null);
+        setClauses.push('patient_name = @patient_name');
+      }
+      if (patientData.gender !== undefined) {
+        req.input('gender', sql.NVarChar(50), patientData.gender || null);
+        setClauses.push('gender = @gender');
+      }
+      if (patientData.dob !== undefined) {
+        req.input('dob', sql.NVarChar(50), patientData.dob || null);
+        setClauses.push('dob = @dob');
+      }
+      if (patientData.age !== undefined) {
+        req.input('age', sql.Int, (patientData.age !== null && patientData.age !== undefined && patientData.age !== '') ? Number(patientData.age) : null);
+        setClauses.push('age = @age');
+      }
+      if (patientData.telephone !== undefined) {
+        req.input('telephone', sql.NVarChar(50), patientData.telephone || null);
+        setClauses.push('telephone = @telephone');
+      }
+
+      setClauses.push('updated_at = GETDATE()');
+
+      if (setClauses.length > 1) {
+        await req.query(`
+          UPDATE patients
+          SET ${setClauses.join(', ')}
+          WHERE id = @id;
+        `);
+      }
 
       const getReq = pool.request();
       getReq.input('id', sql.VarChar(100), id);
@@ -1229,6 +1245,22 @@ export const dbHandlers: Record<string, Record<string, Function>> = {
       const isMatch = await bcrypt.compare(password, user.password_hash);
       if (!isMatch) {
         throw new Error('Invalid username or password');
+      }
+
+      // Update last_login timestamp upon successful authentication
+      const nowIso = new Date().toISOString();
+      try {
+        const updateReq = pool.request();
+        updateReq.input('id', sql.VarChar(100), user.id);
+        updateReq.input('last_login', sql.NVarChar(100), nowIso);
+        await updateReq.query(`
+          UPDATE users
+          SET last_login = @last_login, updated_at = GETDATE()
+          WHERE id = @id;
+        `);
+        user.last_login = nowIso;
+      } catch (err) {
+        log.error('Failed to update user last_login timestamp:', err);
       }
 
       const rolePerms = typeof user.role_permissions === 'string' ? JSON.parse(user.role_permissions) : user.role_permissions || {};

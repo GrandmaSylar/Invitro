@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
 
 export function WelcomeChangelogModal() {
-  const currentVersion = '1.1.15';
+  const currentVersion = '1.1.16';
   const localStorageKey = `lims-changelog-seen-v${currentVersion}`;
   
   const [isOpen, setIsOpen] = useState(false);

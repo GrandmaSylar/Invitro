@@ -56,7 +56,7 @@ const navigationGroups = [
     items: [
       { name: "Dashboard", icon: LayoutDashboard, path: "/", permissionKey: PERMISSIONS['dashboard.view'] },
       { name: "Patients", icon: Users, path: "/patients", permissionKey: PERMISSIONS['patients.view'] },
-      { name: "Tests & Samples", icon: FlaskConical, path: "/test-register", permissionKey: PERMISSIONS['test_register.view'] },
+      { name: "Test and Parameters", icon: FlaskConical, path: "/test-register", permissionKey: PERMISSIONS['test_register.view'] },
       { name: "Results", icon: FileText, path: "/results-entry", permissionKey: PERMISSIONS['results_entry.view'] },
     ]
   },
@@ -78,7 +78,7 @@ const navigationGroups = [
 const PAGE_LABELS: Record<string, string> = {
   "/": "Dashboard",
   "/patients": "Patients",
-  "/test-register": "Tests & Samples",
+  "/test-register": "Test and Parameters",
   "/hospital-records": "Hospital Records",
   "/results-entry": "Results",
   "/profile": "Profile",

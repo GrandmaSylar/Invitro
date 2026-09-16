@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { motion } from 'motion/react';
 import { Button } from '../../app/components/ui/button';
 import { Checkbox } from '../../app/components/ui/checkbox';
-import { Eye, EyeOff, Loader2, Mail, User, Lock, Power, ShieldCheck, Zap, RefreshCw, FlaskConical, Layers } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, User, Lock, Power, ShieldCheck, Zap, RefreshCw, FlaskConical, Layers, Wrench } from 'lucide-react';
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { showConfirm } from '../../stores/useDialogStore';
@@ -29,6 +29,29 @@ export function LoginPage() {
     }
   };
 
+  const handleResetDbConfig = async () => {
+    const confirmed = await showConfirm({
+      title: "Reset Database Configuration?",
+      description: "This will clear your current local database connection settings and launch the Database Setup Wizard. Are you sure you want to proceed?",
+      confirmText: "Reset & Launch Wizard",
+      cancelText: "Cancel",
+      variant: "destructive"
+    });
+
+    if (confirmed) {
+      try {
+        if (window.electronAPI?.resetDbConfig) {
+          await window.electronAPI.resetDbConfig();
+        } else if (window.electronAPI?.invoke) {
+          await window.electronAPI.invoke('db-reset-config');
+        }
+      } catch (err) {
+        console.error('Failed to reset database configuration:', err);
+      }
+      window.location.reload();
+    }
+  };
+
   // Active tab
   const [activeTab, setActiveTab] = useState<LoginMethod>('username');
 
@@ -46,6 +69,33 @@ export function LoginPage() {
   // Failed login tracking
   const [failCount, setFailCount] = useState(0);
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // DB connection status & latency tracking
+  const [dbStatus, setDbStatus] = useState<{
+    status: 'Connected' | 'Disconnected' | 'Not Configured' | 'Checking';
+    latency: number;
+    strength: string;
+    server?: string;
+  }>({ status: 'Checking', latency: 0, strength: 'None' });
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const res = await (window.electronAPI?.getDbStatus 
+          ? window.electronAPI.getDbStatus() 
+          : window.electronAPI?.invoke?.('db-get-status'));
+        if (res) {
+          setDbStatus(res);
+        }
+      } catch (err) {
+        setDbStatus({ status: 'Disconnected', latency: 0, strength: 'None' });
+      }
+    };
+
+    checkStatus();
+    const interval = setInterval(checkStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const redirectPath = searchParams.get('redirect') || '/';
 
@@ -209,7 +259,10 @@ export function LoginPage() {
             <div className="flex border-b border-gray-200 mb-6">
               <button
                 type="button"
-                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all duration-200 cursor-pointer ${
+                disabled={loading || isLocked}
+                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all duration-200 ${
+                  loading || isLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                } ${
                   activeTab === 'username'
                     ? 'border-[#0c2e5a] text-[#0c2e5a]'
                     : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -220,7 +273,10 @@ export function LoginPage() {
               </button>
               <button
                 type="button"
-                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all duration-200 cursor-pointer ${
+                disabled={loading || isLocked}
+                className={`flex-1 pb-3 text-xs font-bold text-center border-b-2 transition-all duration-200 ${
+                  loading || isLocked ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                } ${
                   activeTab === 'email'
                     ? 'border-[#0c2e5a] text-[#0c2e5a]'
                     : 'border-transparent text-gray-400 hover:text-gray-600'
@@ -250,7 +306,9 @@ export function LoginPage() {
                 <div className="relative mt-4">
                   <label
                     htmlFor="login-username"
-                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
+                    className={`absolute -top-2 left-3 bg-white px-1 text-xs font-bold transition-all pointer-events-none z-10 ${
+                      loading || isLocked ? 'text-gray-400' : 'text-[#5f748d]'
+                    }`}
                   >
                     Username *
                   </label>
@@ -259,11 +317,11 @@ export function LoginPage() {
                     <input
                       id="login-username"
                       type="text"
-                      className="w-full h-11 pl-10 pr-3 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      className="w-full h-11 pl-10 pr-3 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:border-gray-200 disabled:opacity-75"
                       placeholder="e.g. kmensah"
                       value={username}
                       onChange={(e) => { setUsername(e.target.value); setError(''); }}
-                      disabled={isLocked}
+                      disabled={loading || isLocked}
                       autoFocus
                     />
                   </div>
@@ -273,7 +331,9 @@ export function LoginPage() {
                 <div className="relative mt-4">
                   <label
                     htmlFor="login-password-user"
-                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
+                    className={`absolute -top-2 left-3 bg-white px-1 text-xs font-bold transition-all pointer-events-none z-10 ${
+                      loading || isLocked ? 'text-gray-400' : 'text-[#5f748d]'
+                    }`}
                   >
                     Password *
                   </label>
@@ -282,16 +342,17 @@ export function LoginPage() {
                     <input
                       id="login-password-user"
                       type={showPassword ? 'text' : 'password'}
-                      className="w-full h-11 pl-10 pr-10 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      className="w-full h-11 pl-10 pr-10 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:border-gray-200 disabled:opacity-75"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                      disabled={isLocked}
+                      disabled={loading || isLocked}
                     />
                     <button
                       type="button"
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={loading || isLocked}
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -306,13 +367,24 @@ export function LoginPage() {
                       id="remember-user"
                       checked={rememberMe}
                       onCheckedChange={(c) => setRememberMe(c === true)}
+                      disabled={loading || isLocked}
                       className="border-[#ccd3dc] data-[state=checked]:bg-[#0c2e5a] data-[state=checked]:border-[#0c2e5a]"
                     />
-                    <label htmlFor="remember-user" className="text-xs font-bold text-[#5f748d] cursor-pointer select-none">
+                    <label
+                      htmlFor="remember-user"
+                      className={`text-xs font-bold transition-colors select-none ${
+                        loading || isLocked ? 'text-gray-400 cursor-not-allowed opacity-60' : 'text-[#5f748d] cursor-pointer'
+                      }`}
+                    >
                       Remember me
                     </label>
                   </div>
-                  <Link to="/forgot-password" className="text-xs font-bold text-[#0c2e5a] hover:underline">
+                  <Link
+                    to="/forgot-password"
+                    className={`text-xs font-bold text-[#0c2e5a] hover:underline transition-opacity ${
+                      loading || isLocked ? 'pointer-events-none opacity-40 text-gray-400' : ''
+                    }`}
+                  >
                     Forgot password?
                   </Link>
                 </div>
@@ -322,11 +394,13 @@ export function LoginPage() {
                 {/* Action Button */}
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-[#0c2e5a] hover:bg-[#092244] text-white font-bold rounded-md shadow-md mt-6 flex items-center justify-center transition-colors border-none cursor-pointer"
+                  className={`w-full h-11 bg-[#0c2e5a] text-white font-bold rounded-md shadow-md mt-6 flex items-center justify-center transition-all border-none ${
+                    loading || isLocked ? 'opacity-70 cursor-not-allowed bg-[#0c2e5a]/80' : 'hover:bg-[#092244] cursor-pointer'
+                  }`}
                   disabled={loading || isLocked}
                 >
                   {loading ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-                  Sign In
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </form>
             ) : (
@@ -338,7 +412,9 @@ export function LoginPage() {
                 <div className="relative mt-4">
                   <label
                     htmlFor="login-email"
-                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
+                    className={`absolute -top-2 left-3 bg-white px-1 text-xs font-bold transition-all pointer-events-none z-10 ${
+                      loading || isLocked ? 'text-gray-400' : 'text-[#5f748d]'
+                    }`}
                   >
                     Email Address *
                   </label>
@@ -347,11 +423,11 @@ export function LoginPage() {
                     <input
                       id="login-email"
                       type="email"
-                      className="w-full h-11 pl-10 pr-3 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      className="w-full h-11 pl-10 pr-3 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:border-gray-200 disabled:opacity-75"
                       placeholder="you@example.com"
                       value={email}
                       onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                      disabled={isLocked}
+                      disabled={loading || isLocked}
                       autoFocus
                     />
                   </div>
@@ -361,7 +437,9 @@ export function LoginPage() {
                 <div className="relative mt-4">
                   <label
                     htmlFor="login-password-email"
-                    className="absolute -top-2 left-3 bg-white px-1 text-xs font-bold text-[#5f748d] transition-all pointer-events-none z-10"
+                    className={`absolute -top-2 left-3 bg-white px-1 text-xs font-bold transition-all pointer-events-none z-10 ${
+                      loading || isLocked ? 'text-gray-400' : 'text-[#5f748d]'
+                    }`}
                   >
                     Password *
                   </label>
@@ -370,16 +448,17 @@ export function LoginPage() {
                     <input
                       id="login-password-email"
                       type={showPassword ? 'text' : 'password'}
-                      className="w-full h-11 pl-10 pr-10 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900"
+                      className="w-full h-11 pl-10 pr-10 border border-[#ccd3dc] rounded-md bg-white focus:outline-none focus:border-[#0f2d59] focus:ring-1 focus:ring-[#0f2d59] text-sm text-gray-900 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed disabled:border-gray-200 disabled:opacity-75"
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                      disabled={isLocked}
+                      disabled={loading || isLocked}
                     />
                     <button
                       type="button"
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setShowPassword(!showPassword)}
+                      disabled={loading || isLocked}
                       tabIndex={-1}
                     >
                       {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -394,13 +473,24 @@ export function LoginPage() {
                       id="remember-email"
                       checked={rememberMe}
                       onCheckedChange={(c) => setRememberMe(c === true)}
+                      disabled={loading || isLocked}
                       className="border-[#ccd3dc] data-[state=checked]:bg-[#0c2e5a] data-[state=checked]:border-[#0c2e5a]"
                     />
-                    <label htmlFor="remember-email" className="text-xs font-bold text-[#5f748d] cursor-pointer select-none">
+                    <label
+                      htmlFor="remember-email"
+                      className={`text-xs font-bold transition-colors select-none ${
+                        loading || isLocked ? 'text-gray-400 cursor-not-allowed opacity-60' : 'text-[#5f748d] cursor-pointer'
+                      }`}
+                    >
                       Remember me
                     </label>
                   </div>
-                  <Link to="/forgot-password" className="text-xs font-bold text-[#0c2e5a] hover:underline">
+                  <Link
+                    to="/forgot-password"
+                    className={`text-xs font-bold text-[#0c2e5a] hover:underline transition-opacity ${
+                      loading || isLocked ? 'pointer-events-none opacity-40 text-gray-400' : ''
+                    }`}
+                  >
                     Forgot password?
                   </Link>
                 </div>
@@ -410,23 +500,81 @@ export function LoginPage() {
                 {/* Action Button */}
                 <Button
                   type="submit"
-                  className="w-full h-11 bg-[#0c2e5a] hover:bg-[#092244] text-white font-bold rounded-md shadow-md mt-6 flex items-center justify-center transition-colors border-none cursor-pointer"
+                  className={`w-full h-11 bg-[#0c2e5a] text-white font-bold rounded-md shadow-md mt-6 flex items-center justify-center transition-all border-none ${
+                    loading || isLocked ? 'opacity-70 cursor-not-allowed bg-[#0c2e5a]/80' : 'hover:bg-[#092244] cursor-pointer'
+                  }`}
                   disabled={loading || isLocked}
                 >
                   {loading ? <Loader2 className="size-4 animate-spin mr-2" /> : null}
-                  Sign In
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </Button>
               </form>
             )}
 
             {/* Card Footer matching QSS Version Printout */}
-            <div className="text-center space-y-1.5 mt-8">
-              <p className="text-[10px] text-[#8c9ba5] font-bold tracking-wider leading-none">
-                Invitro LIMS v1.1.12
-              </p>
-              <p className="text-[8px] text-[#a0adb8] font-bold tracking-widest uppercase leading-none">
-                Developed by PhiNova
-              </p>
+            <div className="text-center space-y-3 mt-8 pt-4 border-t border-gray-100">
+              <div className="flex items-center justify-center gap-2.5 flex-wrap">
+                {/* DB status & latency badge */}
+                <div
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold transition-all duration-200 select-none shrink-0"
+                  style={{
+                    backgroundColor: dbStatus.status === 'Connected'
+                      ? (dbStatus.strength === 'Excellent' || dbStatus.strength === 'Good' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)')
+                      : 'rgba(239, 68, 68, 0.08)',
+                    borderColor: dbStatus.status === 'Connected'
+                      ? (dbStatus.strength === 'Excellent' || dbStatus.strength === 'Good' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)')
+                      : 'rgba(239, 68, 68, 0.3)',
+                    color: dbStatus.status === 'Connected'
+                      ? (dbStatus.strength === 'Excellent' || dbStatus.strength === 'Good' ? '#059669' : '#d97706')
+                      : '#dc2626'
+                  }}
+                  title={
+                    dbStatus.status === 'Connected'
+                      ? `Connected to MSSQL Server: ${dbStatus.server || 'Active'}\nLatency: ${dbStatus.latency}ms\nQuality: ${dbStatus.strength}`
+                      : `Database Status: ${dbStatus.status}`
+                  }
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full inline-block animate-pulse shrink-0"
+                    style={{
+                      backgroundColor: dbStatus.status === 'Connected'
+                        ? (dbStatus.strength === 'Excellent' || dbStatus.strength === 'Good' ? '#10b981' : '#f59e0b')
+                        : '#ef4444',
+                      boxShadow: dbStatus.status === 'Connected'
+                        ? `0 0 6px ${dbStatus.strength === 'Excellent' || dbStatus.strength === 'Good' ? '#10b981' : '#f59e0b'}`
+                        : '0 0 6px #ef4444'
+                    }}
+                  />
+                  <span className="font-mono">
+                    {dbStatus.status === 'Connected' 
+                      ? `DB: ${dbStatus.latency}ms` 
+                      : dbStatus.status === 'Checking' 
+                        ? 'DB: Checking...' 
+                        : 'DB: Offline'}
+                  </span>
+                </div>
+
+                <span className="text-gray-300 text-xs">•</span>
+
+                <button
+                  type="button"
+                  onClick={handleResetDbConfig}
+                  disabled={loading || isLocked}
+                  className="text-xs font-semibold text-gray-500 hover:text-red-600 transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group"
+                  title="Clear database connection settings and open setup wizard"
+                >
+                  <Wrench className="size-3.5 text-gray-400 group-hover:text-red-500 transition-colors" />
+                  <span>Database Setup Wizard</span>
+                </button>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-[#8c9ba5] font-bold tracking-wider leading-none">
+                  Invitro LIMS v1.1.16
+                </p>
+                <p className="text-[8px] text-[#a0adb8] font-bold tracking-widest uppercase leading-none">
+                  Developed by PhiNova
+                </p>
+              </div>
             </div>
 
           </div>

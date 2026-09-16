@@ -110,14 +110,16 @@ export const authService = {
           _active_device_id: deviceId
         };
 
+        const nowIso = new Date().toISOString();
         await supabase
           .from('users')
           .update({ 
-            last_login: new Date().toISOString(),
+            last_login: nowIso,
             permission_overrides: newOverrides
           })
           .eq('id', userRow.id);
         
+        userRow.last_login = nowIso;
         userRow.permission_overrides = newOverrides;
       } catch (e) {
         console.warn('Non-critical: Failed to update session details and active device ID', e);

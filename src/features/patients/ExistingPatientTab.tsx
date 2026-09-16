@@ -8,6 +8,7 @@ import { useResultsByRecord } from "../../hooks/useResults";
 import { usePermission } from "../../hooks/usePermission";
 import { labRecordService } from "../../services/labRecordService";
 import type { Patient, LabRecord, LabRecordTest } from "../../lib/types";
+import { calculateAgeFromDob } from "../../lib/mappers";
 import { Card, CardContent, CardHeader, CardTitle } from "../../app/components/ui/card";
 import { Input } from "../../app/components/ui/input";
 import { Button } from "../../app/components/ui/button";
@@ -231,7 +232,17 @@ export function PatientRow({
           <div className="font-semibold text-base">{patient.patientName}</div>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
             {patient.gender && <span className="flex items-center gap-1"><User size={14} /> {patient.gender}</span>}
-            {patient.dob && <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(patient.dob).toLocaleDateString()}</span>}
+            {patient.dob ? (
+              <span className="flex items-center gap-1">
+                <Calendar size={14} /> {new Date(patient.dob).toLocaleDateString()} (Age: {patient.age ?? calculateAgeFromDob(patient.dob)})
+              </span>
+            ) : (
+              patient.age !== undefined && patient.age !== null && (
+                <span className="flex items-center gap-1">
+                  <Calendar size={14} /> Age: {patient.age} yrs
+                </span>
+              )
+            )}
             {patient.telephone && <span className="flex items-center gap-1"><Phone size={14} /> {patient.telephone}</span>}
           </div>
         </div>
@@ -343,7 +354,23 @@ function RecordDetailView({
   const [editName, setEditName] = useState('');
   const [editGender, setEditGender] = useState('');
   const [editDob, setEditDob] = useState('');
+  const [editAge, setEditAge] = useState<number | ''>('');
   const [editPhone, setEditPhone] = useState('');
+
+  const openEditPatientDialog = () => {
+    if (!patient) return;
+    setEditName(patient.patientName || '');
+    setEditGender(patient.gender || '');
+    const initialDob = patient.dob || '';
+    setEditDob(initialDob);
+    if (initialDob) {
+      setEditAge(calculateAgeFromDob(initialDob));
+    } else {
+      setEditAge(patient.age ?? '');
+    }
+    setEditPhone(patient.telephone || '');
+    setEditPatientOpen(true);
+  };
 
   // ── Edit Payment Dialog State ──
   const [editPaymentOpen, setEditPaymentOpen] = useState(false);
@@ -413,6 +440,12 @@ function RecordDetailView({
           Back to Search
         </Button>
         <div className="flex items-center gap-2">
+          {canEdit && (
+            <Button variant="outline" onClick={openEditPatientDialog} className="flex items-center gap-2">
+              <Edit size={16} />
+              Edit Patient Info
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setShowResults(true)} className="flex items-center gap-2" disabled={resultsLoading}>
             <ClipboardCheck size={16} />
             View Results{savedResults.length > 0 ? ` (${savedResults.length})` : ''}
@@ -432,10 +465,22 @@ function RecordDetailView({
               {patient?.patientName?.charAt(0).toUpperCase() || 'P'}
             </div>
             <div>
-              <h2 className="text-xl font-bold">{patient?.patientName || 'Unknown Patient'}</h2>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold">{patient?.patientName || 'Unknown Patient'}</h2>
+                {canEdit && (
+                  <Button variant="ghost" size="sm" onClick={openEditPatientDialog} className="h-7 text-xs flex items-center gap-1 text-primary">
+                    <Edit size={12} /> Edit
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-1">
                 <span className="flex items-center gap-1"><User size={14} /> {patient?.gender || '—'}</span>
-                <span className="flex items-center gap-1"><Calendar size={14} /> {patient?.dob ? new Date(patient?.dob).toLocaleDateString() : '—'}</span>
+                <span className="flex items-center gap-1">
+                  <Calendar size={14} />
+                  {patient?.dob
+                    ? `${new Date(patient.dob).toLocaleDateString()} (Age: ${patient?.age ?? calculateAgeFromDob(patient.dob)})`
+                    : (patient?.age !== undefined && patient?.age !== null ? `Age: ${patient.age} yrs` : 'DOB/Age: —')}
+                </span>
                 <span className="flex items-center gap-1"><Phone size={14} /> {patient?.telephone || '—'}</span>
               </div>
             </div>
@@ -659,14 +704,40 @@ function RecordDetailView({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-dob">Date of Birth</Label>
-              <Input
-                id="edit-dob"
-                type="date"
-                value={editDob}
-                onChange={(e) => setEditDob(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-dob">Date of Birth</Label>
+                <Input
+                  id="edit-dob"
+                  type="date"
+                  value={editDob}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditDob(val);
+                    if (val) {
+                      setEditAge(calculateAgeFromDob(val));
+                    }
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Selecting DOB forces calculation of Age.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-age">Age {editDob ? "(Calculated)" : "(Years)"}</Label>
+                <Input
+                  id="edit-age"
+                  type="number"
+                  min="0"
+                  value={editAge}
+                  onChange={(e) => setEditAge(e.target.value ? parseInt(e.target.value, 10) : '')}
+                  placeholder="Years"
+                  disabled={updatePatient.isPending || !!editDob}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {editDob ? "Locked (Calculated from DOB)" : "Enter age if DOB is unknown"}
+                </p>
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-phone">Phone Number</Label>
@@ -690,6 +761,7 @@ function RecordDetailView({
                   confirmText: "Update"
                 });
                 if (!confirmed) return;
+                const finalAge = editDob ? calculateAgeFromDob(editDob) : (typeof editAge === 'number' ? editAge : undefined);
                 updatePatient.mutate(
                   {
                     id: patient.id,
@@ -697,6 +769,7 @@ function RecordDetailView({
                       patientName: editName.trim(),
                       gender: editGender || undefined,
                       dob: editDob || undefined,
+                      age: typeof finalAge === 'number' ? finalAge : undefined,
                       telephone: editPhone || undefined,
                     },
                   },

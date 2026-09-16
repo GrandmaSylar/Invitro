@@ -58,3 +58,4 @@ deployment-docs/*.key
 # Excel and Temporary files
 ~$*
 scratch_output.txt
+.devswarm-temp/

@@ -27,6 +27,24 @@ import type {
   Notification,
 } from './types';
 
+/**
+ * Calculates full age in completed years from a DOB string (YYYY-MM-DD).
+ * Returns empty string if DOB is empty or invalid.
+ */
+export function calculateAgeFromDob(dobString: string | null | undefined): number | "" {
+  if (!dobString) return "";
+  const birthDate = new Date(dobString);
+  if (isNaN(birthDate.getTime())) return "";
+  const today = new Date();
+  let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    calculatedAge--;
+  }
+  return Math.max(0, calculatedAge);
+}
+
+
 // ── Users & Roles ──────────────────────────────────────────────
 
 export function mapUserRow(row: any): User {
