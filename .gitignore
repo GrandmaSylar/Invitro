@@ -49,6 +49,57 @@ device.key
 db.key
 db_config.json
 sandbox_mode.json
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node
+node_modules/
+dist/
+dist-electron/
+release/
+dist-ssr/
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vite
+.vite/
+
+.vercel
+.env*.local
+
+fit/
+
+# Database & Secrets
+lims.db*
+*.key
+device.key
+db.key
+db_config.json
+sandbox_mode.json
 deployment-docs/credentials.md
 deployment-docs/*.key
 
@@ -59,3 +110,7 @@ deployment-docs/*.key
 ~$*
 scratch_output.txt
 .devswarm-temp/
+
+# Conversation logs & summaries
+*CONVERSATION*.md
+deployment-docs/*CONVERSATION*.md
