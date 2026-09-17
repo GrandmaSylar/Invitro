@@ -37,6 +37,9 @@ Invitro LIMS is a modern, high-performance Laboratory Information Management Sys
 ### E. Standardized 25-Row Table Pagination
 - Reusable [`DataTablePagination.tsx`](file:///c:/Users/berna/bloo/src/app/components/ui/DataTablePagination.tsx) component with default 25 rows per page (selectable 25, 50, 75, 100) integrated across all data tables.
 
+### F. v1.1.16 Features & Release Enhancements
+- For complete session logs, bug fixes, DOB/Age auto-calculation, login form locking, real-time DB latency widget, and GitHub release deployment steps, see [`CONVERSATION_SUMMARY_2026-09-17.md`](file:///c:/Users/berna/bloo/deployment-docs/CONVERSATION_SUMMARY_2026-09-17.md).
+
 ---
 
 ## 3. Security & Git Hygiene
@@ -46,3 +49,4 @@ Invitro LIMS is a modern, high-performance Laboratory Information Management Sys
   - `*.key`, `device.key`, `db_config.json`, `sandbox_mode.json`
   - Local database files (`lims.db*`)
   - PDFs, logs, and build artifacts (`dist/`, `dist-electron/`, `release/`).
+
